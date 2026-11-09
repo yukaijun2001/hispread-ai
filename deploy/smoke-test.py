@@ -6,7 +6,11 @@ parser=argparse.ArgumentParser();parser.add_argument('--url',default='http://loc
 values={}
 for line in Path(args.env_file).read_text().splitlines():
     if '=' in line and not line.lstrip().startswith('#'):
-        key,value=line.split('=',1);values[key]=value.strip().strip('"\'')
+        key,value=line.split('=',1);value=value.strip()
+        # deploy.sh emits JSON-compatible double quotes and Compose's $$ dollar escape.
+        if value.startswith('"'):value=json.loads(value).replace('$$','$')
+        elif value.startswith("'"):value=value[1:-1].replace("\\'", "'")
+        values[key]=value
 jar=http.cookiejar.CookieJar();client=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar));results=[]
 def request(path,method='GET',data=None,content_type='application/json',csrf=True):
     headers={}
