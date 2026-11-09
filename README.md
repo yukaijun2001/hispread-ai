@@ -20,13 +20,20 @@ cd frontend && npm ci && cd ..
 
 ## Docker
 
-正式服务器部署改用 [deploy/README.md](deploy/README.md)：生产模式仅初始化管理员，不导入演示供应商/项目；数据库和后端仅内部网络，前端默认127.0.0.1:8088。生成配置后启动：
+服务器使用根目录的 `deploy.sh` 一键更新部署。它从 GitHub 的 `main` 分支拉取最新提交、构建镜像并启动服务，**只发布前端 `0.0.0.0:10001`**，后端和 PostgreSQL 均不映射宿主机端口。首次部署自动生成权限为600的 `.env.production`；后续部署保留密码、数据库和上传文件。
 
 ```bash
-./deploy/init-env.sh .env.production
-# 编辑PUBLIC_ORIGIN和COOKIE_SECURE，再部署
-docker compose --env-file .env.production up -d --build --wait
+git clone https://github.com/yukaijun2001/hispread-ai.git /opt/hispread-ai
+cd /opt/hispread-ai
+./deploy.sh --origin http://你的服务器公网IP:10001
+
+# 后续更新，在相同目录再次执行
+./deploy.sh
 ```
+
+服务器需要 Git、Docker Engine、Docker Compose ≥2.24.4、Python3、curl，并在防火墙/安全组放行TCP10001。未指定 `--origin` 时复用已有公网访问地址，首次尝试检测公网IPv4；有域名或NAT时应显式指定用户实际访问的地址。GitHub私有仓库使用SSH部署密钥或Git凭据助手。工作区有未提交修改、本地独有提交或分叉时停止更新。
+
+生产模式仅初始化管理员，不导入演示供应商/项目。初始化密码保存在 `.env.production`，更改该文件不重置数据库中已有管理员密码。参数、日志、备份及手动代理部署方式见 [deploy/README.md](deploy/README.md)。
 
 以下演示环境需显式加 `-f docker-compose.demo.yml`，不用于生产数据。
 
