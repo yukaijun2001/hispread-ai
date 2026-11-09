@@ -1,0 +1,86 @@
+name: hispread
+services:
+  postgres:
+    image: postgres:16.10-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hispread_ai
+      POSTGRES_USER: hispread
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?Set a strong DATABASE_PASSWORD}
+      TZ: Asia/Shanghai
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hispread -d hispread_ai"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [internal]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  backend:
+    image: hispread-backend:${IMAGE_TAG:-local}
+    build:
+      context: ./backend
+    restart: unless-stopped
+    init: true
+    environment:
+      SPRING_PROFILES_ACTIVE: production
+      DATABASE_URL: jdbc:postgresql://postgres:5432/hispread_ai
+      DATABASE_USER: hispread
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD (at least 16 characters)}
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8088}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      UPLOAD_DIRECTORY: /app/data/uploads
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0 -Duser.timezone=Asia/Shanghai"
+      TZ: Asia/Shanghai
+    volumes:
+      - uploads:/app/data/uploads
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/api/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    expose: ["8080"]
+    networks: [internal]
+    read_only: true
+    tmpfs: ["/tmp:size=128m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    stop_grace_period: 40s
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  frontend:
+    image: hispread-frontend:${IMAGE_TAG:-local}
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on:
+      backend: {condition: service_healthy}
+    ports:
+      - "${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8088}:8080"
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    read_only: true
+    tmpfs: ["/tmp:size=32m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+networks:
+  internal:
+volumes:
+  postgres_data:
+  uploads:

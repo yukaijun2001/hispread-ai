@@ -1,0 +1,1197 @@
+{
+  "source": "https://supplier.hispread.com/api",
+  "captureMode": "authorized session; business GET requests only; login POST only",
+  "redactedFields": [
+    "accessToken",
+    "account",
+    "accountNumber",
+    "address",
+    "apiKey",
+    "bankAccountNumber",
+    "beneficiaryId",
+    "contact",
+    "contactEmail",
+    "contactPhone",
+    "content",
+    "cookie",
+    "email",
+    "holder",
+    "initialPassword",
+    "key",
+    "password",
+    "personalEmail",
+    "personalPhone",
+    "phone",
+    "recipientName",
+    "refreshToken",
+    "registrationNo",
+    "secret",
+    "secretKey",
+    "token",
+    "url",
+    "username",
+    "walletAddress"
+  ],
+  "responses": {
+    "/auth/me": {
+      "status": 200,
+      "body": {
+        "supplierName": "梧桐",
+        "permissions": [
+          "workbench.tasks.read",
+          "file.write",
+          "proxy.read",
+          "supplier.read",
+          "resource.write",
+          "resource.read",
+          "supplier.write",
+          "project.read",
+          "quote.write",
+          "payment.receipt",
+          "resource.sensitive",
+          "resource.usage",
+          "settlement.confirm",
+          "workbench.read",
+          "payment.read",
+          "account.write",
+          "report.read",
+          "report.export",
+          "exchange_rate.read",
+          "resource.intake.manage",
+          "quote.read",
+          "proxy.write",
+          "settlement.export",
+          "settlement.read",
+          "account.read",
+          "workbench.monitoring.read",
+          "supplier.agent.manage"
+        ],
+        "onboardingRequired": false,
+        "supplierId": "839ab3d1-3101-47c4-bdf5-cbfc1c0e1e0f",
+        "supplierRegistrationApprovalEnabled": false,
+        "username": "[REDACTED]",
+        "mustChangePassword": false,
+        "displayName": "王杰",
+        "role": "SUPPLIER",
+        "id": "71ee6aa7-2ee8-4529-9c15-5f7aad481f9c",
+        "teamAdminGroup": {}
+      }
+    },
+    "/workbench": {
+      "status": 200,
+      "body": {
+        "tasks": [
+          {
+            "id": "82b25771-99d9-4d74-ac2a-a3679122360c",
+            "title": "CCMAX-额度-CODING",
+            "label": "报价已退回",
+            "targetPath": "quotes?id=82b25771-99d9-4d74-ac2a-a3679122360c",
+            "supplierName": "梧桐",
+            "currency": "USD",
+            "amount": null,
+            "createdAt": "2026-11-06T08:53:18.885716Z",
+            "kind": "QUOTE_REJECTED",
+            "summary": "0.27 倍 · 2026-11-06 至 2026-11-30",
+            "detail": "0.27 倍 · 2026-11-06 至 2026-11-30",
+            "actionLabel": "查看",
+            "facts": [
+              {
+                "label": "供应商",
+                "value": "梧桐"
+              },
+              {
+                "label": "项目",
+                "value": "CCMAX-额度-CODING"
+              },
+              {
+                "label": "报价",
+                "value": "0.27 倍"
+              },
+              {
+                "label": "期间",
+                "value": "2026-11-06 至 2026-11-30"
+              }
+            ]
+          }
+        ],
+        "money": [],
+        "recent": [],
+        "announcement": null,
+        "supplierSide": true
+      }
+    },
+    "/workbench/tasks": {
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": "82b25771-99d9-4d74-ac2a-a3679122360c",
+            "title": "CCMAX-额度-CODING",
+            "label": "报价已退回",
+            "targetPath": "quotes?id=82b25771-99d9-4d74-ac2a-a3679122360c",
+            "supplierName": "梧桐",
+            "currency": "USD",
+            "amount": null,
+            "createdAt": "2026-11-06T08:53:18.885716Z",
+            "kind": "QUOTE_REJECTED",
+            "summary": "0.27 倍 · 2026-11-06 至 2026-11-30",
+            "detail": "0.27 倍 · 2026-11-06 至 2026-11-30",
+            "actionLabel": "查看",
+            "facts": [
+              {
+                "label": "供应商",
+                "value": "梧桐"
+              },
+              {
+                "label": "项目",
+                "value": "CCMAX-额度-CODING"
+              },
+              {
+                "label": "报价",
+                "value": "0.27 倍"
+              },
+              {
+                "label": "期间",
+                "value": "2026-11-06 至 2026-11-30"
+              }
+            ]
+          }
+        ],
+        "limited": false
+      }
+    },
+    "/workbench/monitoring": {
+      "status": 200,
+      "body": [
+        {
+          "id": "ANTHROPIC",
+          "name": "Anthropic",
+          "category": "ANTHROPIC",
+          "categoryName": "Anthropic",
+          "groupName": "",
+          "rpm": "267",
+          "tpm": null,
+          "windowSeconds": 60,
+          "dataUpdatedAt": "2026-11-09T07:15:31.502327896Z",
+          "queriedAt": "2026-11-09T07:15:31.616689Z",
+          "lastAttemptAt": "2026-11-09T07:15:31.353951Z",
+          "lastError": null,
+          "state": "READY",
+          "sortOrder": 1
+        }
+      ]
+    },
+    "/workbench/payables-summary": {
+      "status": 404,
+      "body": {
+        "timestamp": "2026-11-09T07:15:32.090Z",
+        "status": 404,
+        "error": "Not Found",
+        "path": "/api/workbench/payables-summary"
+      }
+    },
+    "/projects?size=100": {
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": "aa97a045-e39c-4035-b8ed-a9bc10a4770d",
+            "code": "PRJ-000019",
+            "category": "GEMINI",
+            "categoryName": "Gemini",
+            "name": "AI_studio Gemini",
+            "unit": "额度面值",
+            "description": "",
+            "createdBy": "usr-admin",
+            "enabled": true,
+            "version": 0,
+            "createdAt": "2026-10-30T15:10:25.364859Z",
+            "updatedAt": "2026-10-30T15:10:25.364859Z",
+            "settlementMethod": "QUOTA",
+            "deliveryMethod": "KEY",
+            "capacityType": "ACCOUNT_QUOTA",
+            "capacityScope": "TOTAL",
+            "capacityPeriod": "TOTAL",
+            "capacityCurrency": "USD",
+            "capacityLabel": "全部账号合计总额度（USD）",
+            "suggestedMultiplier": null
+          },
+          {
+            "id": "38d8e0ed-9960-487f-b95d-6a3798c0248a",
+            "code": "PRJ-000018",
+            "category": "GEMINI",
+            "categoryName": "Gemini",
+            "name": "Vertext Gemini",
+            "unit": "额度面值",
+            "description": "",
+            "createdBy": "usr-admin",
+            "enabled": true,
+            "version": 0,
+            "createdAt": "2026-10-30T15:09:16.026016Z",
+            "updatedAt": "2026-10-30T15:09:16.026016Z",
+            "settlementMethod": "QUOTA",
+            "deliveryMethod": "KEY",
+            "capacityType": "ACCOUNT_QUOTA",
+            "capacityScope": "TOTAL",
+            "capacityPeriod": "TOTAL",
+            "capacityCurrency": "USD",
+            "capacityLabel": "全部账号合计总额度（USD）",
+            "suggestedMultiplier": null
+          },
+          {
+            "id": "67657193-3c39-41a1-8652-692a62091835",
+            "code": "PRJ-000017",
+            "category": "OPENROUTER",
+            "categoryName": "Openrouter",
+            "name": "Openrouter-跑付",
+            "unit": "额度面值",
+            "description": "",
+            "createdBy": "68380ebc-2f5b-4e15-9f97-2f4ff75c3ec4",
+            "enabled": true,
+            "version": 0,
+            "createdAt": "2026-10-23T07:45:58.100069Z",
+            "updatedAt": "2026-10-23T07:45:58.100069Z",
+            "settlementMethod": "QUOTA",
+            "deliveryMethod": "KEY",
+            "capacityType": "ACCOUNT_QUOTA",
+            "capacityScope": "TOTAL",
+            "capacityPeriod": "TOTAL",
+            "capacityCurrency": "USD",
+            "capacityLabel": "全部账号合计总额度（USD）",
+            "suggestedMultiplier": null
+          },
+          {
+            "id": "f8180618-3e0e-4a86-989c-112af97d3203",
+            "code": "PRJ-000016",
+            "category": "OPENROUTER",
+            "categoryName": "Openrouter",
+            "name": "Openrouter-买断",
+            "unit": "个数",
+            "description": "",
+            "createdBy": "68380ebc-2f5b-4e15-9f97-2f4ff75c3ec4",
+            "enabled": true,
+            "version": 0,
+            "createdAt": "2026-10-23T07:45:44.041423Z",
+            "updatedAt": "2026-10-23T07:45:44.041423Z",
+            "settlementMethod": "ACCOUNT_BUYOUT",
+            "deliveryMethod": "KEY",
+            "capacityType": "ACCOUNT_QUOTA",
+            "capacityScope": "TOTAL",
+            "capacityPeriod": "TOTAL",
+            "capacityCurrency": "USD",
+            "capacityLabel": "全部账号合计总额度（USD）",
+            "suggestedMultiplier": null
+          },
+          {
+            "id": "e090c391-cfa2-41d5-9224-7a17610b56c1",
+            "code": "PRJ-000015",
+            "category": "AZURE",
+            "categoryName": "Azure",
+            "name": "集中任务-az-其他",
+            "unit": "额度面值",
+            "description": "",
+            "createdBy": "68380ebc-2f5b-4e15-9f97-2f4ff75c3ec4",
+            "enabled": true,
+            "version": 0,
+            "createdAt": "2026-10-20T06:30:57.009537Z",
+            "updatedAt": "2026-10-20T06:30:57.009537Z",
+            "settlementMethod": "QUOTA",
+            "deliveryMethod": "KEY",
+            "capacityType": "ACCOUNT_QUOTA",
+            "capacityScope": "TOTAL",
+            "capacityPeriod": "TOTAL",
+            "capacityCurrency": "USD",
+            "capacityLabel": "全部账号合计总额度（USD）",
+            "suggestedMultiplier": null
+          },
+          {
+            "id": "db4eb900-0765-4f91-ac8a-321b52942175",
+            "code": "PRJ-000014",
+            "category": "AZURE",
+            "categoryName": "Azure",
+            "name": "集中任务-az-美东2",
+            "unit": "额度面值",
+            "description": "",
+            "createdBy": "68380ebc-2f5b-4e15-9f97-2f4ff75c3ec4",
+            "enabled": true,
+            "version": 0,
+            "createdAt": "2026-10-20T06:30:45.819179Z",
+            "updatedAt": "2026-10-20T06:30:45.819179Z",
+            "settlementMethod": "QUOTA",
+            "deliveryMethod": "KEY",
+            "capacityType": "ACCOUNT_QUOTA",
+            "capacityScope": "TOTAL",
+            "capacityPeriod": "TOTAL",
+            "capacityCurrency": "USD",
+            "capacityLabel": "全部账号合计总额度（USD）",
+            "suggestedMultiplier": null
+          },
+          {
+            "id": "eefb696d-aea8-4106-9495-e6e679bb1c13",
+            "code": "PRJ-000013",
+            "category": "ANTHROPIC",
+            "categoryName": "Anthropic",
+            "name": "CCMAX-额度-CODING",
+            "unit": "额度面值",
+            "description": "",
+            "createdBy": "usr-admin",
+            "enabled": true,
+            "version": 1,
+            "createdAt": "2026-10-13T03:26:24.697593Z",
+            "updatedAt": "2026-10-13T03:40:57.340669Z",
+            "settlementMethod": "QUOTA",
+            "deliveryMethod": "KEY",
+            "capacityType": "ACCOUNT_COUNT",
+            "capacityScope": "TOTAL",
+            "capacityPeriod": null,
+            "capacityCurrency": null,
+            "capacityLabel": "可提供账号数（个）",
+            "suggestedMultiplier": null
+          },
+          {
+            "id": "ed92b38e-8d01-434f-aaa5-9086503a042d",
+            "code": "PRJ-000012",
+            "category": "AZURE",
+            "categoryName": "Azure",
+            "name": "Azure-GPT-East US 2",
+            "unit": "额度面值",
+            "description": "",
+            "createdBy": "usr-admin",
+            "enabled": true,
+            "version": 0,
+            "createdAt": "2026-10-13T01:52:30.703466Z",
+            "updatedAt": "2026-10-13T01:52:30.703466Z",
+            "settlementMethod": "QUOTA",
+            "deliveryMethod": "KEY",
+            "capacityType": "ACCOUNT_QUOTA",
+            "capacityScope": "TOTAL",
+            "capacityPeriod": "TOTAL",
+            "capacityCurrency": "USD",
+            "capacityLabel": "全部账号合计总额度（USD）",
+            "suggestedMultiplier": null
+          },
+          {
+            "id": "42629f26-fa3f-4f67-a70d-026828436302",
+            "code": "PRJ-000011",
+            "category": "AZURE",
+            "categoryName": "Azure",
+            "name": "Azure Openai-Image-中转",
+            "unit": "额度面值",
+            "description": "",
+            "createdBy": "68380ebc-2f5b-4e15-9f97-2f4ff75c3ec4",
+            "enabled": true,
+            "version": 1,
+            "createdAt": "2026-10-12T03:02:01.391666Z",
+            "updatedAt": "2026-10-12T03:02:08.074121Z",
+            "settlementMethod": "QUOTA",
+            "deliveryMethod": "RELAY",
+            "capacityType": "ACCOUNT_QUOTA",
+            "capacityScope": "TOTAL",
+            "capacityPeriod": "TOTAL",
+            "capacityCurrency": "USD",
+            "capacityLabel": "全部账号合计总额度（USD）",
+            "suggestedMultiplier": null
+          },
+          {
+            "id": "a0c3af2c-0e84-4ee4-a1e6-ea52a747b10f",
+            "code": "PRJ-000010",
+            "category": "AZURE",
+            "categoryName": "Azure",
+            "name": "Azure OpenAI-中转",
+            "unit": "额度面值",
+            "description": "",
+            "createdBy": "68380ebc-2f5b-4e15-9f97-2f4ff75c3ec4",
+            "enabled": true,
+            "version": 1,
+            "createdAt": "2026-10-12T03:01:29.121122Z",
+            "updatedAt": "2026-10-12T03:01:36.570545Z",
+            "settlementMethod": "QUOTA",
+            "deliveryMethod": "RELAY",
+            "capacityType": "ACCOUNT_QUOTA",
+            "capacityScope": "TOTAL",
+            "capacityPeriod": "TOTAL",
+            "capacityCurrency": "USD",
+            "capacityLabel": "全部账号合计总额度（USD）",
+            "suggestedMultiplier": null
+          },
+          {
+            "id": "1c4cceb1-e3b5-4ded-82bb-36548952ca4c",
+            "code": "PRJ-000009",
+            "category": "OPENAI",
+            "categoryName": "Openai",
+            "name": "Openai-官",
+            "unit": "额度面值",
+            "description": "",
+            "createdBy": "usr-admin",
+            "enabled": true,
+            "version": 0,
+            "createdAt": "2026-10-12T02:42:52.119536Z",
+            "updatedAt": "2026-10-12T02:42:52.119536Z",
+            "settlementMethod": "QUOTA",
+            "deliveryMethod": "KEY",
+            "capacityType": "ACCOUNT_QUOTA",
+            "capacityScope": "TOTAL",
+            "capacityPeriod": "TOTAL",
+            "capacityCurrency": "USD",
+            "capacityLabel": "全部账号合计总额度（USD）",
+            "suggestedMultiplier": null
+          },
+          {
+            "id": "a67cd2b5-ff19-41b4-a0ba-ec1ce30d8147",
+            "code": "PRJ-000008",
+            "category": "OPENAI",
+            "categoryName": "Openai",
+            "name": "Openai-中转",
+            "unit": "额度面值",
+            "description": "",
+            "createdBy": "usr-admin",
+            "enabled": true,
+            "version": 1,
+            "createdAt": "2026-10-11T07:15:15.270796Z",
+            "updatedAt": "2026-10-12T02:42:30.143226Z",
+            "settlementMethod": "QUOTA",
+            "deliveryMethod": "RELAY",
+            "capacityType": "ACCOUNT_QUOTA",
+            "capacityScope": "TOTAL",
+            "capacityPeriod": "TOTAL",
+            "capacityCurrency": "USD",
+            "capacityLabel": "全部账号合计总额度（USD）",
+            "suggestedMultiplier": null
+          },
+          {
+            "id": "3f08f52b-039d-4485-b921-061f5a2de2c2",
+            "code": "PRJ-000007",
+            "category": "OPENAI",
+            "categoryName": "Openai",
+            "name": "Openai-Image-中转",
+            "unit": "额度面值",
+            "description": "",
+            "createdBy": "usr-admin",
+            "enabled": true,
+            "version": 2,
+            "createdAt": "2026-10-11T07:14:49.723689Z",
+            "updatedAt": "2026-10-12T02:42:36.537893Z",
+            "settlementMethod": "QUOTA",
+            "deliveryMethod": "RELAY",
+            "capacityType": "ACCOUNT_QUOTA",
+            "capacityScope": "TOTAL",
+            "capacityPeriod": "TOTAL",
+            "capacityCurrency": "USD",
+            "capacityLabel": "全部账号合计总额度（USD）",
+            "suggestedMultiplier": null
+          },
+          {
+            "id": "6f4755a4-9dff-4ce2-b6fe-3addfef61c1c",
+            "code": "PRJ-000006",
+            "category": "AWS-BEDROCK",
+            "categoryName": "AWS Bedrock",
+            "name": "Aws-GPT",
+            "unit": "额度面值",
+            "description": "",
+            "createdBy": "usr-admin",
+            "enabled": true,
+            "version": 0,
+            "createdAt": "2026-10-09T07:27:50.993597Z",
+            "updatedAt": "2026-10-09T07:27:50.993597Z",
+            "settlementMethod": "QUOTA",
+            "deliveryMethod": "KEY",
+            "capacityType": "ACCOUNT_QUOTA",
+            "capacityScope": "TOTAL",
+            "capacityPeriod": "TOTAL",
+            "capacityCurrency": "USD",
+            "capacityLabel": "全部账号合计总额度（USD）",
+            "suggestedMultiplier": null
+          },
+          {
+            "id": "3ade47fd-4f00-4c9e-a965-e704ce629f7d",
+            "code": "PRJ-000005",
+            "category": "AWS-BEDROCK",
+            "categoryName": "AWS Bedrock",
+            "name": "Aws-Claude",
+            "unit": "额度面值",
+            "description": "",
+            "createdBy": "usr-admin",
+            "enabled": true,
+            "version": 0,
+            "createdAt": "2026-10-09T07:27:35.054911Z",
+            "updatedAt": "2026-10-09T07:27:35.054911Z",
+            "settlementMethod": "QUOTA",
+            "deliveryMethod": "KEY",
+            "capacityType": "ACCOUNT_QUOTA",
+            "capacityScope": "TOTAL",
+            "capacityPeriod": "TOTAL",
+            "capacityCurrency": "USD",
+            "capacityLabel": "全部账号合计总额度（USD）",
+            "suggestedMultiplier": null
+          },
+          {
+            "id": "198e0639-e538-4c1e-8939-4db52687ccf2",
+            "code": "PRJ-000004",
+            "category": "AZURE",
+            "categoryName": "Azure",
+            "name": "Azure-Claude",
+            "unit": "额度面值",
+            "description": "",
+            "createdBy": "usr-admin",
+            "enabled": true,
+            "version": 0,
+            "createdAt": "2026-10-09T07:27:22.129060Z",
+            "updatedAt": "2026-10-09T07:27:22.129060Z",
+            "settlementMethod": "QUOTA",
+            "deliveryMethod": "KEY",
+            "capacityType": "ACCOUNT_QUOTA",
+            "capacityScope": "TOTAL",
+            "capacityPeriod": "TOTAL",
+            "capacityCurrency": "USD",
+            "capacityLabel": "全部账号合计总额度（USD）",
+            "suggestedMultiplier": null
+          },
+          {
+            "id": "f7a660e1-5e3d-4286-941a-2293369dd84a",
+            "code": "PRJ-000003",
+            "category": "AZURE",
+            "categoryName": "Azure",
+            "name": "Azure-GPT",
+            "unit": "额度面值",
+            "description": "",
+            "createdBy": "usr-admin",
+            "enabled": true,
+            "version": 0,
+            "createdAt": "2026-10-09T07:27:10.638752Z",
+            "updatedAt": "2026-10-09T07:27:10.638752Z",
+            "settlementMethod": "QUOTA",
+            "deliveryMethod": "KEY",
+            "capacityType": "ACCOUNT_QUOTA",
+            "capacityScope": "TOTAL",
+            "capacityPeriod": "TOTAL",
+            "capacityCurrency": "USD",
+            "capacityLabel": "全部账号合计总额度（USD）",
+            "suggestedMultiplier": null
+          },
+          {
+            "id": "ca4813a4-6fae-49ba-9114-db2540d33651",
+            "code": "PRJ-000002",
+            "category": "ANTHROPIC",
+            "categoryName": "Anthropic",
+            "name": "CCMAX-买断",
+            "unit": "个数",
+            "description": "",
+            "createdBy": "usr-admin",
+            "enabled": true,
+            "version": 0,
+            "createdAt": "2026-09-16T09:46:37.560384Z",
+            "updatedAt": "2026-09-16T09:46:37.560384Z",
+            "settlementMethod": "ACCOUNT_BUYOUT",
+            "deliveryMethod": "ACCOUNT",
+            "capacityType": "ACCOUNT_COUNT",
+            "capacityScope": "TOTAL",
+            "capacityPeriod": null,
+            "capacityCurrency": null,
+            "capacityLabel": "可提供账号数（个）",
+            "suggestedMultiplier": null
+          },
+          {
+            "id": "707953d4-8d6f-43d2-bac1-9c25a4a6b760",
+            "code": "PRJ-000001",
+            "category": "ANTHROPIC",
+            "categoryName": "Anthropic",
+            "name": "CCMAX-额度",
+            "unit": "额度面值",
+            "description": "",
+            "createdBy": "usr-admin",
+            "enabled": true,
+            "version": 0,
+            "createdAt": "2026-09-16T09:46:20.988500Z",
+            "updatedAt": "2026-09-16T09:46:20.988500Z",
+            "settlementMethod": "QUOTA",
+            "deliveryMethod": "ACCOUNT",
+            "capacityType": "ACCOUNT_COUNT",
+            "capacityScope": "TOTAL",
+            "capacityPeriod": null,
+            "capacityCurrency": null,
+            "capacityLabel": "可提供账号数（个）",
+            "suggestedMultiplier": null
+          }
+        ],
+        "total": 19,
+        "page": 1,
+        "size": 100
+      }
+    },
+    "/quotes?page=1&size=20&state=": {
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": "82b25771-99d9-4d74-ac2a-a3679122360c",
+            "code": "QT-82B25771",
+            "supplierId": "839ab3d1-3101-47c4-bdf5-cbfc1c0e1e0f",
+            "projectId": "eefb696d-aea8-4106-9495-e6e679bb1c13",
+            "itemCode": "PRJ-000013",
+            "title": "CCMAX-额度-CODING",
+            "unit": "额度面值",
+            "pricingType": "DISCOUNT",
+            "unitPrice": null,
+            "ratePercent": "27",
+            "multiplier": "0.27",
+            "currency": "USD",
+            "baseReference": "",
+            "taxInclusive": true,
+            "effectiveFrom": "2026-11-06",
+            "effectiveTo": "2026-11-30",
+            "state": "REJECTED",
+            "submittedBy": "71ee6aa7-2ee8-4529-9c15-5f7aad481f9c",
+            "reviewedBy": "68380ebc-2f5b-4e15-9f97-2f4ff75c3ec4",
+            "reviewNote": "目前价格不在考虑范围内 ，如果方便可以先留联系方式，后续有新任务可告知",
+            "serviceCapacityNote": "",
+            "createdAt": "2026-11-06T08:53:18.885716Z",
+            "priceVersionId": "82b25771-99d9-4d74-ac2a-a3679122360c",
+            "priceEffectiveAt": "2026-11-05T16:00:00Z",
+            "settlementMethod": "QUOTA",
+            "deliveryMethod": "KEY",
+            "capacityType": "ACCOUNT_COUNT",
+            "capacityScope": "TOTAL",
+            "capacityPeriod": null,
+            "capacityCurrency": null,
+            "accountCount": "50",
+            "accountQuota": null,
+            "rpm": null,
+            "tpm": null,
+            "supplierName": "梧桐",
+            "projectName": "CCMAX-额度-CODING"
+          }
+        ],
+        "total": 1,
+        "page": 1,
+        "size": 20
+      }
+    },
+    "/accounts": {
+      "status": 400,
+      "body": {
+        "timestamp": "2026-11-09T07:15:32.723Z",
+        "status": 400,
+        "error": "Bad Request",
+        "path": "/api/accounts"
+      }
+    },
+    "/suppliers?page=1&size=100": {
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": "839ab3d1-3101-47c4-bdf5-cbfc1c0e1e0f",
+            "code": "S000083",
+            "name": "梧桐",
+            "contact": "梧桐",
+            "email": "[REDACTED]",
+            "phone": "",
+            "country": "中国",
+            "cycle": "WEEKLY",
+            "customCycleDays": null,
+            "state": "APPROVED",
+            "profileReviewState": "APPROVED",
+            "enabled": true,
+            "version": 3,
+            "updatedAt": "2026-11-06T09:52:34.709785Z",
+            "supplierType": "INDIVIDUAL"
+          }
+        ],
+        "total": 1,
+        "page": 1,
+        "size": 100
+      }
+    },
+    "/notifications?unread=false&page=1&size=10": {
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": "963a13d9-e4dd-4d18-8e0b-02b5b226ec65",
+            "userId": "71ee6aa7-2ee8-4529-9c15-5f7aad481f9c",
+            "title": "供应商资料 · 状态已更新",
+            "body": "供应商资料 S000083 · 状态已更新。",
+            "eventType": "SUPPLIER_APPROVE",
+            "targetPath": "suppliers?id=839ab3d1-3101-47c4-bdf5-cbfc1c0e1e0f",
+            "targetPermission": "supplier.read",
+            "readAt": "2026-11-09T05:45:36.209304Z",
+            "createdAt": "2026-11-06T09:52:34.709785Z"
+          },
+          {
+            "id": "2a26c908-3f48-4d9c-986e-096f27ccd535",
+            "userId": "71ee6aa7-2ee8-4529-9c15-5f7aad481f9c",
+            "title": "项目报价 · 已退回",
+            "body": "报价 CCMAX-额度-CODING · 已退回。",
+            "eventType": "QUOTE_REJECT",
+            "targetPath": "quotes?id=82b25771-99d9-4d74-ac2a-a3679122360c",
+            "targetPermission": "quote.read",
+            "readAt": "2026-11-09T07:07:15.192511Z",
+            "createdAt": "2026-11-06T09:52:00.581861Z"
+          }
+        ],
+        "total": 2,
+        "page": 1,
+        "size": 10
+      }
+    },
+    "/notifications/unread-count": {
+      "status": 200,
+      "body": {
+        "count": 0
+      }
+    },
+    "/exchange-rates/current": {
+      "status": 200,
+      "body": [
+        {
+          "rate": "6.68",
+          "effectiveFrom": "2026-11-02T09:33:00Z",
+          "baseCurrency": "USD",
+          "enabled": true,
+          "version": 3,
+          "id": "a2b123fb-aabe-4ff8-99d8-04a745f17fdc",
+          "source": "平台维护",
+          "quoteCurrency": "CNY"
+        },
+        {
+          "rate": "1",
+          "effectiveFrom": "2026-10-30T16:00:00Z",
+          "baseCurrency": "USD",
+          "enabled": true,
+          "version": 1,
+          "id": "246d2da2-75ca-4097-b89a-2c40a37f5bc9",
+          "source": "平台维护",
+          "quoteCurrency": "USDT"
+        }
+      ]
+    },
+    "/resources/eligible-projects": {
+      "status": 200,
+      "body": []
+    },
+    "/resources/submission-capabilities": {
+      "status": 200,
+      "body": {
+        "allowCcmax": false,
+        "forceStopCcmaxIntake": false,
+        "allowCcmaxPause": false,
+        "allowCcmaxSafeRemoval": false
+      }
+    },
+    "/outbound-proxies/page?page=1&size=50&state=enabled&protocol=all": {
+      "status": 200,
+      "body": {
+        "items": [],
+        "total": 0,
+        "page": 1,
+        "size": 50
+      }
+    },
+    "/supplier-agents?page=1&size=20": {
+      "status": 200,
+      "body": [
+        {
+          "id": "29488753-d429-4766-885c-55fcd7d04856",
+          "username": "[REDACTED]",
+          "displayName": "AG45",
+          "enabled": true,
+          "version": 0,
+          "parentUserId": "71ee6aa7-2ee8-4529-9c15-5f7aad481f9c",
+          "projectIds": [],
+          "projects": []
+        }
+      ]
+    },
+    "/supplier-team-groups": {
+      "status": 200,
+      "body": [
+        {
+          "id": "1d2cc25d-61b5-4b99-9f90-09c3f11774ce",
+          "name": "交付组1",
+          "adminUserId": null,
+          "memberIds": [
+            "29488753-d429-4766-885c-55fcd7d04856"
+          ],
+          "version": 2,
+          "allowPro": true
+        }
+      ]
+    },
+    "/auth/profile": {
+      "status": 200,
+      "body": {
+        "username": "[REDACTED]",
+        "displayName": "王杰",
+        "version": 2,
+        "personalPhone": "",
+        "personalEmail": ""
+      }
+    },
+    "/auth/registration-policy": {
+      "status": 200,
+      "body": {
+        "requireLower": true,
+        "requireDigit": true,
+        "requireSymbol": true,
+        "passwordMaxLength": 64,
+        "passwordMinLength": 8,
+        "requireUpper": true
+      }
+    },
+    "/quotes/multiplier-bounds": {
+      "status": 200,
+      "body": {
+        "max": "1",
+        "min": "0"
+      }
+    },
+    "/deliveries?page=1&size=20": {
+      "status": 200,
+      "body": {
+        "items": [],
+        "total": 0,
+        "page": 1,
+        "size": 20
+      }
+    },
+    "/settlements?page=1&size=20": {
+      "status": 200,
+      "body": {
+        "items": [],
+        "total": 0,
+        "page": 1,
+        "size": 20
+      }
+    },
+    "/payments?page=1&size=20": {
+      "status": 200,
+      "body": {
+        "items": [],
+        "total": 0,
+        "page": 1,
+        "size": 20
+      }
+    },
+    "/reports/supplier-receivables?from=2026-06-01&to=2026-11-30&currency=&supplierId=&projectId=": {
+      "status": 200,
+      "body": {
+        "items": [],
+        "range": {
+          "from": "2026-06-01",
+          "to": "2026-11-30"
+        }
+      }
+    },
+    "/accounts?supplierId=839ab3d1-3101-47c4-bdf5-cbfc1c0e1e0f": {
+      "status": 200,
+      "body": []
+    },
+    "/suppliers/839ab3d1-3101-47c4-bdf5-cbfc1c0e1e0f": {
+      "status": 200,
+      "body": {
+        "id": "839ab3d1-3101-47c4-bdf5-cbfc1c0e1e0f",
+        "code": "S000083",
+        "name": "梧桐",
+        "registrationNo": "",
+        "contact": "[REDACTED]",
+        "email": "[REDACTED]",
+        "phone": "",
+        "country": "中国",
+        "cycle": "WEEKLY",
+        "customCycleDays": null,
+        "state": "APPROVED",
+        "profileReviewState": "APPROVED",
+        "enabled": true,
+        "pendingProfile": null,
+        "submittedBy": "71ee6aa7-2ee8-4529-9c15-5f7aad481f9c",
+        "reviewNote": "",
+        "version": 3,
+        "createdAt": "2026-11-06T08:47:40.117263Z",
+        "updatedAt": "2026-11-06T09:52:34.709785Z",
+        "supplierType": "INDIVIDUAL",
+        "linkedUsers": [
+          {
+            "id": "29488753-d429-4766-885c-55fcd7d04856",
+            "username": "[REDACTED]",
+            "displayName": "AG45",
+            "roleCode": null,
+            "supplierId": null,
+            "enabled": true,
+            "version": null,
+            "createdAt": null,
+            "roleName": null,
+            "supplierName": null,
+            "online": null
+          },
+          {
+            "id": "71ee6aa7-2ee8-4529-9c15-5f7aad481f9c",
+            "username": "[REDACTED]",
+            "displayName": "王杰",
+            "roleCode": null,
+            "supplierId": null,
+            "enabled": true,
+            "version": null,
+            "createdAt": null,
+            "roleName": null,
+            "supplierName": null,
+            "online": null
+          }
+        ]
+      }
+    },
+    "/documents?supplierId=839ab3d1-3101-47c4-bdf5-cbfc1c0e1e0f": {
+      "status": 200,
+      "body": []
+    },
+    "/quotes/82b25771-99d9-4d74-ac2a-a3679122360c": {
+      "status": 200,
+      "body": {
+        "id": "82b25771-99d9-4d74-ac2a-a3679122360c",
+        "code": "QT-82B25771",
+        "supplierId": "839ab3d1-3101-47c4-bdf5-cbfc1c0e1e0f",
+        "projectId": "eefb696d-aea8-4106-9495-e6e679bb1c13",
+        "itemCode": "PRJ-000013",
+        "title": "CCMAX-额度-CODING",
+        "unit": "额度面值",
+        "pricingType": "DISCOUNT",
+        "unitPrice": null,
+        "ratePercent": "27",
+        "multiplier": "0.27",
+        "currency": "USD",
+        "baseReference": "",
+        "taxInclusive": true,
+        "effectiveFrom": "2026-11-06",
+        "effectiveTo": "2026-11-30",
+        "state": "REJECTED",
+        "submittedBy": "71ee6aa7-2ee8-4529-9c15-5f7aad481f9c",
+        "reviewedBy": "68380ebc-2f5b-4e15-9f97-2f4ff75c3ec4",
+        "reviewNote": "目前价格不在考虑范围内 ，如果方便可以先留联系方式，后续有新任务可告知",
+        "serviceCapacityNote": "",
+        "createdAt": "2026-11-06T08:53:18.885716Z",
+        "priceVersionId": "82b25771-99d9-4d74-ac2a-a3679122360c",
+        "priceEffectiveAt": "2026-11-05T16:00:00Z",
+        "settlementMethod": "QUOTA",
+        "deliveryMethod": "KEY",
+        "capacityType": "ACCOUNT_COUNT",
+        "capacityScope": "TOTAL",
+        "capacityPeriod": null,
+        "capacityCurrency": null,
+        "accountCount": "50",
+        "accountQuota": null,
+        "rpm": null,
+        "tpm": null,
+        "supplierName": "梧桐",
+        "projectName": "CCMAX-额度-CODING",
+        "priceHistory": [
+          {
+            "id": "82b25771-99d9-4d74-ac2a-a3679122360c",
+            "changeId": null,
+            "unitPrice": null,
+            "ratePercent": "27",
+            "multiplier": "0.27",
+            "effectiveAt": "2026-11-05T16:00:00Z",
+            "approvedAt": null
+          }
+        ],
+        "renewalHistory": []
+      }
+    },
+    "/projects/category-codes": {
+      "status": 200,
+      "body": [
+        {
+          "code": "AWS-BEDROCK",
+          "name": "AWS Bedrock",
+          "enabled": true,
+          "version": 0,
+          "projectCount": 2,
+          "updatedAt": "2026-09-16T09:45:51.894292Z"
+        },
+        {
+          "code": "ANTHROPIC",
+          "name": "Anthropic",
+          "enabled": true,
+          "version": 0,
+          "projectCount": 3,
+          "updatedAt": "2026-09-16T09:45:51.894292Z"
+        },
+        {
+          "code": "AZURE",
+          "name": "Azure",
+          "enabled": true,
+          "version": 0,
+          "projectCount": 7,
+          "updatedAt": "2026-09-16T09:45:51.894292Z"
+        },
+        {
+          "code": "GEMINI",
+          "name": "Gemini",
+          "enabled": true,
+          "version": 0,
+          "projectCount": 2,
+          "updatedAt": "2026-10-30T15:09:00.533112Z"
+        },
+        {
+          "code": "GROK",
+          "name": "Grok",
+          "enabled": true,
+          "version": 0,
+          "projectCount": 0,
+          "updatedAt": "2026-09-16T09:45:51.894292Z"
+        },
+        {
+          "code": "KIMI",
+          "name": "Kimi",
+          "enabled": true,
+          "version": 0,
+          "projectCount": 0,
+          "updatedAt": "2026-09-16T09:45:51.894292Z"
+        },
+        {
+          "code": "OPENAI",
+          "name": "Openai",
+          "enabled": true,
+          "version": 0,
+          "projectCount": 3,
+          "updatedAt": "2026-09-16T09:45:51.894292Z"
+        },
+        {
+          "code": "OPENROUTER",
+          "name": "Openrouter",
+          "enabled": true,
+          "version": 0,
+          "projectCount": 2,
+          "updatedAt": "2026-10-23T07:45:09.751676Z"
+        }
+      ]
+    },
+    "/projects/categories": {
+      "status": 200,
+      "body": [
+        "ANTHROPIC",
+        "AWS-BEDROCK",
+        "AZURE",
+        "GEMINI",
+        "OPENAI",
+        "OPENROUTER"
+      ]
+    },
+    "/cc-intake/mine": {
+      "status": 200,
+      "body": {
+        "date": "2026-11-09",
+        "total": 0,
+        "pro": 0,
+        "nonPro": 0,
+        "unknown": 0,
+        "processing": 0,
+        "proAllowance": {
+          "limit": null,
+          "used": 0,
+          "remaining": null,
+          "source": "S",
+          "groupId": null,
+          "reclaimed": false,
+          "reservedRemaining": 0
+        },
+        "nonProAllowance": {
+          "limit": null,
+          "used": 0,
+          "remaining": null,
+          "source": "S",
+          "groupId": null,
+          "reclaimed": false,
+          "reservedRemaining": 0
+        },
+        "canPro": false,
+        "accepting": false,
+        "proBlockReason": "SUPPLIER_DISABLED",
+        "nonProBlockReason": "SUPPLIER_DISABLED"
+      }
+    },
+    "/supplier-bills/filters?from=2026-11-09&to=2026-11-09&department=": {
+      "status": 200,
+      "body": {
+        "creators": [],
+        "groupAdmin": false,
+        "groupName": "",
+        "projects": [],
+        "resourceTypes": [],
+        "departments": [
+          {
+            "label": "交付组1",
+            "value": "1d2cc25d-61b5-4b99-9f90-09c3f11774ce"
+          }
+        ],
+        "summaryUpdating": false,
+        "summaryAsOf": null
+      }
+    },
+    "/supplier-bills/days?from=2026-11-09&to=2026-11-09&page=1&size=20": {
+      "status": 200,
+      "body": {
+        "page": 1,
+        "size": 20,
+        "items": [],
+        "totals": [],
+        "total": 0,
+        "summaryUpdating": false,
+        "summaryAsOf": null
+      }
+    },
+    "/supplier-bills/departments?from=2026-11-09&to=2026-11-09&page=1&size=20": {
+      "status": 200,
+      "body": {
+        "page": 1,
+        "size": 20,
+        "items": [],
+        "totals": [],
+        "total": 0,
+        "summaryUpdating": false,
+        "summaryAsOf": null
+      }
+    },
+    "/resources/summary": {
+      "status": 200,
+      "body": []
+    },
+    "/resources/creator-summary": {
+      "status": 200,
+      "body": []
+    },
+    "/settlements/summary?currency=": {
+      "status": 200,
+      "body": {
+        "confirmedCount": 0,
+        "outstanding": "0.00",
+        "total": "0.00",
+        "pendingCount": 0,
+        "pendingTotal": "0.00",
+        "paid": "0.00",
+        "unsettledPayable": "0",
+        "received": "0.00",
+        "currency": "USD"
+      }
+    },
+    "/settlements/pending-summary": {
+      "status": 200,
+      "body": {
+        "currency": "USD",
+        "pendingCount": 0,
+        "pendingTotal": "0.00"
+      }
+    },
+    "/exchange-rates?page=1&size=20": {
+      "status": 403,
+      "body": {
+        "status": 403,
+        "message": "没有执行此操作的权限",
+        "traceId": "7e4cd5c0-9f37-4a0f-be94-72b52955f0f9"
+      }
+    },
+    "/auth/api-tokens": {
+      "status": 200,
+      "body": []
+    }
+  }
+}

@@ -1,0 +1,574 @@
+{
+  "coverageDeclaration": "供应商/公共页面有线上截图基线；管理员及成员没有线上账号，视觉基线缺失，报告必须标记为未做像素对照，不能据本地DOM检查认定1:1合格。",
+  "originalAdminRouteEstimate": 23,
+  "actualDistinctAdminRoutes": 25,
+  "pages": [
+    {
+      "role": "SUPPLIER",
+      "route": "workbench",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "source-live-paired-screenshot",
+      "sourceVisualBaseline": true,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER",
+      "route": "quotes",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "source-live-paired-screenshot",
+      "sourceVisualBaseline": true,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER",
+      "route": "settlements?tab=daily",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "source-live-paired-screenshot",
+      "sourceVisualBaseline": true,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER",
+      "route": "settlements?tab=departments",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "source-live-paired-screenshot",
+      "sourceVisualBaseline": true,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER",
+      "route": "settlements?tab=statements",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "source-live-paired-screenshot",
+      "sourceVisualBaseline": true,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER",
+      "route": "settlements?tab=payments",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "source-live-paired-screenshot",
+      "sourceVisualBaseline": true,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER",
+      "route": "settlements?tab=rates",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "source-live-paired-screenshot",
+      "sourceVisualBaseline": true,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER",
+      "route": "deliveries",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "source-live-paired-screenshot",
+      "sourceVisualBaseline": true,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER",
+      "route": "deliveries-pending",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "source-live-paired-screenshot",
+      "sourceVisualBaseline": true,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER",
+      "route": "outbound-proxies",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "source-live-paired-screenshot",
+      "sourceVisualBaseline": true,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER",
+      "route": "supplier-agents",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "source-live-paired-screenshot",
+      "sourceVisualBaseline": true,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER",
+      "route": "reports",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "source-live-paired-screenshot",
+      "sourceVisualBaseline": true,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER",
+      "route": "api-docs",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "source-live-paired-screenshot",
+      "sourceVisualBaseline": true,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER",
+      "route": "suppliers",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "source-live-paired-screenshot",
+      "sourceVisualBaseline": true,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "workbench",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "suppliers",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "operator-kpi",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "supplier-accounts",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "projects",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "quotes",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "settlements",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "resources",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "resources-pending",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "outbound-proxies",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "resource-targets",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "ccmax-resource-analysis",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "reports",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "notifications",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "api-docs",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "notice-admin",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "users",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "roles",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "audits",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "settings",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "scheduled-tasks",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "scheduled-task-runs",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "payout-providers",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "payout-recipients",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "payout-calls",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "settlements?tab=daily",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "settlements?tab=statements",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "settlements?tab=inputs",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "settlements?tab=payments",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "ADMIN",
+      "route": "settlements?tab=rates",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER_AGENT",
+      "route": "workbench",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER_AGENT",
+      "route": "deliveries",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER_AGENT",
+      "route": "deliveries-pending",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned",
+      "requiredPermission": "resource.intake.manage"
+    },
+    {
+      "role": "SUPPLIER_AGENT",
+      "route": "outbound-proxies",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER_AGENT",
+      "route": "settlements?tab=daily",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER_AGENT_GROUP_ADMIN",
+      "route": "workbench",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER_AGENT_GROUP_ADMIN",
+      "route": "deliveries",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER_AGENT_GROUP_ADMIN",
+      "route": "deliveries-pending",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned",
+      "requiredPermission": "resource.intake.manage"
+    },
+    {
+      "role": "SUPPLIER_AGENT_GROUP_ADMIN",
+      "route": "outbound-proxies",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER_AGENT_GROUP_ADMIN",
+      "route": "settlements?tab=daily",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER_AGENT_GROUP_ADMIN",
+      "route": "settlements?tab=departments",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER_AGENT_GROUP_ADMIN",
+      "route": "supplier-agents",
+      "viewport": 1920,
+      "height": 1000,
+      "baseline": "recovered-source+local-dom-structural",
+      "sourceVisualBaseline": false,
+      "status": "planned"
+    },
+    {
+      "role": "PUBLIC",
+      "route": "login",
+      "viewport": 390,
+      "height": 844,
+      "baseline": "source-live-paired-screenshot",
+      "sourceVisualBaseline": true,
+      "status": "planned"
+    },
+    {
+      "role": "PUBLIC",
+      "route": "register",
+      "viewport": 390,
+      "height": 844,
+      "baseline": "source-live-paired-screenshot",
+      "sourceVisualBaseline": true,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER",
+      "route": "workbench",
+      "viewport": 390,
+      "height": 844,
+      "baseline": "source-live-paired-screenshot",
+      "sourceVisualBaseline": true,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER",
+      "route": "quotes",
+      "viewport": 390,
+      "height": 844,
+      "baseline": "source-live-paired-screenshot",
+      "sourceVisualBaseline": true,
+      "status": "planned"
+    },
+    {
+      "role": "SUPPLIER",
+      "route": "navigation",
+      "viewport": 390,
+      "height": 844,
+      "baseline": "source-live-paired-screenshot",
+      "sourceVisualBaseline": true,
+      "status": "planned"
+    }
+  ],
+  "pendingDesktopDialogs": [
+    "SUPPLIER 新增报价行",
+    "SUPPLIER 新增代理",
+    "SUPPLIER 个人信息",
+    "ADMIN 新增供应商",
+    "ADMIN 角色权限编辑",
+    "ADMIN 定时任务配置"
+  ],
+  "runtimeChecks": [
+    "No Vue render error/unhandled rejection",
+    "No API GET unexpectedly returns 404 or wrong response shape",
+    "Server rejects forbidden cross-role/cross-supplier operations",
+    "Member teamAdminGroup controls department/team menus",
+    "Role-aware visible routes match recovered shell"
+  ],
+  "status": "Awaiting backend ADMIN/member seed readiness"
+}

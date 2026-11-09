@@ -1,0 +1,10 @@
+import fs from 'node:fs/promises';
+const root='/Users/yukaijun/account-booster/hispread-ai/ui-review/five-role';
+const summary=JSON.parse(await fs.readFile(root+'/summary.json','utf8'));
+const totals=summary.roles.reduce((s,r)=>({routes:s.routes+r.routes,allowed:s.allowed+r.allowed,denied:s.denied+r.denied,errors:s.errors+r.runtimeErrors.length,failed:s.failed+r.failedRequests.length,dialogs:s.dialogs+r.dialogs.filter(d=>d.status==='opened').length,mismatches:s.mismatches+r.accessMismatches.length}),{routes:0,allowed:0,denied:0,errors:0,failed:0,dialogs:0,mismatches:0});
+let html=await fs.readFile(root+'/report.html','utf8');
+const banner=`<section style="margin:18px;padding:22px;border:2px solid #b45309;background:#fffbeb;color:#78350f;border-radius:12px;font:14px/1.8 system-ui"><h2 style="margin:0 0 8px">OPERATOR / FINANCE 本地角色验收</h2><p><b>无线上运营或财务账号，本报告不计算像素一致度，不判定视觉还原通过。</b>原60视图配对报告保持在上级目录。</p><p>真实浏览器验证 ${totals.routes} 个路由场景，${totals.allowed} 可达 / ${totals.denied} 权限拒绝；权限预期不一致 ${totals.mismatches}；runtime错误 ${totals.errors}；失败页面GET ${totals.failed}；已打开 ${totals.dialogs} 个本地菜单/新增/审核弹层。</p><p>账号权限按本地 RolePolicy 默认策略，原始证据只提供权限码和前端分支，未提供生产内置角色授权分配。菜单与页面继续复用 supplierId+permissions 判断。</p><p>截图输入无DOM，因此技能脚本的结构0项不能解释为0缺陷。真实导航、按钮、GET与403写权限检查见 <a href="../../docs/five-role-browser-qa.json">five-role-browser-qa.json</a>；<a href="summary.json">本报告机器摘要</a>。</p></section>`;
+html=html.replace(/<body([^>]*)>/i,m=>m+banner);
+await fs.writeFile(root+'/report.html',html);
+let fix=await fs.readFile(root+'/fix-task.md','utf8');fix=fix.replace(/overall_score:.*\n/,'overall_score: null\n').replace(/verdict:.*\n/,'verdict: not-assessed-no-online-visual-baseline\n');fix=fix.replace(/(# UI 整改任务书[^\n]*\n)/,'$1\n> 本报告所有页面均为本地角色截图，无线上视觉基线，不提供像素分或视觉通过结论。真实DOM/runtime/权限检查详见 docs/five-role-browser-qa.json；结构0项仅表示截图输入没有DOM。\n');await fs.writeFile(root+'/fix-task.md',fix);
+console.log({annotated:true,totals});

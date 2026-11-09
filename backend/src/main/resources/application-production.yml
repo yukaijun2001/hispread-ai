@@ -1,0 +1,15 @@
+server:
+  tomcat:
+    max-http-form-post-size: 2MB
+    max-swallow-size: 12MB
+spring:
+  datasource:
+    username: ${DATABASE_USER:hispread}
+  session:
+    timeout: ${SESSION_TIMEOUT:8h}
+app:
+  bootstrap-mode: production
+logging:
+  level:
+    root: INFO
+    org.springframework.web: WARN

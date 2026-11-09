@@ -1,0 +1,1293 @@
+{
+  "basis": "Read actual recovered Vue frontend request sites and backend controller implementation; private original backend unavailable",
+  "files": [
+    {
+      "file": "frontend/src/recovered/DailyAccounting-z_8v-GqX.js",
+      "bytes": 28198,
+      "lines": 745
+    },
+    {
+      "file": "frontend/src/recovered/SettlementManagement-DAgYDp-f.js",
+      "bytes": 28671,
+      "lines": 811
+    },
+    {
+      "file": "frontend/src/recovered/ApprovedQuoteRejection-7MD8D-Rd.js",
+      "bytes": 2866,
+      "lines": 104
+    },
+    {
+      "file": "frontend/src/recovered/SettlementDetail-B_4PzTZg.js",
+      "bytes": 16846,
+      "lines": 431
+    },
+    {
+      "file": "frontend/src/recovered/PaymentForm-DYdHXH-C.js",
+      "bytes": 6949,
+      "lines": 196
+    },
+    {
+      "file": "frontend/src/recovered/DailyExports-q6_gv_XE.js",
+      "bytes": 20254,
+      "lines": 549
+    },
+    {
+      "file": "frontend/src/recovered/QuoteRankingResults-cj8V1Hgu.js",
+      "bytes": 3734,
+      "lines": 113
+    },
+    {
+      "file": "frontend/src/recovered/Quotes-BL6CyQ42.js",
+      "bytes": 46713,
+      "lines": 1180
+    },
+    {
+      "file": "frontend/src/recovered/SettlementInputs-CZ-QKlwM.js",
+      "bytes": 11300,
+      "lines": 347
+    },
+    {
+      "file": "frontend/src/recovered/PaymentsTab-c0WtyzS3.js",
+      "bytes": 23783,
+      "lines": 679
+    },
+    {
+      "file": "frontend/src/recovered/OperatorKpi-NouSWERW.js",
+      "bytes": 6980,
+      "lines": 242
+    },
+    {
+      "file": "frontend/src/recovered/ExchangeRatesTab-FzGMcdR6.js",
+      "bytes": 5436,
+      "lines": 178
+    },
+    {
+      "file": "frontend/src/recovered/SettlementBatch-C6NFYAZd.js",
+      "bytes": 25853,
+      "lines": 613
+    },
+    {
+      "file": "frontend/src/recovered/Reports-ChHNVTLt.js",
+      "bytes": 18128,
+      "lines": 626
+    },
+    {
+      "file": "frontend/src/recovered/QuotePeriodPanel-D3BWLIuY.js",
+      "bytes": 8342,
+      "lines": 254
+    },
+    {
+      "file": "frontend/src/recovered/SettlementPreview-CEv04HyA.js",
+      "bytes": 7678,
+      "lines": 234
+    }
+  ],
+  "frontendCalls": [
+    {
+      "file": "DailyAccounting-z_8v-GqX.js",
+      "line": 53,
+      "pathExpression": "/accounting/daily/exports?page=1&type=&state="
+    },
+    {
+      "file": "DailyAccounting-z_8v-GqX.js",
+      "line": 183,
+      "pathExpression": "/accounting/daily?${ce}"
+    },
+    {
+      "file": "DailyAccounting-z_8v-GqX.js",
+      "line": 183,
+      "pathExpression": "/accounting/daily/summary?${H}"
+    },
+    {
+      "file": "DailyAccounting-z_8v-GqX.js",
+      "line": 183,
+      "pathExpression": "/accounting/daily/groups?${H}&page=${L}&size=${z}&groupBy=${j==="
+    },
+    {
+      "file": "DailyAccounting-z_8v-GqX.js",
+      "line": 187,
+      "pathExpression": "/projects?page=1&size=100"
+    },
+    {
+      "file": "SettlementManagement-DAgYDp-f.js",
+      "line": 222,
+      "pathExpression": "/settlements/summary?currency="
+    },
+    {
+      "file": "SettlementManagement-DAgYDp-f.js",
+      "line": 226,
+      "pathExpression": "/settlements/pending-summary?${dt}"
+    },
+    {
+      "file": "SettlementManagement-DAgYDp-f.js",
+      "line": 228,
+      "pathExpression": "/settlements?${z}&page=${Ue}&size=${We}"
+    },
+    {
+      "file": "SettlementManagement-DAgYDp-f.js",
+      "line": 252,
+      "pathExpression": "/projects?size=100"
+    },
+    {
+      "file": "SettlementManagement-DAgYDp-f.js",
+      "line": 754,
+      "pathExpression": "/settlements/preview"
+    },
+    {
+      "file": "SettlementManagement-DAgYDp-f.js",
+      "line": 769,
+      "pathExpression": "/settlements/preview?page=${e}&size=${t}"
+    },
+    {
+      "file": "SettlementManagement-DAgYDp-f.js",
+      "line": 775,
+      "pathExpression": "/settlements"
+    },
+    {
+      "file": "ApprovedQuoteRejection-7MD8D-Rd.js",
+      "line": 23,
+      "pathExpression": "/quotes/${encodeURIComponent(n.id)}"
+    },
+    {
+      "file": "ApprovedQuoteRejection-7MD8D-Rd.js",
+      "line": 42,
+      "pathExpression": "/quotes/${encodeURIComponent(n.id)}/reject-approved"
+    },
+    {
+      "file": "SettlementDetail-B_4PzTZg.js",
+      "line": 58,
+      "pathExpression": "/settlements/${i}?page=${P}&size=${I}"
+    },
+    {
+      "file": "SettlementDetail-B_4PzTZg.js",
+      "line": 282,
+      "pathExpression": "/settlements/${i}/confirm"
+    },
+    {
+      "file": "SettlementDetail-B_4PzTZg.js",
+      "line": 300,
+      "pathExpression": "/settlements/${i}/void"
+    },
+    {
+      "file": "SettlementDetail-B_4PzTZg.js",
+      "line": 321,
+      "pathExpression": "/settlements/${i}/withdraw"
+    },
+    {
+      "file": "SettlementDetail-B_4PzTZg.js",
+      "line": 418,
+      "pathExpression": "/settlements/${t.id}/adjustments"
+    },
+    {
+      "file": "PaymentForm-DYdHXH-C.js",
+      "line": 36,
+      "pathExpression": "/exchange-rates/current"
+    },
+    {
+      "file": "PaymentForm-DYdHXH-C.js",
+      "line": 36,
+      "pathExpression": "/payments/providers"
+    },
+    {
+      "file": "PaymentForm-DYdHXH-C.js",
+      "line": 176,
+      "pathExpression": "/payments/offline"
+    },
+    {
+      "file": "PaymentForm-DYdHXH-C.js",
+      "line": 181,
+      "pathExpression": "/payments"
+    },
+    {
+      "file": "DailyExports-q6_gv_XE.js",
+      "line": 36,
+      "pathExpression": "/accounting/daily/exports"
+    },
+    {
+      "file": "QuoteRankingResults-cj8V1Hgu.js",
+      "line": 40,
+      "pathExpression": "/quotes/ranking?projectId=${encodeURIComponent(r.id)}&currency=${encodeURIComponent(i)}&onDate=${encodeURIComponent(l)}&sortBy=${y}&sortDirection=${x}"
+    },
+    {
+      "file": "Quotes-BL6CyQ42.js",
+      "line": 143,
+      "pathExpression": "/quotes?${lt.toString()}"
+    },
+    {
+      "file": "Quotes-BL6CyQ42.js",
+      "line": 143,
+      "pathExpression": "/projects?size=100"
+    },
+    {
+      "file": "Quotes-BL6CyQ42.js",
+      "line": 143,
+      "pathExpression": "/exchange-rates/current"
+    },
+    {
+      "file": "Quotes-BL6CyQ42.js",
+      "line": 143,
+      "pathExpression": "/quotes/multiplier-bounds"
+    },
+    {
+      "file": "Quotes-BL6CyQ42.js",
+      "line": 155,
+      "pathExpression": "/quotes/"
+    },
+    {
+      "file": "Quotes-BL6CyQ42.js",
+      "line": 164,
+      "pathExpression": "/quotes/"
+    },
+    {
+      "file": "Quotes-BL6CyQ42.js",
+      "line": 181,
+      "pathExpression": "/quotes/${encodeURIComponent(t.id)}"
+    },
+    {
+      "file": "Quotes-BL6CyQ42.js",
+      "line": 197,
+      "pathExpression": "/quotes/${encodeURIComponent(t.id)}"
+    },
+    {
+      "file": "Quotes-BL6CyQ42.js",
+      "line": 300,
+      "pathExpression": "/quotes/${e.id}"
+    },
+    {
+      "file": "Quotes-BL6CyQ42.js",
+      "line": 300,
+      "pathExpression": "/quotes"
+    },
+    {
+      "file": "Quotes-BL6CyQ42.js",
+      "line": 1122,
+      "pathExpression": "/quotes/${M.id}/review"
+    },
+    {
+      "file": "Quotes-BL6CyQ42.js",
+      "line": 1157,
+      "pathExpression": "/quotes/${M.id}/withdraw"
+    },
+    {
+      "file": "SettlementInputs-CZ-QKlwM.js",
+      "line": 48,
+      "pathExpression": "/settlement-inputs?search=${encodeURIComponent(c)}&state=${O}&page=${b}&size=${E}"
+    },
+    {
+      "file": "SettlementInputs-CZ-QKlwM.js",
+      "line": 215,
+      "pathExpression": "/settlement-inputs/${A.id}/void"
+    },
+    {
+      "file": "SettlementInputs-CZ-QKlwM.js",
+      "line": 327,
+      "pathExpression": "/settlement-inputs/manual-direct"
+    },
+    {
+      "file": "SettlementInputs-CZ-QKlwM.js",
+      "line": 327,
+      "pathExpression": "/settlement-inputs/manual"
+    },
+    {
+      "file": "SettlementInputs-CZ-QKlwM.js",
+      "line": 327,
+      "pathExpression": "/settlement-inputs"
+    },
+    {
+      "file": "PaymentsTab-c0WtyzS3.js",
+      "line": 134,
+      "pathExpression": "/payments/providers"
+    },
+    {
+      "file": "PaymentsTab-c0WtyzS3.js",
+      "line": 138,
+      "pathExpression": "/payments/${e.id}/reconcile"
+    },
+    {
+      "file": "PaymentsTab-c0WtyzS3.js",
+      "line": 209,
+      "pathExpression": "/payments/${e.id}/execute"
+    },
+    {
+      "file": "PaymentsTab-c0WtyzS3.js",
+      "line": 212,
+      "pathExpression": "/payments/${e.id}/payout-preview"
+    },
+    {
+      "file": "PaymentsTab-c0WtyzS3.js",
+      "line": 252,
+      "pathExpression": "/payments/${e.id}/execute"
+    },
+    {
+      "file": "PaymentsTab-c0WtyzS3.js",
+      "line": 293,
+      "pathExpression": "/payments/sandbox/events"
+    },
+    {
+      "file": "PaymentsTab-c0WtyzS3.js",
+      "line": 316,
+      "pathExpression": "/payments?page=${T}&size=${D}&settlementId=${encodeURIComponent(c)}"
+    },
+    {
+      "file": "PaymentsTab-c0WtyzS3.js",
+      "line": 319,
+      "pathExpression": "/payments/"
+    },
+    {
+      "file": "PaymentsTab-c0WtyzS3.js",
+      "line": 328,
+      "pathExpression": "/payments/"
+    },
+    {
+      "file": "PaymentsTab-c0WtyzS3.js",
+      "line": 477,
+      "pathExpression": "/payments/${j.id}/review"
+    },
+    {
+      "file": "PaymentsTab-c0WtyzS3.js",
+      "line": 541,
+      "pathExpression": "/payments/${j.id}/receipt"
+    },
+    {
+      "file": "PaymentsTab-c0WtyzS3.js",
+      "line": 572,
+      "pathExpression": "/payments/${j.id}/close"
+    },
+    {
+      "file": "PaymentsTab-c0WtyzS3.js",
+      "line": 590,
+      "pathExpression": "/settlements/${encodeURIComponent(e.settlementId)}"
+    },
+    {
+      "file": "PaymentsTab-c0WtyzS3.js",
+      "line": 633,
+      "pathExpression": "/payments/${e.id}/offline-record"
+    },
+    {
+      "file": "OperatorKpi-NouSWERW.js",
+      "line": 44,
+      "pathExpression": "/suppliers/owner-candidates?includeHistory=true"
+    },
+    {
+      "file": "OperatorKpi-NouSWERW.js",
+      "line": 44,
+      "pathExpression": "/suppliers?search=${encodeURIComponent(S)}&owner=${encodeURIComponent(w)}&page=${E}&size=${O}"
+    },
+    {
+      "file": "OperatorKpi-NouSWERW.js",
+      "line": 44,
+      "pathExpression": "/reports/operator-kpi?month=${A}&currency=${M}&owner=${encodeURIComponent(P)}&page=${I}&size=${R}"
+    },
+    {
+      "file": "OperatorKpi-NouSWERW.js",
+      "line": 44,
+      "pathExpression": "/reports/operator-kpi/lines?month=${A}&currency=${K.currency}&ownerUserId=${K.ownerUserId||"
+    },
+    {
+      "file": "ExchangeRatesTab-FzGMcdR6.js",
+      "line": 31,
+      "pathExpression": "/exchange-rates?search=${encodeURIComponent(b)}&page=${S}&size=${w}"
+    },
+    {
+      "file": "ExchangeRatesTab-FzGMcdR6.js",
+      "line": 31,
+      "pathExpression": "/exchange-rates/current"
+    },
+    {
+      "file": "ExchangeRatesTab-FzGMcdR6.js",
+      "line": 151,
+      "pathExpression": "/exchange-rates"
+    },
+    {
+      "file": "ExchangeRatesTab-FzGMcdR6.js",
+      "line": 167,
+      "pathExpression": "/exchange-rates/${O.id}/enabled"
+    },
+    {
+      "file": "SettlementBatch-C6NFYAZd.js",
+      "line": 180,
+      "pathExpression": "/settlement-batches/candidates?periodStart=${w}&periodEnd=${T}"
+    },
+    {
+      "file": "SettlementBatch-C6NFYAZd.js",
+      "line": 180,
+      "pathExpression": "/settlement-batches?view=${_e}"
+    },
+    {
+      "file": "SettlementBatch-C6NFYAZd.js",
+      "line": 186,
+      "pathExpression": "/settlement-batches/${j.id}"
+    },
+    {
+      "file": "SettlementBatch-C6NFYAZd.js",
+      "line": 247,
+      "pathExpression": "/settlement-batches/${t}"
+    },
+    {
+      "file": "SettlementBatch-C6NFYAZd.js",
+      "line": 383,
+      "pathExpression": "/settlement-batches/${j.id}/start"
+    },
+    {
+      "file": "SettlementBatch-C6NFYAZd.js",
+      "line": 390,
+      "pathExpression": "/settlement-batches/${j.id}/retry-preview"
+    },
+    {
+      "file": "SettlementBatch-C6NFYAZd.js",
+      "line": 576,
+      "pathExpression": "/settlement-batches/preview"
+    },
+    {
+      "file": "SettlementBatch-C6NFYAZd.js",
+      "line": 597,
+      "pathExpression": "/settlement-batches/${j.id}/items/${N}/preview?page=${t}&size=${n}"
+    },
+    {
+      "file": "Reports-ChHNVTLt.js",
+      "line": 148,
+      "pathExpression": "/projects?enabled=true&page=1&size=100"
+    },
+    {
+      "file": "Reports-ChHNVTLt.js",
+      "line": 151,
+      "pathExpression": "/reports/overview?${Q}"
+    },
+    {
+      "file": "Reports-ChHNVTLt.js",
+      "line": 151,
+      "pathExpression": "/reports/monthly-payables?${Q}"
+    },
+    {
+      "file": "Reports-ChHNVTLt.js",
+      "line": 151,
+      "pathExpression": "/reports/supplier-receivables?${Q}"
+    },
+    {
+      "file": "Reports-ChHNVTLt.js",
+      "line": 179,
+      "pathExpression": "/reports/settlements?${i.toString()}"
+    },
+    {
+      "file": "QuotePeriodPanel-D3BWLIuY.js",
+      "line": 52,
+      "pathExpression": "/quotes/${encodeURIComponent(n.id)}/period-change"
+    },
+    {
+      "file": "QuotePeriodPanel-D3BWLIuY.js",
+      "line": 121,
+      "pathExpression": "/quotes/${encodeURIComponent(n.id)}/period-change"
+    },
+    {
+      "file": "QuotePeriodPanel-D3BWLIuY.js",
+      "line": 157,
+      "pathExpression": "/quotes/${encodeURIComponent(n.id)}/period-change/review"
+    }
+  ],
+  "missingMap": [
+    {
+      "area": "quote ranking",
+      "before": "APPROVED rows unsorted; onDate ignored for price; no rank",
+      "implementation": "historical price projection, active-date/supplier filtering, decimal price/capacity sort and rank"
+    },
+    {
+      "area": "daily accounting",
+      "before": "reviewStatus/model/sort and grouped fields incomplete",
+      "implementation": "align actual frontend filters and aggregate shape before paging"
+    },
+    {
+      "area": "exports",
+      "before": "durable bytes exist; requestKey changed payload not rejected and filter labels/source snapshot incomplete",
+      "implementation": "canonical request fingerprint, immutable values/headers, filterLabels and totals snapshot"
+    },
+    {
+      "area": "settlement batches",
+      "before": "only PREVIEW retries after COMPLETED; failed items swallowed, partial writes within parent transaction possible",
+      "implementation": "snapshot-preserving failure visibility, per-item savepoints and retry all/failed states"
+    },
+    {
+      "area": "rates",
+      "before": "all newly-created versions 0 despite frontend incremental-version promise",
+      "implementation": "per-pair version sequencing plus effective-time selection"
+    },
+    {
+      "area": "operator KPI",
+      "before": "PlatformConfigController empty generic entity list",
+      "implementation": "FinancialReportService actual confirmed-settlement owner/month/currency aggregation, owner delegates"
+    },
+    {
+      "area": "external payments",
+      "before": "unconfigured external 503",
+      "implementation": "retain truthful default; documented capability boundary, no invented provider URL or success"
+    },
+    {
+      "area": "manual source historical pricing and idempotency",
+      "before": "used latest/base quote multiplier for historical amount and skipped conflicting sourceRef silently",
+      "implementation": "read reviewed price effective at period end; reject crossing reviewed price changes with409; same sourceRef same payload skips, changed payload409"
+    }
+  ],
+  "babelInventoryCalls": [
+    {
+      "module": "ApprovedQuoteRejection-7MD8D-Rd.js",
+      "line": 23,
+      "method": "GET",
+      "path": "/quotes/{encodeURIComponent(n.id)}",
+      "expression": "`/quotes/${encodeURIComponent(n.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ApprovedQuoteRejection-7MD8D-Rd.js",
+      "line": 42,
+      "method": "POST",
+      "path": "/quotes/{encodeURIComponent(n.id)}/reject-approved",
+      "expression": "`/quotes/${encodeURIComponent(n.id)}/reject-approved`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 53,
+      "method": "GET",
+      "path": "/accounting/daily/exports?page=1&type=&state=",
+      "expression": "`/accounting/daily/exports?page=1&type=&state=`",
+      "dynamic": false
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 66,
+      "method": "GET",
+      "path": null,
+      "expression": "n => ({\n    type: e,\n    sequence: (n?.sequence || 0) + 1,\n    scope: {\n      filter: {\n        ...t.filter\n      },\n      supplierName: t.supplierName,\n      projectName: t.projectName\n    }\n  })",
+      "dynamic": true
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 183,
+      "method": "GET",
+      "path": null,
+      "expression": "j === `detail` ? `/accounting/daily?${ce}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 183,
+      "method": "GET",
+      "path": "/accounting/daily/summary?{H}",
+      "expression": "`/accounting/daily/summary?${H}`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 183,
+      "method": "GET",
+      "path": null,
+      "expression": "j === `detail` ? null : `/accounting/daily/groups?${H}&page=${L}&size=${z}&groupBy=${j===`supplier`?`SUPPLIER`:`DAY`}${le}`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 187,
+      "method": "GET",
+      "path": null,
+      "expression": "a(`project.read`) ? `/projects?page=1&size=100` : null",
+      "dynamic": true
+    },
+    {
+      "module": "DailyExports-q6_gv_XE.js",
+      "line": 82,
+      "method": "GET",
+      "path": null,
+      "expression": "`${y}?${t}`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyExports-q6_gv_XE.js",
+      "line": 102,
+      "method": "POST",
+      "path": null,
+      "expression": "`${y}/estimate`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyExports-q6_gv_XE.js",
+      "line": 129,
+      "method": "POST",
+      "path": "/accounting/daily/exports",
+      "expression": "y",
+      "dynamic": false
+    },
+    {
+      "module": "DailyExports-q6_gv_XE.js",
+      "line": 145,
+      "method": "POST",
+      "path": null,
+      "expression": "`${y}/${e.id}/cancel`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyExports-q6_gv_XE.js",
+      "line": 156,
+      "method": "GET",
+      "path": null,
+      "expression": "`${y}/${t.id}/preview`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyExports-q6_gv_XE.js",
+      "line": 166,
+      "method": "GET",
+      "path": null,
+      "expression": "`${y}/${t.id}`",
+      "dynamic": true
+    },
+    {
+      "module": "ExchangeRatesTab-FzGMcdR6.js",
+      "line": 31,
+      "method": "GET",
+      "path": null,
+      "expression": "i ? null : `/exchange-rates?search=${encodeURIComponent(b)}&page=${S}&size=${w}`",
+      "dynamic": true
+    },
+    {
+      "module": "ExchangeRatesTab-FzGMcdR6.js",
+      "line": 31,
+      "method": "GET",
+      "path": null,
+      "expression": "i ? `/exchange-rates/current` : null",
+      "dynamic": true
+    },
+    {
+      "module": "ExchangeRatesTab-FzGMcdR6.js",
+      "line": 151,
+      "method": "POST",
+      "path": "/exchange-rates",
+      "expression": "`/exchange-rates`",
+      "dynamic": false
+    },
+    {
+      "module": "ExchangeRatesTab-FzGMcdR6.js",
+      "line": 167,
+      "method": "POST",
+      "path": "/exchange-rates/{O.id}/enabled",
+      "expression": "`/exchange-rates/${O.id}/enabled`",
+      "dynamic": true
+    },
+    {
+      "module": "OperatorKpi-NouSWERW.js",
+      "line": 44,
+      "method": "GET",
+      "path": "/suppliers/owner-candidates?includeHistory=true",
+      "expression": "`/suppliers/owner-candidates?includeHistory=true`",
+      "dynamic": false
+    },
+    {
+      "module": "OperatorKpi-NouSWERW.js",
+      "line": 44,
+      "method": "GET",
+      "path": null,
+      "expression": "o === `owners` ? `/suppliers?search=${encodeURIComponent(S)}&owner=${encodeURIComponent(w)}&page=${E}&size=${O}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "OperatorKpi-NouSWERW.js",
+      "line": 44,
+      "method": "GET",
+      "path": null,
+      "expression": "o === `report` ? `/reports/operator-kpi?month=${A}&currency=${M}&owner=${encodeURIComponent(P)}&page=${I}&size=${R}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "OperatorKpi-NouSWERW.js",
+      "line": 44,
+      "method": "GET",
+      "path": null,
+      "expression": "K ? `/reports/operator-kpi/lines?month=${A}&currency=${K.currency}&ownerUserId=${K.ownerUserId||``}&unassigned=${K.ownerUserId?`false`:`true`}&search=${encodeURIComponent(B)}&page=${H}&size=${W}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentForm-DYdHXH-C.js",
+      "line": 36,
+      "method": "GET",
+      "path": null,
+      "expression": "b(`account.read`) ? `/accounts?supplierId=` + c.supplierId : null",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentForm-DYdHXH-C.js",
+      "line": 36,
+      "method": "GET",
+      "path": null,
+      "expression": "b(`exchange_rate.read`) ? `/exchange-rates/current` : null",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentForm-DYdHXH-C.js",
+      "line": 36,
+      "method": "GET",
+      "path": null,
+      "expression": "b(`payment.execute`) ? `/payments/providers` : null",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentForm-DYdHXH-C.js",
+      "line": 176,
+      "method": "POST",
+      "path": "/payments/offline",
+      "expression": "`/payments/offline`",
+      "dynamic": false
+    },
+    {
+      "module": "PaymentForm-DYdHXH-C.js",
+      "line": 181,
+      "method": "POST",
+      "path": "/payments",
+      "expression": "`/payments`",
+      "dynamic": false
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 134,
+      "method": "GET",
+      "path": null,
+      "expression": "c && e.paymentMethod !== `OFFLINE` ? `/payments/providers` : null",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 138,
+      "method": "POST",
+      "path": "/payments/{e.id}/reconcile",
+      "expression": "`/payments/${e.id}/reconcile`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 209,
+      "method": "POST",
+      "path": "/payments/{e.id}/execute",
+      "expression": "`/payments/${e.id}/execute`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 212,
+      "method": "POST",
+      "path": "/payments/{e.id}/payout-preview",
+      "expression": "`/payments/${e.id}/payout-preview`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 252,
+      "method": "POST",
+      "path": "/payments/{e.id}/execute",
+      "expression": "`/payments/${e.id}/execute`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 293,
+      "method": "POST",
+      "path": "/payments/sandbox/events",
+      "expression": "`/payments/sandbox/events`",
+      "dynamic": false
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 316,
+      "method": "GET",
+      "path": "/payments?page={T}&size={D}&settlementId={encodeURIComponent(c)}",
+      "expression": "`/payments?page=${T}&size=${D}&settlementId=${encodeURIComponent(c)}`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 319,
+      "method": "GET",
+      "path": "/payments/{encodeURIComponent(q)}",
+      "expression": "`/payments/` + encodeURIComponent(q)",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 328,
+      "method": "GET",
+      "path": "/payments/{encodeURIComponent(t.id)}",
+      "expression": "`/payments/` + encodeURIComponent(t.id)",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 477,
+      "method": "POST",
+      "path": "/payments/{j.id}/review",
+      "expression": "`/payments/${j.id}/review`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 541,
+      "method": "POST",
+      "path": "/payments/{j.id}/receipt",
+      "expression": "`/payments/${j.id}/receipt`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 572,
+      "method": "POST",
+      "path": "/payments/{j.id}/close",
+      "expression": "`/payments/${j.id}/close`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 590,
+      "method": "GET",
+      "path": "/settlements/{encodeURIComponent(e.settlementId)}",
+      "expression": "`/settlements/${encodeURIComponent(e.settlementId)}`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 633,
+      "method": "POST",
+      "path": "/payments/{e.id}/offline-record",
+      "expression": "`/payments/${e.id}/offline-record`",
+      "dynamic": true
+    },
+    {
+      "module": "QuotePeriodPanel-D3BWLIuY.js",
+      "line": 52,
+      "method": "GET",
+      "path": "/quotes/{encodeURIComponent(n.id)}/period-change",
+      "expression": "`/quotes/${encodeURIComponent(n.id)}/period-change`",
+      "dynamic": true
+    },
+    {
+      "module": "QuotePeriodPanel-D3BWLIuY.js",
+      "line": 121,
+      "method": "POST",
+      "path": "/quotes/{encodeURIComponent(n.id)}/period-change",
+      "expression": "`/quotes/${encodeURIComponent(n.id)}/period-change`",
+      "dynamic": true
+    },
+    {
+      "module": "QuotePeriodPanel-D3BWLIuY.js",
+      "line": 157,
+      "method": "POST",
+      "path": "/quotes/{encodeURIComponent(n.id)}/period-change/review",
+      "expression": "`/quotes/${encodeURIComponent(n.id)}/period-change/review`",
+      "dynamic": true
+    },
+    {
+      "module": "QuoteRankingResults-cj8V1Hgu.js",
+      "line": 40,
+      "method": "GET",
+      "path": "/quotes/ranking?projectId={encodeURIComponent(r.id)}&currency={encodeURIComponent(i)}&onDate={encodeURIComponent(l)}&sortBy={y}&sortDirection={x}",
+      "expression": "T",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 143,
+      "method": "GET",
+      "path": null,
+      "expression": "v || A === `list` ? `/quotes?${lt.toString()}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 143,
+      "method": "GET",
+      "path": "/projects?size=100",
+      "expression": "`/projects?size=100`",
+      "dynamic": false
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 143,
+      "method": "GET",
+      "path": null,
+      "expression": "u(`exchange_rate.read`) ? `/exchange-rates/current` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 143,
+      "method": "GET",
+      "path": null,
+      "expression": "u(`quote.read`) ? `/quotes/multiplier-bounds` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 155,
+      "method": "GET",
+      "path": "/quotes/{encodeURIComponent(t)}",
+      "expression": "`/quotes/` + encodeURIComponent(t)",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 164,
+      "method": "GET",
+      "path": "/quotes/{encodeURIComponent(t)}",
+      "expression": "`/quotes/` + encodeURIComponent(t)",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 181,
+      "method": "GET",
+      "path": "/quotes/{encodeURIComponent(t.id)}",
+      "expression": "`/quotes/${encodeURIComponent(t.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 197,
+      "method": "GET",
+      "path": "/quotes/{encodeURIComponent(t.id)}",
+      "expression": "`/quotes/${encodeURIComponent(t.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 300,
+      "method": "PUT",
+      "path": "/quotes/{e.id}",
+      "expression": "`/quotes/${e.id}`",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 300,
+      "method": "POST",
+      "path": "/quotes",
+      "expression": "`/quotes`",
+      "dynamic": false
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 1122,
+      "method": "POST",
+      "path": "/quotes/{M.id}/review",
+      "expression": "`/quotes/${M.id}/review`",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 1157,
+      "method": "POST",
+      "path": "/quotes/{M.id}/withdraw",
+      "expression": "`/quotes/${M.id}/withdraw`",
+      "dynamic": true
+    },
+    {
+      "module": "Reports-ChHNVTLt.js",
+      "line": 148,
+      "method": "GET",
+      "path": "/projects?enabled=true&page=1&size=100",
+      "expression": "`/projects?enabled=true&page=1&size=100`",
+      "dynamic": false
+    },
+    {
+      "module": "Reports-ChHNVTLt.js",
+      "line": 152,
+      "method": "GET",
+      "path": null,
+      "expression": "n",
+      "dynamic": true
+    },
+    {
+      "module": "Reports-ChHNVTLt.js",
+      "line": 179,
+      "method": "GET",
+      "path": "/reports/settlements?{i.toString()}",
+      "expression": "`/reports/settlements?${i.toString()}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 143,
+      "method": "POST",
+      "path": null,
+      "expression": "p",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 143,
+      "method": "POST",
+      "path": null,
+      "expression": "m",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 180,
+      "method": "GET",
+      "path": null,
+      "expression": "c && !j && U ? `/settlement-batches/candidates?periodStart=${w}&periodEnd=${T}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 180,
+      "method": "GET",
+      "path": "/settlement-batches?view={_e}",
+      "expression": "`/settlement-batches?view=${_e}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 186,
+      "method": "GET",
+      "path": "/settlement-batches/{j.id}",
+      "expression": "`/settlement-batches/${j.id}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 247,
+      "method": "GET",
+      "path": "/settlement-batches/{t}",
+      "expression": "`/settlement-batches/${t}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 383,
+      "method": "POST",
+      "path": "/settlement-batches/{j.id}/start",
+      "expression": "`/settlement-batches/${j.id}/start`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 390,
+      "method": "POST",
+      "path": "/settlement-batches/{j.id}/retry-preview",
+      "expression": "`/settlement-batches/${j.id}/retry-preview`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 576,
+      "method": "POST",
+      "path": "/settlement-batches/preview",
+      "expression": "`/settlement-batches/preview`",
+      "dynamic": false
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 597,
+      "method": "GET",
+      "path": "/settlement-batches/{j.id}/items/{N}/preview?page={t}&size={n}",
+      "expression": "`/settlement-batches/${j.id}/items/${N}/preview?page=${t}&size=${n}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 58,
+      "method": "GET",
+      "path": "/settlements/{i}?page={P}&size={I}",
+      "expression": "`/settlements/${i}?page=${P}&size=${I}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 176,
+      "method": "GET",
+      "path": null,
+      "expression": "i",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 282,
+      "method": "POST",
+      "path": "/settlements/{i}/confirm",
+      "expression": "`/settlements/${i}/confirm`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 300,
+      "method": "POST",
+      "path": "/settlements/{i}/void",
+      "expression": "`/settlements/${i}/void`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 321,
+      "method": "POST",
+      "path": "/settlements/{i}/withdraw",
+      "expression": "`/settlements/${i}/withdraw`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 418,
+      "method": "POST",
+      "path": "/settlements/{t.id}/adjustments",
+      "expression": "`/settlements/${t.id}/adjustments`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementInputs-CZ-QKlwM.js",
+      "line": 48,
+      "method": "GET",
+      "path": "/settlement-inputs?search={encodeURIComponent(c)}&state={O}&page={b}&size={E}",
+      "expression": "`/settlement-inputs?search=${encodeURIComponent(c)}&state=${O}&page=${b}&size=${E}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementInputs-CZ-QKlwM.js",
+      "line": 215,
+      "method": "POST",
+      "path": "/settlement-inputs/{A.id}/void",
+      "expression": "`/settlement-inputs/${A.id}/void`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementInputs-CZ-QKlwM.js",
+      "line": 327,
+      "method": "POST",
+      "path": null,
+      "expression": "r === `manual` ? l(e) ? `/settlement-inputs/manual-direct` : `/settlement-inputs/manual` : `/settlement-inputs`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 186,
+      "method": "POST",
+      "path": null,
+      "expression": "z",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 197,
+      "method": "GET",
+      "path": null,
+      "expression": "e",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 222,
+      "method": "GET",
+      "path": null,
+      "expression": "u === `statements` ? `/settlements/summary?currency=` + w : null",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 226,
+      "method": "GET",
+      "path": null,
+      "expression": "u === `statements` ? `/settlements/pending-summary?${dt}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 228,
+      "method": "GET",
+      "path": null,
+      "expression": "u === `statements` ? `/settlements?${z}&page=${Ue}&size=${We}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 252,
+      "method": "GET",
+      "path": null,
+      "expression": "!x && (A || P || I) && d(`project.read`) ? `/projects?size=100` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 754,
+      "method": "POST",
+      "path": "/settlements/preview",
+      "expression": "`/settlements/preview`",
+      "dynamic": false
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 769,
+      "method": "POST",
+      "path": "/settlements/preview?page={e}&size={t}",
+      "expression": "`/settlements/preview?page=${e}&size=${t}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 775,
+      "method": "POST",
+      "path": "/settlements",
+      "expression": "`/settlements`",
+      "dynamic": false
+    }
+  ],
+  "babelInventoryNotes": "Dynamic callbacks not necessarily HTTP calls; conditional/prefix expressions resolved by module reading. 16 finance/quotes/report modules read; payment providers remain capability-limited by external credentials.",
+  "implementedServices": [
+    "QuotePricingService historical date projection and numeric rank",
+    "FinancialWorkflowService.confirmOverdue pure local task",
+    "FinancialReportService owner-month confirmed-settlement KPI",
+    "PayoutProviderGateway official read-only tests"
+  ],
+  "targetedTests": {
+    "FinanceContractIntegrationTest": 7,
+    "PayoutProviderGatewayTest": 2,
+    "MakerCheckerIntegrationTest": 5,
+    "PlatformFinanceIntegrationTest": 4,
+    "result": "18 targeted tests passed (FinanceContract7, Gateway2, MakerChecker5, PlatformFinance4), zero failures/errors"
+  },
+  "remainingExternalBoundary": {
+    "fundsExecution": "Configured HISPREAD_PAYOUT_V1 bridge supports preflight/execute/reconcile. No native wallet transfer implementation or live credentials verification; unconfigured returns503.",
+    "realCredentials": "No provider credentials supplied or live provider account success tested. Transport fixtures verify request/signature shape and error handling only.",
+    "quoteAutoRenewal": "Explicit administrator rules supported by SystemJobService; documented local policy generates PENDING applications only. No original production renewal policy is claimed."
+  },
+  "providerPrimarySources": [
+    "https://www.airwallex.com/docs/api/authentication/api_access_token",
+    "https://www.okx.com/docs-v5/en/",
+    "https://github.com/binance/binance-api-swagger/blob/master/spot_api.yaml"
+  ],
+  "frozen": true,
+  "paymentCapabilities": {
+    "endpoint": "GET /api/payments/provider-capabilities",
+    "access": "ADMIN plus payment.execute only",
+    "fields": [
+      "code",
+      "name",
+      "enabled",
+      "configured",
+      "readOnlyTestAvailable",
+      "executable",
+      "unavailableReason"
+    ],
+    "execution": "Official provider tests remain read-only. executable=true only for an enabled validated HISPREAD_PAYOUT_V1 executionAdapter bridge; native wallet transfer is not implemented.",
+    "secrets": "No API keys, tokens, signatures or full provider config returned."
+  },
+  "paymentExecutionBridge": {
+    "protocol": "HISPREAD_PAYOUT_V1",
+    "documentation": "docs/payment-execution-bridge.md",
+    "routes": [
+      "POST /payments/{id}/payout-preview",
+      "POST /payments/{id}/execute",
+      "POST /payments/{id}/reconcile"
+    ],
+    "tests": "PaymentExecutionIntegrationTest: 5 passed, real local HTTP fixture plus PostgreSQL, no live funds",
+    "properties": [
+      "durable intent before one network send",
+      "original-request idempotency",
+      "independent approval and account snapshot",
+      "timeout UNKNOWN preserves reservation",
+      "explicit success exact-once paid amount",
+      "definite failure exact-once reservation release"
+    ]
+  }
+}

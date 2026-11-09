@@ -1,0 +1,54 @@
+{
+  "generatedAt": "2026-11-09T12:53:01.983Z",
+  "basis": "Actual frontend call-site inventory plus manual domain review, route matching, PostgreSQL tests and configured HTTP adapter fixtures. Route presence alone does not establish functional completion.",
+  "routeCoverage": {
+    "explicitTemplates": 216,
+    "present": 216,
+    "unmatched": 0,
+    "backendMappings": 323
+  },
+  "domains": {
+    "resources": {
+      "modules": 13,
+      "calls": 99,
+      "implemented": 58,
+      "externallyConfigured": 41,
+      "missing": 0,
+      "excludedScopeShadowedNonHttp": 3
+    },
+    "finance": {
+      "modules": 16,
+      "callSites": 80,
+      "remainingExternalBoundary": {
+        "fundsExecution": "Configured HISPREAD_PAYOUT_V1 bridge supports preflight/execute/reconcile. No native wallet transfer implementation or live credentials verification; unconfigured returns503.",
+        "realCredentials": "No provider credentials supplied or live provider account success tested. Transport fixtures verify request/signature shape and error handling only.",
+        "quoteAutoRenewal": "Explicit administrator rules supported by SystemJobService; documented local policy generates PENDING applications only. No original production renewal policy is claimed."
+      }
+    },
+    "system": {
+      "status": "frozen; 24 system regressions plus latest12 explicit rule/adapter config tests passed",
+      "limitations": [
+        "Static matching is not runtime proof. Dynamic templates are manually resolved where listed; shadowed bindings are excluded from HTTP coverage.",
+        "QUOTE_AUTO_RENEWAL now supports explicit administrator opt-in rules and creates future PENDING applications, never auto-approval. Unconfigured rules and external executor-only tasks remain unavailable.",
+        "External adapters require administrator configuration; unsupported/unconfigured methods return503.",
+        "Session online status uses persisted spring_session.principal_name/expiry_time; test MockHttpSession does not create persistent session rows.",
+        "QUOTE_AUTO_RENEWAL is now an explicit local opt-in policy that generates PENDING applications; without explicit administrator rules it remains notready503. It is not claimed as recovered production policy."
+      ]
+    }
+  },
+  "production": {
+    "compose": "docker-compose.yml",
+    "bootstrap": "production-only administrator; zero demo suppliers/projects",
+    "database": "PostgreSQL16/Flyway",
+    "session": "PostgreSQL JDBC durable session",
+    "upload": "persistent named volume",
+    "tls": "optional Caddy edge with real DNS",
+    "nativeLiveProviderCredentialsSupplied": false
+  },
+  "limitations": [
+    "Original private CCMAX management protocol was not provided. Resource adapters implement the documented integration contract and need a compatible upstream.",
+    "Real third-party success is not established by fixture tests; successful tests show the adapter and local state machine work against the configured contract.",
+    "Public HTTPS certificate issuance requires real hostname/DNS and was not attempted in local Docker.",
+    "Image builds were executed on linux/arm64; build on target server or use buildx --platform for linux/amd64."
+  ]
+}

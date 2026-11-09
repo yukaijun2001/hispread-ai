@@ -1,0 +1,17 @@
+# Explicit demo override; do not use on a production database.
+services:
+  backend:
+    environment:
+      SPRING_PROFILES_ACTIVE: default
+      BOOTSTRAP_MODE: demo
+      FIXTURES_PATH: /app/fixtures.json
+      SEED_USERNAME: ${SEED_USERNAME:-local_supplier}
+      SEED_PASSWORD: ${SEED_PASSWORD:?Set SEED_PASSWORD for demo}
+      OPERATOR_USERNAME: ${OPERATOR_USERNAME:-local_operator}
+      OPERATOR_PASSWORD: ${OPERATOR_PASSWORD:?Set OPERATOR_PASSWORD for demo}
+      FINANCE_USERNAME: ${FINANCE_USERNAME:-local_finance}
+      FINANCE_PASSWORD: ${FINANCE_PASSWORD:?Set FINANCE_PASSWORD for demo}
+      MEMBER_USERNAME: ${MEMBER_USERNAME:-wt_agent45}
+      MEMBER_PASSWORD: ${MEMBER_PASSWORD:?Set MEMBER_PASSWORD for demo}
+    volumes:
+      - ./docs/runtime-fixtures.json:/app/fixtures.json:ro

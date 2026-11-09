@@ -1,0 +1,1040 @@
+{
+  "basis": "Restored frontend manual audit plus root Babel inventory, exact methods/routes and response usage. Unknowns are never counted as implemented.",
+  "modulesReviewed": [
+    "Users-B5SmzLla.js",
+    "Roles-BkB5m-qF.js",
+    "RoleEditor-D-Ljkwz-.js",
+    "Suppliers-BquEthXG.js",
+    "SupplierDetail-CJpHR0kK.js",
+    "SupplierPlatformSettings-DQ79klgY.js",
+    "OwnerSection-BV_jBT2b.js",
+    "SystemSettings-CtOVlrw5.js",
+    "SystemNotices-BwbR9un8.js",
+    "NoticeEditor-CI-sPhtw.js",
+    "NoticeDeliveries-D5ljVxwh.js",
+    "ScheduledTasks-DQG4VARN.js",
+    "ScheduledTaskRuns-DXdXtjvS.js",
+    "ResourceTargets-DskGxaTi.js",
+    "IntakePolicyPanel-DHvOkPUU.js",
+    "PrioritySupportDialog-DfV-rWYR.js",
+    "PayoutProviders-D9Kgf-te.js",
+    "SupplierAccounts-CMP57Xp2.js",
+    "IntakeReviewDialog-C9xZ8Ftb.js"
+  ],
+  "frontendCallSitesInScope": 103,
+  "serverRoutes": [
+    {
+      "method": "GET",
+      "path": "/projects",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/projects/{id}",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/projects/category-codes",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/projects/categories",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/projects",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/projects/{id}",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/suppliers",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/suppliers/{id}",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/suppliers/{id}",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/accounts",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/accounts",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/accounts/{id}/reveal",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/suppliers",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/suppliers/{id}/review",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/suppliers/{id}/code",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/suppliers/{id}/note",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/suppliers/available-users",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/suppliers/owner-candidates",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/suppliers/{id}/owner",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/suppliers/{id}/owner-terms",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/suppliers/{id}/users",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/suppliers/{id}/users",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/suppliers/{id}/users",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/accounts/platform",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/accounts/{id}/review",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/system/users",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/system/users",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/system/users/{id}",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/system/users/{id}/enabled",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/system/users/{id}/password",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/system/users/{id}/logout",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/system/roles",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/system/roles/page",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/system/roles",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/system/roles/{code}",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/system/settings",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/system/settings",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/system/audit-actions",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/system/audits",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/system/audits/{id}",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/system/scheduled-tasks",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/system/scheduled-tasks/{key}",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/system/scheduled-tasks/{key}/schedule",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/system/scheduled-tasks/{key}/config",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/system/scheduled-tasks/{key}/runs",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/system/scheduled-tasks/{key}/run",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/notifications/notice-recipients",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/notifications/quote-projects",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/notifications/recipient-preview",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/notifications/notices",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/notifications/notices/{id}",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/notifications/notices",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/notifications/notices/{id}",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/notifications/publish",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/notifications/notices/{id}/publish",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/notifications/notices/{id}/revoke",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/notifications/notices/{id}/deliveries",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/resource-targets",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/resource-targets",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/resource-targets/{id}",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/resource-targets/{id}",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/resource-targets/{id}/test",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/resource-targets/{id}/sync",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/workbench-monitoring/sources/{id}/refresh",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/resource-targets/{id}/oauth/link",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/resource-targets/{id}/oauth/complete",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/workbench-monitoring/sources",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/workbench-monitoring/sources",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/workbench-monitoring/sources/{id}",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/workbench-monitoring/multipliers",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/workbench-monitoring/multipliers",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/payout-providers/{code}",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/payout-providers/{code}",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/payout-providers/{code}/test",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/payout-calls",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/turnover",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/turnover",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/reports/operator-kpi",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/reports/operator-kpi/lines",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/resource-targets/{id}/sync-settings",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/resource-targets/{id}/sync-settings",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/suppliers/{id}/settings",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/suppliers/{id}/settings",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/cc-intake/admin/system",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/cc-intake/admin/suppliers/{id}",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/cc-intake/admin/suppliers/{id}/members/{memberId}",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/cc-intake/admin/system",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/cc-intake/admin/suppliers/{id}",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/cc-intake/admin/suppliers/{id}/members/{memberId}",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/cc-intake/admin/suppliers/{id}/members",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/system/scheduled-tasks/{key}/rotation-settings",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/system/scheduled-tasks/{key}/rotation-settings",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/system/scheduled-tasks/priority-support",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/system/scheduled-tasks/{key}/rotation-settings/retry-restore",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/cc-intake/admin/reviews",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/cc-intake/admin/reviews/{dispatchId}/resolve",
+      "controller": "IntakeConfigController.java"
+    }
+  ],
+  "dynamicCallSiteReview": [
+    {
+      "module": "IntakePolicyPanel-DHvOkPUU.js",
+      "line": 34,
+      "method": "GET",
+      "path": null,
+      "expression": "x ? C : null",
+      "dynamic": true,
+      "auditStatus": "manual-alias-required"
+    },
+    {
+      "module": "IntakePolicyPanel-DHvOkPUU.js",
+      "line": 126,
+      "method": "PUT",
+      "path": null,
+      "expression": "C",
+      "dynamic": true,
+      "auditStatus": "manual-alias-required"
+    },
+    {
+      "module": "IntakeReviewDialog-C9xZ8Ftb.js",
+      "line": 34,
+      "method": "GET",
+      "path": null,
+      "expression": "v ? `/deliveries/filter-options?assignment=ASSIGNED&supplierSearch=${encodeURIComponent(x)}` : null",
+      "dynamic": true,
+      "auditStatus": "manual-resolved-conditional"
+    },
+    {
+      "module": "IntakeReviewDialog-C9xZ8Ftb.js",
+      "line": 39,
+      "method": "GET",
+      "path": null,
+      "expression": "v ? `/cc-intake/admin/reviews?${B}` : null",
+      "dynamic": true,
+      "auditStatus": "manual-resolved-conditional"
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 35,
+      "method": "GET",
+      "path": null,
+      "expression": "A && r ? `/notifications/quote-projects?search=${encodeURIComponent(m)}&page=${b}&size=${S}` : null",
+      "dynamic": true,
+      "auditStatus": "manual-resolved-conditional"
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 41,
+      "method": "GET",
+      "path": null,
+      "expression": "M ? `/notifications/recipient-preview?${N}` : null",
+      "dynamic": true,
+      "auditStatus": "manual-resolved-conditional"
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 51,
+      "method": "PUT",
+      "path": null,
+      "expression": "e.target.checked",
+      "dynamic": true,
+      "auditStatus": "not-network-shadowed-binding"
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 69,
+      "method": "POST",
+      "path": null,
+      "expression": "d.filter(t => t.id !== e.id)",
+      "dynamic": true,
+      "auditStatus": "not-network-shadowed-binding"
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 76,
+      "method": "POST",
+      "path": null,
+      "expression": "[]",
+      "dynamic": true,
+      "auditStatus": "not-network-shadowed-binding"
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 101,
+      "method": "POST",
+      "path": null,
+      "expression": "t.target.checked ? [...d, e] : d.filter(t => t.id !== e.id)",
+      "dynamic": true,
+      "auditStatus": "manual-alias-required"
+    },
+    {
+      "module": "OwnerSection-BV_jBT2b.js",
+      "line": 34,
+      "method": "GET",
+      "path": null,
+      "expression": "x(`supplier.owner.assign`) && (!b || k) ? `/suppliers/${i}/owner-terms?search=${encodeURIComponent(C)}&page=${T}&size=${D}` : null",
+      "dynamic": true,
+      "auditStatus": "manual-resolved-conditional"
+    },
+    {
+      "module": "OwnerSection-BV_jBT2b.js",
+      "line": 34,
+      "method": "GET",
+      "path": null,
+      "expression": "x(`supplier.owner.assign`) ? `/suppliers/owner-candidates` : null",
+      "dynamic": true,
+      "auditStatus": "manual-resolved-conditional"
+    },
+    {
+      "module": "PrioritySupportDialog-DfV-rWYR.js",
+      "line": 33,
+      "method": "GET",
+      "path": null,
+      "expression": "m ? y : null",
+      "dynamic": true,
+      "auditStatus": "manual-alias-required"
+    },
+    {
+      "module": "PrioritySupportDialog-DfV-rWYR.js",
+      "line": 46,
+      "method": "GET",
+      "path": null,
+      "expression": "!K && w === `SELECTED` ? `/deliveries/filter-options?supplierSearch=${encodeURIComponent(W)}` : null",
+      "dynamic": true,
+      "auditStatus": "manual-resolved-conditional"
+    },
+    {
+      "module": "PrioritySupportDialog-DfV-rWYR.js",
+      "line": 96,
+      "method": "PUT",
+      "path": null,
+      "expression": "y",
+      "dynamic": true,
+      "auditStatus": "manual-alias-required"
+    },
+    {
+      "module": "PrioritySupportDialog-DfV-rWYR.js",
+      "line": 108,
+      "method": "POST",
+      "path": null,
+      "expression": "y + `/retry-restore`",
+      "dynamic": true,
+      "auditStatus": "manual-resolved-conditional"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 61,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.read`",
+      "dynamic": true,
+      "auditStatus": "not-network-shadowed-binding"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 61,
+      "method": "GET",
+      "path": null,
+      "expression": "`workbench.monitoring.configure`",
+      "dynamic": true,
+      "auditStatus": "not-network-shadowed-binding"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 61,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.write`",
+      "dynamic": true,
+      "auditStatus": "not-network-shadowed-binding"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 61,
+      "method": "GET",
+      "path": null,
+      "expression": "`workbench.monitoring.configure`",
+      "dynamic": true,
+      "auditStatus": "not-network-shadowed-binding"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 61,
+      "method": "GET",
+      "path": null,
+      "expression": "o ? `/workbench-monitoring/sources` : null",
+      "dynamic": true,
+      "auditStatus": "manual-resolved-conditional"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 61,
+      "method": "GET",
+      "path": null,
+      "expression": "o ? `/projects/category-codes` : null",
+      "dynamic": true,
+      "auditStatus": "manual-resolved-conditional"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 620,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.read`",
+      "dynamic": true,
+      "auditStatus": "not-network-shadowed-binding"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 620,
+      "method": "GET",
+      "path": null,
+      "expression": "`workbench.monitoring.configure`",
+      "dynamic": true,
+      "auditStatus": "not-network-shadowed-binding"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 620,
+      "method": "GET",
+      "path": null,
+      "expression": "s ? `/resource-targets` : null",
+      "dynamic": true,
+      "auditStatus": "manual-resolved-conditional"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 677,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.write`",
+      "dynamic": true,
+      "auditStatus": "not-network-shadowed-binding"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 697,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.write`",
+      "dynamic": true,
+      "auditStatus": "not-network-shadowed-binding"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 720,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.write`",
+      "dynamic": true,
+      "auditStatus": "not-network-shadowed-binding"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 729,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.dispatch`",
+      "dynamic": true,
+      "auditStatus": "not-network-shadowed-binding"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 797,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.test`",
+      "dynamic": true,
+      "auditStatus": "not-network-shadowed-binding"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 801,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.write`",
+      "dynamic": true,
+      "auditStatus": "not-network-shadowed-binding"
+    },
+    {
+      "module": "ScheduledTaskRuns-DXdXtjvS.js",
+      "line": 65,
+      "method": "GET",
+      "path": null,
+      "expression": "_ && !L ? `/system/scheduled-tasks/${encodeURIComponent(_.key)}/runs?${R.toString()}` : null",
+      "dynamic": true,
+      "auditStatus": "manual-resolved-conditional"
+    },
+    {
+      "module": "SupplierAccounts-CMP57Xp2.js",
+      "line": 68,
+      "method": "GET",
+      "path": null,
+      "expression": "e.message",
+      "dynamic": true,
+      "auditStatus": "not-network-shadowed-binding"
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 59,
+      "method": "GET",
+      "path": null,
+      "expression": "U ? `/suppliers/available-users` : null",
+      "dynamic": true,
+      "auditStatus": "manual-resolved-conditional"
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 59,
+      "method": "GET",
+      "path": null,
+      "expression": "C(`account.read`) ? `/accounts?supplierId=` + a : null",
+      "dynamic": true,
+      "auditStatus": "manual-resolved-conditional"
+    },
+    {
+      "module": "SupplierPlatformSettings-DQ79klgY.js",
+      "line": 31,
+      "method": "GET",
+      "path": null,
+      "expression": "m ? h : null",
+      "dynamic": true,
+      "auditStatus": "manual-alias-required"
+    },
+    {
+      "module": "Suppliers-BquEthXG.js",
+      "line": 184,
+      "method": "GET",
+      "path": null,
+      "expression": "K === `new` && s(`supplier.users`) ? `/suppliers/available-users` : null",
+      "dynamic": true,
+      "auditStatus": "manual-resolved-conditional"
+    },
+    {
+      "module": "Suppliers-BquEthXG.js",
+      "line": 184,
+      "method": "GET",
+      "path": null,
+      "expression": "!_ && s(`supplier.owner.assign`) ? `/suppliers/owner-candidates?includeHistory=true` : null",
+      "dynamic": true,
+      "auditStatus": "manual-resolved-conditional"
+    },
+    {
+      "module": "Suppliers-BquEthXG.js",
+      "line": 184,
+      "method": "GET",
+      "path": null,
+      "expression": "_ ? null : `/suppliers?search=${encodeURIComponent(T)}&state=${A}&owner=${s(`supplier.owner.assign`)?encodeURIComponent(N):``}&page=${L}&size=${H}`",
+      "dynamic": true,
+      "auditStatus": "manual-resolved-conditional"
+    },
+    {
+      "module": "Suppliers-BquEthXG.js",
+      "line": 184,
+      "method": "GET",
+      "path": null,
+      "expression": "_ ? `/suppliers/${a.supplierId}` : null",
+      "dynamic": true,
+      "auditStatus": "manual-resolved-conditional"
+    },
+    {
+      "module": "SystemSettings-CtOVlrw5.js",
+      "line": 28,
+      "method": "GET",
+      "path": null,
+      "expression": "t(`system.settings`) ? `/workbench-monitoring/multipliers` : null",
+      "dynamic": true,
+      "auditStatus": "manual-resolved-conditional"
+    },
+    {
+      "module": "SystemSettings-CtOVlrw5.js",
+      "line": 190,
+      "method": "GET",
+      "path": null,
+      "expression": "l ? `/system/settings` : null",
+      "dynamic": true,
+      "auditStatus": "manual-resolved-conditional"
+    }
+  ],
+  "responseShapes": {
+    "users": "page{items:[id,username,displayName,roleCode,roleName,enabled,online,supplierName,additionalRoles,version],total,page,size}",
+    "roles": "{roles,permissions,scopeTypes}; page variant also items,total/page/size, allowedPermissions/scopeType on each role",
+    "suppliers": "page of access-filtered supplier public records; pendingProfile separate until admin review",
+    "accounts": "tenant list; platform page; replacement approval atomically SUPERSEDED original; full number only reveal permission",
+    "notices": "draft/published/revoked store records with count snapshots; deliveries page summary+READ/UNREAD/WITHDRAWN audit",
+    "scheduledTasks": "array{key,type,name,enabled,ready,running,intervalMinutes,lastRunAt,nextRunAt,unavailableReason,version}; runs page state/trigger/date filter",
+    "monitoring": "array write-only secret config; refresh returns stored state/lastError/rpm/tpm via real ResourceIntegrationGateway",
+    "providers": "masked configuration object; official read-only gateway test persists lastHealth*; no transfer executed",
+    "intake": "{policy:{pro,nonPro,nonProOpen,ranges},inherited,version}; priority settings+suppliers+rounds; review page and resolve persist decision"
+  },
+  "implementedWorkflows": [
+    "user frontend query filters, role/version/enabled/session invalidation",
+    "supplier profile validation/filter/pending review/code uniqueness/owner binding/history",
+    "account change application/independent review/original superseded only on approval",
+    "notification audience/project filters/idempotent publish/history-preserving revoke/delivery search",
+    "local settlement deadline scheduled/manual execution with durable run records",
+    "resource target test/sync/oauth and monitoring manual refresh via configured gateway",
+    "payout configuration write-only secrets and official provider read-only connection test",
+    "intake policy validation/inheritance/rotation config/count review persistence"
+  ],
+  "limitations": [
+    "Static matching is not runtime proof. Dynamic templates are manually resolved where listed; shadowed bindings are excluded from HTTP coverage.",
+    "QUOTE_AUTO_RENEWAL now supports explicit administrator opt-in rules and creates future PENDING applications, never auto-approval. Unconfigured rules and external executor-only tasks remain unavailable.",
+    "External adapters require administrator configuration; unsupported/unconfigured methods return503.",
+    "Session online status uses persisted spring_session.principal_name/expiry_time; test MockHttpSession does not create persistent session rows.",
+    "QUOTE_AUTO_RENEWAL is now an explicit local opt-in policy that generates PENDING applications; without explicit administrator rules it remains notready503. It is not claimed as recovered production policy."
+  ],
+  "tests": [
+    "SystemSupplierContractTest",
+    "AdminIntegrationTest"
+  ],
+  "status": "frozen; 24 system regressions plus latest12 explicit rule/adapter config tests passed",
+  "manualRouteCorrections": [
+    {
+      "frontend": "Projects-BlZGF-3J.js:55",
+      "method": "DELETE",
+      "path": "/projects/category-codes/{code}?version={version}",
+      "basis": "source helper e is generic fetch, explicit options.method DELETE; AST GET inference overridden",
+      "implemented": true
+    },
+    {
+      "method": "POST",
+      "path": "/suppliers/{id}/enabled",
+      "basis": "CatalogController @RequestMapping method={PUT,POST} proves both routes",
+      "implemented": true
+    },
+    {
+      "method": "POST/PUT",
+      "path": "/projects/category-codes[/code]",
+      "implemented": true,
+      "workflow": "code immutable, unique, version check, referenced categories cannot be deleted"
+    }
+  ],
+  "gatewayValidation": {
+    "monitoring": "MonitoringContractIntegrationTest uses localhost HttpServer under test profile, validates nested data.rpm=321/data.tpm=4500, DB persisted READY, token omitted",
+    "provider": "PayoutProviderGatewayTest validates official read-only request construction; missing server configuration503"
+  },
+  "knownUnavailableActions": [
+    "CCMAX/priority/WeCom scheduled jobs: remote executor unavailable until configured; ready=false, not fabricated successful runs"
+  ],
+  "verification": {
+    "tests": 24,
+    "failures": 0,
+    "errors": 0,
+    "classes": [
+      {
+        "class": "SystemSupplierContractTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "class": "MonitoringContractIntegrationTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "class": "AdminIntegrationTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "class": "SecurityRoleBoundaryIntegrationTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "class": "RolePolicyIntegrationTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "class": "OperatorFinanceIntegrationTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0
+      }
+    ]
+  },
+  "explicitLocalRenewal": {
+    "policy": "docs/local-quote-renewal-policy.md",
+    "entry": "PUT /system/scheduled-tasks/QUOTE_AUTO_RENEWAL/config",
+    "ready": "only after explicit rule and admin quote opt-in",
+    "result": "future PENDING application, never automatically APPROVED",
+    "idempotency": "source quote ID + future period; overlapping active/pending skipped"
+  },
+  "lastExplicitConfigurationTests": {
+    "tests": 12,
+    "failures": 0,
+    "errors": 0,
+    "classes": [
+      {
+        "class": "ExplicitJobConfigurationTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "class": "ExecutionAdapterConfigTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "class": "SystemSupplierContractTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "class": "AdminIntegrationTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0
+      }
+    ]
+  },
+  "paymentExecutionConfig": "docs/local-payment-execution-config.md"
+}

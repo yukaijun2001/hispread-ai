@@ -1,0 +1,64 @@
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
+  forward-headers-strategy: framework
+  error:
+    include-message: never
+    include-stacktrace: never
+  servlet:
+    session:
+      timeout: ${SESSION_TIMEOUT:8h}
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${COOKIE_SECURE:false}
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/hispread_ai}
+    username: ${DATABASE_USER:yukaijun}
+    password: ${DATABASE_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${DATABASE_POOL_SIZE:10}
+      connection-timeout: 10000
+      validation-timeout: 5000
+  sql:
+    init:
+      mode: never
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    validate-migration-naming: true
+  session:
+    store-type: jdbc
+    jdbc:
+      initialize-schema: never
+      cleanup-cron: "0 */5 * * * *"
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+  jackson:
+    default-property-inclusion: always
+app:
+  bootstrap-mode: ${BOOTSTRAP_MODE:demo}
+  public-origin: ${PUBLIC_ORIGIN:}
+  trust-forwarded-headers: ${TRUST_FORWARDED_HEADERS:false}
+  integrations:
+    allow-private-targets: ${INTEGRATION_ALLOW_PRIVATE_TARGETS:false}
+    connect-timeout-ms: ${INTEGRATION_CONNECT_TIMEOUT_MS:5000}
+    request-timeout-ms: ${INTEGRATION_REQUEST_TIMEOUT_MS:15000}
+  operator-username: ${OPERATOR_USERNAME:}
+  operator-password: ${OPERATOR_PASSWORD:}
+  finance-username: ${FINANCE_USERNAME:}
+  finance-password: ${FINANCE_PASSWORD:}
+  member-username: ${MEMBER_USERNAME:}
+  member-password: ${MEMBER_PASSWORD:}
+  admin-username: ${ADMIN_USERNAME:}
+  admin-password: ${ADMIN_PASSWORD:}
+  seed-username: ${SEED_USERNAME:}
+  seed-password: ${SEED_PASSWORD:}
+  fixtures: ${FIXTURES_PATH:../docs/runtime-fixtures.json}
+  uploads: ${UPLOAD_DIRECTORY:./data/uploads}
