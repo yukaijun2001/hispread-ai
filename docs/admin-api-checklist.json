@@ -1,0 +1,1169 @@
+{
+  "basis": "Static reading of all recovered frontend branches; runtime backend enforcement must separately verify permissions and tenant scope.",
+  "apiPrefix": "/api",
+  "pageResponseContract": {
+    "items": [],
+    "total": 0,
+    "page": 1,
+    "size": 10
+  },
+  "roleBranches": {
+    "ADMIN": {
+      "supplierId": null,
+      "role": "ADMIN",
+      "routes": [
+        "workbench",
+        "suppliers",
+        "operator-kpi",
+        "supplier-accounts",
+        "projects",
+        "quotes",
+        "settlements",
+        "resources",
+        "resources-pending",
+        "outbound-proxies",
+        "resource-targets",
+        "ccmax-resource-analysis",
+        "reports",
+        "notifications",
+        "api-docs",
+        "notice-admin",
+        "users",
+        "roles",
+        "audits",
+        "settings",
+        "scheduled-tasks",
+        "scheduled-task-runs",
+        "payout-providers",
+        "payout-recipients",
+        "payout-calls"
+      ],
+      "notes": [
+        "No supplier-only deliveries or supplier-agents routes. Platform resources equivalent is shown.",
+        "settlements tabs daily,statements,inputs,payments,rates governed by permissions. No supplier departments tab.",
+        "ccmax-resource-analysis requires report.read and resource.read plus no supplierId."
+      ]
+    },
+    "SUPPLIER_AGENT": {
+      "supplierId": "parent supplier ID",
+      "role": "SUPPLIER_AGENT",
+      "routes": [
+        "workbench",
+        "deliveries",
+        "deliveries-pending",
+        "outbound-proxies",
+        "settlements?tab=daily"
+      ],
+      "conditionalRoutes": {
+        "settlements?tab=departments": "teamAdminGroup.id exists",
+        "supplier-agents": "teamAdminGroup.id exists"
+      },
+      "notes": [
+        "api-docs explicitly hidden and route denied for member.",
+        "settlement statements/payments/rates not in member tabs.",
+        "quotes/reports require explicitly granted permissions; do not give by accident.",
+        "all read/write resource operations scoped to owning member or authorized group.",
+        "Local backend supplier-bills read gate explicitly allows member own/group-scoped daily bills, matching the recovered member tab availability even if settlement.read is absent."
+      ]
+    },
+    "SUPPLIER": {
+      "supplierId": "own supplier ID",
+      "role": "SUPPLIER",
+      "existingAudit": "14 supplier views"
+    }
+  },
+  "endpoints": [
+    {
+      "route": "all",
+      "module": "core/index.js",
+      "method": "GET",
+      "path": "/api/auth/me",
+      "responseShape": "authenticated user object",
+      "requiredFields": [
+        "id",
+        "username",
+        "displayName",
+        "role",
+        "supplierId",
+        "permissions",
+        "mustChangePassword",
+        "onboardingRequired",
+        "teamAdminGroup"
+      ],
+      "when": "bootstrap",
+      "notes": "ADMIN must have supplierId=null and role ADMIN; SUPPLIER_AGENT must retain parent supplierId. permissions is a string[]."
+    },
+    {
+      "route": "workbench",
+      "module": "system/workbench__Workbench.js",
+      "method": "GET",
+      "path": "/api/workbench",
+      "responseShape": "object",
+      "requiredFields": [
+        "money",
+        "todos",
+        "announcement",
+        "recent"
+      ],
+      "when": "initial",
+      "notes": "money/todos/recent must be arrays even when empty; same supplier payload plus platform counters as available."
+    },
+    {
+      "route": "workbench",
+      "module": "system/workbench__Workbench.js",
+      "method": "GET",
+      "path": "/api/workbench/monitoring",
+      "responseShape": "array",
+      "requiredFields": [
+        "category",
+        "categoryName",
+        "rpm",
+        "tpm",
+        "queriedAt"
+      ],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "workbench",
+      "module": "system/workbench__Workbench.js",
+      "method": "GET",
+      "path": "/api/turnover",
+      "responseShape": "object {items:[]}",
+      "requiredFields": [
+        "items"
+      ],
+      "when": "permission turnover.read",
+      "notes": "Each item: businessDate,siteName,currency,amount,note."
+    },
+    {
+      "route": "all",
+      "module": "core/index.js",
+      "method": "GET",
+      "path": "/api/notifications/unread-count",
+      "responseShape": "object {count:0}",
+      "requiredFields": [
+        "count"
+      ],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "all",
+      "module": "core/index.js",
+      "method": "GET",
+      "path": "/api/notifications?unread=true&size=5",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items"
+      ],
+      "when": "bell opened",
+      "notes": ""
+    },
+    {
+      "route": "suppliers",
+      "module": "supplier/Suppliers.js",
+      "method": "GET",
+      "path": "/api/suppliers?search=&state=&owner=&page=1&size=10",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items",
+        "total",
+        "page",
+        "size"
+      ],
+      "when": "initial",
+      "notes": "Supplier row: id,code,name,supplierType,country,contact,phone,email,cycle,state,enabled,version,ownerName."
+    },
+    {
+      "route": "suppliers",
+      "module": "supplier/Suppliers.js",
+      "method": "GET",
+      "path": "/api/suppliers/owner-candidates?includeHistory=true",
+      "responseShape": "array",
+      "requiredFields": [
+        "id",
+        "username",
+        "displayName"
+      ],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "suppliers",
+      "module": "supplier/Suppliers.js",
+      "method": "GET",
+      "path": "/api/suppliers/available-users",
+      "responseShape": "array",
+      "requiredFields": [
+        "id",
+        "username",
+        "displayName"
+      ],
+      "when": "create supplier dialog",
+      "notes": ""
+    },
+    {
+      "route": "suppliers",
+      "module": "supplier/SupplierDetail.js",
+      "method": "GET",
+      "path": "/api/suppliers/{id}",
+      "responseShape": "supplier detail object",
+      "requiredFields": [
+        "id",
+        "code",
+        "name",
+        "state",
+        "version"
+      ],
+      "when": "detail drawer",
+      "notes": ""
+    },
+    {
+      "route": "suppliers",
+      "module": "supplier/SupplierPlatformSettings.js",
+      "method": "GET",
+      "path": "/api/suppliers/{id}/settings",
+      "responseShape": "object",
+      "requiredFields": [
+        "defaultProxyMaxResources",
+        "allowPro",
+        "allowCcmax",
+        "allowCcmaxReauthorization",
+        "allowCcmaxPause",
+        "allowCcmaxSafeRemoval",
+        "forceStopCcmaxIntake",
+        "globalAllowCcmax",
+        "globalAllowCcmaxReauthorization",
+        "version"
+      ],
+      "when": "supplier settings tab",
+      "notes": ""
+    },
+    {
+      "route": "operator-kpi",
+      "module": "supplier/operator-kpi__OperatorKpi.js",
+      "method": "GET",
+      "path": "/api/suppliers/owner-candidates?includeHistory=true",
+      "responseShape": "array",
+      "requiredFields": [
+        "id",
+        "username",
+        "displayName"
+      ],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "operator-kpi",
+      "module": "supplier/operator-kpi__OperatorKpi.js",
+      "method": "GET",
+      "path": "/api/reports/operator-kpi?month=YYYY-MM&currency=&owner=&page=1&size=10",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items",
+        "total",
+        "page",
+        "size"
+      ],
+      "when": "report tab",
+      "notes": "Each row includes ownerUserId,ownerName,currency, supplierCount and receivable/payable totals."
+    },
+    {
+      "route": "operator-kpi",
+      "module": "supplier/operator-kpi__OperatorKpi.js",
+      "method": "GET",
+      "path": "/api/reports/operator-kpi/lines?month=YYYY-MM&currency=USD&ownerUserId=&unassigned=true&search=&page=1&size=10",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items"
+      ],
+      "when": "report drilldown",
+      "notes": ""
+    },
+    {
+      "route": "supplier-accounts,payout-recipients",
+      "module": "supplier/payout-recipients__SupplierAccounts.js",
+      "method": "GET",
+      "path": "/api/accounts/platform?search=&supplierId=&accountType=&currency=&state=&page=1&size=10",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items",
+        "total",
+        "page",
+        "size"
+      ],
+      "when": "initial",
+      "notes": "Row: id,supplierId,supplierName,accountType,providerCode,bank,holder,lastFour,currency,state,version,transferType,network."
+    },
+    {
+      "route": "projects",
+      "module": "quoting/projects__Projects.js",
+      "method": "GET",
+      "path": "/api/projects?search=&category=&settlementMethod=&deliveryMethod=&enabled=&page=1&size=10",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items",
+        "total",
+        "page",
+        "size"
+      ],
+      "when": "initial",
+      "notes": "Row: id,name,category,settlementMethod,deliveryMethod,capacityType,capacityScope,capacityPeriod,capacityCurrency,enabled,version."
+    },
+    {
+      "route": "projects",
+      "module": "quoting/projects__Projects.js",
+      "method": "GET",
+      "path": "/api/projects/categories",
+      "responseShape": "array of category strings or source-supported categories",
+      "requiredFields": [],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "projects,resources,resource-targets",
+      "module": "quoting/projects__Projects.js",
+      "method": "GET",
+      "path": "/api/projects/category-codes",
+      "responseShape": "array of objects",
+      "requiredFields": [
+        "code",
+        "name",
+        "enabled",
+        "version"
+      ],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "quotes",
+      "module": "quoting/quotes__Quotes.js",
+      "method": "GET",
+      "path": "/api/quotes?search=&supplier=&project=&currency=&state=&page=1&size=10",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items",
+        "total",
+        "page",
+        "size"
+      ],
+      "when": "initial",
+      "notes": "Platform list uses permission-based supplier filter and review actions; same quote model as supplier."
+    },
+    {
+      "route": "quotes",
+      "module": "quoting/quotes__Quotes.js",
+      "method": "GET",
+      "path": "/api/quotes/multiplier-bounds",
+      "responseShape": "object",
+      "requiredFields": [
+        "min",
+        "max"
+      ],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "settlements?tab=daily",
+      "module": "finance/DailyAccounting.js",
+      "method": "GET",
+      "path": "/api/accounting/daily?from=&to=&search=&supplier=&project=&model=&sourceKind=&reviewStatus=&page=1&size=10&includeSummary=false",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items",
+        "total",
+        "page",
+        "size"
+      ],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "settlements?tab=daily",
+      "module": "finance/DailyAccounting.js",
+      "method": "GET",
+      "path": "/api/accounting/daily/summary?from=&to=&search=&supplier=&project=&model=&sourceKind=&reviewStatus=",
+      "responseShape": "object",
+      "requiredFields": [
+        "totals",
+        "projects"
+      ],
+      "when": "initial",
+      "notes": "totals/project arrays; total rows include currency,pendingCount,confirmedCount,amount."
+    },
+    {
+      "route": "settlements?tab=daily",
+      "module": "finance/DailyAccounting.js",
+      "method": "GET",
+      "path": "/api/accounting/daily/groups?from=&to=&page=1&size=10&groupBy=SUPPLIER",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items",
+        "total",
+        "page",
+        "size"
+      ],
+      "when": "supplier/day grouping",
+      "notes": ""
+    },
+    {
+      "route": "settlements?tab=daily",
+      "module": "finance/DailyAccounting.js",
+      "method": "GET",
+      "path": "/api/accounting/daily/exports?page=1&type=&state=",
+      "responseShape": "page object plus activeCount",
+      "requiredFields": [
+        "items",
+        "activeCount"
+      ],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "settlements?tab=statements",
+      "module": "finance/SettlementManagement.js",
+      "method": "GET",
+      "path": "/api/settlements?search=&supplierId=&currency=&state=&paymentProgress=&periodStart=&periodEnd=&page=1&size=10",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items",
+        "total",
+        "page",
+        "size"
+      ],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "settlements?tab=statements",
+      "module": "finance/SettlementManagement.js",
+      "method": "GET",
+      "path": "/api/settlements/pending-summary?search=&supplierId=&currency=USD&periodStart=&periodEnd=",
+      "responseShape": "pending summary object or source array",
+      "requiredFields": [
+        "amount",
+        "count"
+      ],
+      "when": "initial",
+      "notes": "Inspect finance controller supplier implementation for exact model reuse."
+    },
+    {
+      "route": "settlements?tab=statements",
+      "module": "finance/SettlementManagement.js",
+      "method": "GET",
+      "path": "/api/settlements/summary?currency=USD",
+      "responseShape": "summary object",
+      "requiredFields": [
+        "currency"
+      ],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "settlements?tab=inputs",
+      "module": "finance/SettlementInputs.js",
+      "method": "GET",
+      "path": "/api/settlement-inputs?search=&state=&page=1&size=10",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items",
+        "total",
+        "page",
+        "size"
+      ],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "settlements?tab=payments",
+      "module": "finance/PaymentsTab.js",
+      "method": "GET",
+      "path": "/api/payments?page=1&size=10&settlementId=",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items",
+        "total",
+        "page",
+        "size"
+      ],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "settlements?tab=rates",
+      "module": "finance/ExchangeRatesTab.js",
+      "method": "GET",
+      "path": "/api/exchange-rates",
+      "responseShape": "array",
+      "requiredFields": [
+        "id",
+        "fromCurrency",
+        "toCurrency",
+        "rate",
+        "effectiveFrom",
+        "enabled",
+        "version"
+      ],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "workbench,quotes,settlements",
+      "module": "finance/ExchangeRatesTab.js",
+      "method": "GET",
+      "path": "/api/exchange-rates/current",
+      "responseShape": "array",
+      "requiredFields": [
+        "fromCurrency",
+        "toCurrency",
+        "rate",
+        "effectiveFrom"
+      ],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "resources,resources-pending",
+      "module": "resources/resources-pending__Resources.js",
+      "method": "GET",
+      "path": "/api/resources?search=&resourceType=&category=&assignment=ASSIGNED&page=1&size=10&summaryOnly=true",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items",
+        "total",
+        "page",
+        "size"
+      ],
+      "when": "initial",
+      "notes": "Exact filter route is platform /resources (supplier uses /deliveries); same row contract. Includes selection/state operations by permissions."
+    },
+    {
+      "route": "resources,resources-pending",
+      "module": "resources/resources-pending__Resources.js",
+      "method": "GET",
+      "path": "/api/deliveries/filter-options?assignment=ASSIGNED&supplierSearch=&creatorSearch=",
+      "responseShape": "object",
+      "requiredFields": [
+        "suppliers",
+        "creators"
+      ],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "resources",
+      "module": "resources/resources-pending__Resources.js",
+      "method": "GET",
+      "path": "/api/resources/summary?resourceType=CCMAX",
+      "responseShape": "object",
+      "requiredFields": [
+        "total"
+      ],
+      "when": "initial",
+      "notes": "Reuse supplier resources summary shape."
+    },
+    {
+      "route": "resources",
+      "module": "resources/resources-pending__Resources.js",
+      "method": "GET",
+      "path": "/api/resources/failure-reasons?resourceType=CCMAX",
+      "responseShape": "array or source supported options",
+      "requiredFields": [],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "resources",
+      "module": "resources/resources-pending__Resources.js",
+      "method": "GET",
+      "path": "/api/resources/creator-summary?page=1&size=10",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items"
+      ],
+      "when": "creator drawer",
+      "notes": ""
+    },
+    {
+      "route": "resources",
+      "module": "resources/IntakeReviewDialog.js",
+      "method": "GET",
+      "path": "/api/cc-intake/admin/reviews?page=1&size=10",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items"
+      ],
+      "when": "CC intake review dialog",
+      "notes": ""
+    },
+    {
+      "route": "resource-targets",
+      "module": "resources/resource-targets__ResourceTargets.js",
+      "method": "GET",
+      "path": "/api/resource-targets",
+      "responseShape": "array",
+      "requiredFields": [
+        "id",
+        "name",
+        "type",
+        "enabled",
+        "version"
+      ],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "resource-targets",
+      "module": "resources/resource-targets__ResourceTargets.js",
+      "method": "GET",
+      "path": "/api/workbench-monitoring/sources",
+      "responseShape": "array",
+      "requiredFields": [
+        "id",
+        "name",
+        "category",
+        "groupName",
+        "state",
+        "intervalSeconds",
+        "version"
+      ],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "resource-targets",
+      "module": "resources/resource-targets__ResourceTargets.js",
+      "method": "GET",
+      "path": "/api/resource-targets/{id}/sync-settings",
+      "responseShape": "object",
+      "requiredFields": [
+        "perTargetConcurrency",
+        "globalConcurrency",
+        "targetVersion"
+      ],
+      "when": "sync settings drawer",
+      "notes": ""
+    },
+    {
+      "route": "ccmax-resource-analysis",
+      "module": "resources/CurrentResourceOverview.js",
+      "method": "GET",
+      "path": "/api/reports/ccmax-resources/current?supplierId=",
+      "responseShape": "object",
+      "requiredFields": [
+        "total",
+        "rows"
+      ],
+      "when": "current tab",
+      "notes": "rows: {resourceType,operationalState,count}. Numeric total."
+    },
+    {
+      "route": "ccmax-resource-analysis",
+      "module": "misc/DailyCreationAnalysis.js",
+      "method": "GET",
+      "path": "/api/reports/ccmax-resources?from=YYYY-MM-DD&to=YYYY-MM-DD&supplierId=",
+      "responseShape": "object",
+      "requiredFields": [
+        "from",
+        "to",
+        "rows"
+      ],
+      "when": "creations tab",
+      "notes": "rows contain createdDate,resourceType,operationalState,count; see ccmaxAnalysis helper."
+    },
+    {
+      "route": "ccmax-resource-analysis",
+      "module": "supplier/SupplierDailyCreations.js",
+      "method": "GET",
+      "path": "/api/reports/ccmax-resources/suppliers?from=YYYY-MM-DD&to=YYYY-MM-DD&supplierId=",
+      "responseShape": "object",
+      "requiredFields": [
+        "from",
+        "to",
+        "rows"
+      ],
+      "when": "suppliers tab",
+      "notes": "rows contain createdDate,supplierId,supplierName,supplierCode,count; from/to required (date loop)."
+    },
+    {
+      "route": "reports",
+      "module": "system/reports__Reports.js",
+      "method": "GET",
+      "path": "/api/reports/overview?from=&to=&currency=&supplierId=&projectId=",
+      "responseShape": "object {summary:[],monthly:[],suppliers:[]}",
+      "requiredFields": [
+        "summary",
+        "monthly",
+        "suppliers"
+      ],
+      "when": "initial",
+      "notes": "All three arrays accessed unguarded by overview renderer. summary rows: currency,supplierCount,confirmedPayable,paidAmount,outstandingAmount,receivedAmount,settlementCount,disputedCount."
+    },
+    {
+      "route": "reports",
+      "module": "system/reports__Reports.js",
+      "method": "GET",
+      "path": "/api/reports/monthly-payables?from=&to=&currency=&supplierId=&projectId=",
+      "responseShape": "object {items:[]}",
+      "requiredFields": [
+        "items"
+      ],
+      "when": "monthly tab",
+      "notes": ""
+    },
+    {
+      "route": "reports",
+      "module": "system/reports__Reports.js",
+      "method": "GET",
+      "path": "/api/reports/supplier-receivables?from=&to=&currency=&supplierId=&projectId=",
+      "responseShape": "object {items:[]}",
+      "requiredFields": [
+        "items"
+      ],
+      "when": "receivables tab",
+      "notes": ""
+    },
+    {
+      "route": "reports",
+      "module": "system/reports__Reports.js",
+      "method": "GET",
+      "path": "/api/reports/settlements?from=&to=&currency=&supplierId=&projectId=&scope=",
+      "responseShape": "object {items:[]}",
+      "requiredFields": [
+        "items"
+      ],
+      "when": "drilldown",
+      "notes": ""
+    },
+    {
+      "route": "outbound-proxies",
+      "module": "system/outbound-proxies__OutboundProxies.js",
+      "method": "GET",
+      "path": "/api/outbound-proxies/page?page=1&size=10&search=&enabled=&protocol=",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items",
+        "total",
+        "page",
+        "size"
+      ],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "users",
+      "module": "system/Users.js",
+      "method": "GET",
+      "path": "/api/system/users?search=&supplierSearch=&roleCode=&enabled=&online=&page=1&size=10",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items",
+        "total",
+        "page",
+        "size"
+      ],
+      "when": "initial",
+      "notes": "User row: id,username,displayName,role,roleCode,roleName,supplierId,supplierName,enabled,online,additionalRoles:[],version. Additional roles arrays must exist."
+    },
+    {
+      "route": "users",
+      "module": "system/Users.js",
+      "method": "GET",
+      "path": "/api/system/roles",
+      "responseShape": "object",
+      "requiredFields": [
+        "roles",
+        "permissions"
+      ],
+      "when": "initial",
+      "notes": "roles array {code,name,builtIn,permissions:[],version}; permissions array source schema."
+    },
+    {
+      "route": "roles",
+      "module": "system/Roles.js",
+      "method": "GET",
+      "path": "/api/system/roles/page?search=&page=1&size=10",
+      "responseShape": "page object plus permissions",
+      "requiredFields": [
+        "items",
+        "total",
+        "page",
+        "size",
+        "permissions"
+      ],
+      "when": "initial",
+      "notes": "role.permissions.length used unguarded, always [] at minimum."
+    },
+    {
+      "route": "audits",
+      "module": "system/Audits.js",
+      "method": "GET",
+      "path": "/api/system/audit-actions?retry=0",
+      "responseShape": "string[]",
+      "requiredFields": [],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "audits",
+      "module": "system/Audits.js",
+      "method": "GET",
+      "path": "/api/system/audits?summaryOnly=true&search=&action=&actor=&outcome=&page=1&size=10&from=&to=",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items",
+        "total",
+        "page",
+        "size"
+      ],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "audits",
+      "module": "system/Audits.js",
+      "method": "GET",
+      "path": "/api/system/audits/{id}",
+      "responseShape": "audit detail object",
+      "requiredFields": [
+        "id",
+        "action",
+        "actor",
+        "outcome"
+      ],
+      "when": "row opened",
+      "notes": ""
+    },
+    {
+      "route": "notice-admin",
+      "module": "system/notice-admin__SystemNotices.js",
+      "method": "GET",
+      "path": "/api/notifications/notices?search=&status=&page=1&size=10",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items",
+        "total",
+        "page",
+        "size"
+      ],
+      "when": "initial",
+      "notes": "row: id,title,body,status,audience,recipientCount,readCount,createdAt,publishedAt,version."
+    },
+    {
+      "route": "notice-admin",
+      "module": "system/NoticeDeliveries.js",
+      "method": "GET",
+      "path": "/api/notifications/notices/{id}/deliveries?search=&state=&page=1&size=20",
+      "responseShape": "page object plus summary",
+      "requiredFields": [
+        "items",
+        "summary"
+      ],
+      "when": "delivery dialog",
+      "notes": ""
+    },
+    {
+      "route": "notice-admin",
+      "module": "system/NoticeEditor.js",
+      "method": "GET",
+      "path": "/api/notifications/recipient-preview?audience=ALL&page=1&size=10",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items",
+        "total"
+      ],
+      "when": "create/edit notice",
+      "notes": ""
+    },
+    {
+      "route": "notice-admin",
+      "module": "system/NoticeEditor.js",
+      "method": "GET",
+      "path": "/api/notifications/quote-projects?search=&page=1&size=20",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items"
+      ],
+      "when": "filter recipient projects",
+      "notes": ""
+    },
+    {
+      "route": "notice-admin",
+      "module": "system/NoticeEditor.js",
+      "method": "GET",
+      "path": "/api/notifications/notice-recipients?search=&page=1&size=10",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items"
+      ],
+      "when": "DIRECT audience",
+      "notes": ""
+    },
+    {
+      "route": "settings",
+      "module": "system/settings__SystemSettings.js",
+      "method": "GET",
+      "path": "/api/system/settings",
+      "responseShape": "object",
+      "requiredFields": [
+        "policy",
+        "version",
+        "allowAllSuppliersPro",
+        "allowAllSuppliersCcmax",
+        "forceStopCcmaxIntake",
+        "ccmaxIntakeConcurrencyLimit",
+        "ccmaxCreationTimeoutSeconds",
+        "allowAllSuppliersCcmaxReauthorization"
+      ],
+      "when": "initial",
+      "notes": "policy includes passwordMinLength,passwordMaxLength,requireUpper,requireLower,requireDigit,requireSymbol,initialPasswordFormat,initialPasswordPrefix,quoteMultiplierMin,quoteMultiplierMax,supplierRegistrationApprovalEnabled,allowSamePersonReview. Also sessionIdleMinutes,sessionAbsoluteMinutes,forceInitialChange,loginMaxFailures,loginLockMinutes."
+    },
+    {
+      "route": "settings",
+      "module": "system/settings__SystemSettings.js",
+      "method": "GET",
+      "path": "/api/workbench-monitoring/multipliers",
+      "responseShape": "array",
+      "requiredFields": [
+        "category",
+        "minMultiplier",
+        "maxMultiplier",
+        "currentRpmMultiplier",
+        "currentTpmMultiplier",
+        "generatedAt",
+        "version"
+      ],
+      "when": "initial",
+      "notes": ""
+    },
+    {
+      "route": "settings",
+      "module": "resources/IntakePolicyPanel.js",
+      "method": "GET",
+      "path": "/api/cc-intake/admin/system",
+      "responseShape": "object",
+      "requiredFields": [
+        "policy",
+        "inherited",
+        "version"
+      ],
+      "when": "intake policy section",
+      "notes": "policy.ranges must be object; each tier min/max. Other policy allowance fields {mode,quantity}."
+    },
+    {
+      "route": "suppliers",
+      "module": "resources/IntakePolicyPanel.js",
+      "method": "GET",
+      "path": "/api/cc-intake/admin/suppliers/{id}",
+      "responseShape": "object",
+      "requiredFields": [
+        "policy",
+        "inherited",
+        "version"
+      ],
+      "when": "supplier setting",
+      "notes": ""
+    },
+    {
+      "route": "suppliers",
+      "module": "resources/IntakePolicyPanel.js",
+      "method": "GET",
+      "path": "/api/cc-intake/admin/suppliers/{id}/members",
+      "responseShape": "array",
+      "requiredFields": [
+        "id",
+        "displayName",
+        "username"
+      ],
+      "when": "supplier member priority settings",
+      "notes": ""
+    },
+    {
+      "route": "scheduled-tasks,scheduled-task-runs",
+      "module": "system/scheduled-tasks__ScheduledTasks.js",
+      "method": "GET",
+      "path": "/api/system/scheduled-tasks",
+      "responseShape": "array",
+      "requiredFields": [
+        "key",
+        "type",
+        "name",
+        "ready",
+        "enabled",
+        "running",
+        "intervalMinutes",
+        "version"
+      ],
+      "when": "initial",
+      "notes": "Empty [] safe but no execution details selectable. Each task may include unavailableReason,lastRunAt,nextRunAt,targetName."
+    },
+    {
+      "route": "scheduled-task-runs",
+      "module": "system/scheduled-task-runs__ScheduledTaskRuns.js",
+      "method": "GET",
+      "path": "/api/system/scheduled-tasks/{key}/runs?page=1&size=10&triggerKind=&state=&from=&to=",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items",
+        "total",
+        "page",
+        "size"
+      ],
+      "when": "task exists",
+      "notes": "Run row: id,state,triggerKind,startedAt,finishedAt,resultCode,message,count."
+    },
+    {
+      "route": "scheduled-tasks",
+      "module": "system/scheduled-tasks__ScheduledTasks.js",
+      "method": "GET",
+      "path": "/api/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings",
+      "responseShape": "object",
+      "requiredFields": [
+        "webhookUrl",
+        "workbenchUrl",
+        "version"
+      ],
+      "when": "reminder dialog",
+      "notes": "Do not put real webhook secrets in seed data."
+    },
+    {
+      "route": "scheduled-tasks",
+      "module": "resources/PrioritySupportDialog.js",
+      "method": "GET",
+      "path": "/api/system/scheduled-tasks/{key}/rotation-settings",
+      "responseShape": "object",
+      "requiredFields": [
+        "settings",
+        "rounds",
+        "suppliers",
+        "version",
+        "taskVersion",
+        "name",
+        "intervalMinutes"
+      ],
+      "when": "rotation dialog",
+      "notes": "settings: mode,scope,tiers:[],basisPoints,maxAccounts,priority."
+    },
+    {
+      "route": "payout-providers",
+      "module": "system/payout-providers__PayoutProviders.js",
+      "method": "GET",
+      "path": "/api/payout-providers/AIRWALLEX",
+      "responseShape": "provider configuration object",
+      "requiredFields": [
+        "enabled",
+        "configured",
+        "regionCode",
+        "apiKeyMasked",
+        "hasSecretKey",
+        "hasPassphrase",
+        "clientIdMasked",
+        "loginAs",
+        "apiVersion",
+        "transferMethod",
+        "transferReason",
+        "sourceWallet",
+        "singleLimit",
+        "dailyLimit",
+        "requestTimeoutMs",
+        "reconcileIntervalSeconds",
+        "lastHealthState",
+        "lastHealthAt",
+        "lastHealthMessage"
+      ],
+      "when": "initial: all 3 tab panels mounted",
+      "notes": "No upstream credentials should be seeded or returned. Connection test is a separate explicit action, not page-load requirement."
+    },
+    {
+      "route": "payout-providers",
+      "module": "system/payout-providers__PayoutProviders.js",
+      "method": "GET",
+      "path": "/api/payout-providers/OKX_USDT",
+      "responseShape": "provider configuration object",
+      "requiredFields": [
+        "enabled",
+        "configured",
+        "regionCode",
+        "apiKeyMasked",
+        "hasSecretKey",
+        "hasPassphrase",
+        "clientIdMasked",
+        "loginAs",
+        "apiVersion",
+        "transferMethod",
+        "transferReason",
+        "sourceWallet",
+        "singleLimit",
+        "dailyLimit",
+        "requestTimeoutMs",
+        "reconcileIntervalSeconds",
+        "lastHealthState",
+        "lastHealthAt",
+        "lastHealthMessage"
+      ],
+      "when": "initial: all 3 tab panels mounted",
+      "notes": "No upstream credentials should be seeded or returned. Connection test is a separate explicit action, not page-load requirement."
+    },
+    {
+      "route": "payout-providers",
+      "module": "system/payout-providers__PayoutProviders.js",
+      "method": "GET",
+      "path": "/api/payout-providers/BINANCE_USDT",
+      "responseShape": "provider configuration object",
+      "requiredFields": [
+        "enabled",
+        "configured",
+        "regionCode",
+        "apiKeyMasked",
+        "hasSecretKey",
+        "hasPassphrase",
+        "clientIdMasked",
+        "loginAs",
+        "apiVersion",
+        "transferMethod",
+        "transferReason",
+        "sourceWallet",
+        "singleLimit",
+        "dailyLimit",
+        "requestTimeoutMs",
+        "reconcileIntervalSeconds",
+        "lastHealthState",
+        "lastHealthAt",
+        "lastHealthMessage"
+      ],
+      "when": "initial: all 3 tab panels mounted",
+      "notes": "No upstream credentials should be seeded or returned. Connection test is a separate explicit action, not page-load requirement."
+    },
+    {
+      "route": "payout-calls",
+      "module": "system/payout-calls__PayoutCallLogs.js",
+      "method": "GET",
+      "path": "/api/payout-calls?search=&state=&page=1&size=10",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items",
+        "total",
+        "page",
+        "size"
+      ],
+      "when": "initial",
+      "notes": "Each row includes id,paymentId,supplierName,providerCode,state,amount,currency,createdAt,updatedAt."
+    },
+    {
+      "route": "notifications",
+      "module": "system/notifications__Notifications.js",
+      "method": "GET",
+      "path": "/api/notifications?unread=&page=1&size=10",
+      "responseShape": "page object {items:[],total:0,page:1,size:10}",
+      "requiredFields": [
+        "items",
+        "total",
+        "page",
+        "size"
+      ],
+      "when": "initial",
+      "notes": ""
+    }
+  ]
+}

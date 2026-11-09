@@ -1,0 +1,6 @@
+# Pull prebuilt multi-architecture release images; combine with base compose.
+services:
+  backend:
+    image: ${REGISTRY:?Set REGISTRY}/hispread-backend:${RELEASE_TAG:?Set RELEASE_TAG}
+  frontend:
+    image: ${REGISTRY:?Set REGISTRY}/hispread-frontend:${RELEASE_TAG:?Set RELEASE_TAG}

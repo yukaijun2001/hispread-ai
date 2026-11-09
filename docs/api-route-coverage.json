@@ -1,0 +1,4235 @@
+{
+  "generatedAt": "2026-11-09T12:53:01.940Z",
+  "limitations": [
+    "Literal/template path equality is a routing check only, not proof of functional behavior.",
+    "Dynamic expressions and helper calls are manually classified in domain audit files.",
+    "Frontend controls intentionally denied by role policy remain denied; a 403 is not a missing interface."
+  ],
+  "controllerMappings": 323,
+  "literalTemplates": 216,
+  "routePresent": 216,
+  "manualReview": [],
+  "checks": [
+    {
+      "module": "AccountDialogs-DkF7YQod.js",
+      "line": 31,
+      "method": "GET",
+      "path": "/auth/profile",
+      "expression": "`/auth/profile`",
+      "dynamic": false,
+      "routeMatches": [
+        "AuthController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "AccountDialogs-DkF7YQod.js",
+      "line": 45,
+      "method": "PUT",
+      "path": "/auth/profile",
+      "expression": "`/auth/profile`",
+      "dynamic": false,
+      "routeMatches": [
+        "AuthController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "AccountDialogs-DkF7YQod.js",
+      "line": 172,
+      "method": "GET",
+      "path": "/auth/password-policy",
+      "expression": "`/auth/password-policy`",
+      "dynamic": false,
+      "routeMatches": [
+        "AuthController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "AccountDialogs-DkF7YQod.js",
+      "line": 186,
+      "method": "POST",
+      "path": "/auth/password",
+      "expression": "`/auth/password`",
+      "dynamic": false,
+      "routeMatches": [
+        "AuthController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ApprovedQuoteRejection-7MD8D-Rd.js",
+      "line": 23,
+      "method": "GET",
+      "path": "/quotes/{encodeURIComponent(n.id)}",
+      "expression": "`/quotes/${encodeURIComponent(n.id)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "QuotesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ApprovedQuoteRejection-7MD8D-Rd.js",
+      "line": 42,
+      "method": "POST",
+      "path": "/quotes/{encodeURIComponent(n.id)}/reject-approved",
+      "expression": "`/quotes/${encodeURIComponent(n.id)}/reject-approved`",
+      "dynamic": true,
+      "routeMatches": [
+        "QuotesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Audits-BxINf5wz.js",
+      "line": 386,
+      "method": "GET",
+      "path": "/system/audit-actions?retry={te}",
+      "expression": "`/system/audit-actions?retry=${te}`",
+      "dynamic": true,
+      "routeMatches": [
+        "SystemAdminController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Audits-BxINf5wz.js",
+      "line": 395,
+      "method": "GET",
+      "path": "/system/audits?summaryOnly=true&{Q.toString()}",
+      "expression": "`/system/audits?summaryOnly=true&${Q.toString()}`",
+      "dynamic": true,
+      "routeMatches": [
+        "SystemAdminController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2441,
+      "method": "GET",
+      "path": "/resources/eligible-projects",
+      "expression": "`/resources/eligible-projects`",
+      "dynamic": false,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "CcmaxBatchDelivery-BSCydCTL.js",
+      "line": 125,
+      "method": "POST",
+      "path": "/resources/ccmax/batch",
+      "expression": "`/resources/ccmax/batch`",
+      "dynamic": false,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "CurrentResourceOverview-Dl-e28oo.js",
+      "line": 41,
+      "method": "GET",
+      "path": "/reports/ccmax-resources/current?{new URLSearchParams({supplierId:E})}",
+      "expression": "`/reports/ccmax-resources/current?${new URLSearchParams({supplierId:E})}`",
+      "dynamic": true,
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 53,
+      "method": "GET",
+      "path": "/accounting/daily/exports?page=1&type=&state=",
+      "expression": "`/accounting/daily/exports?page=1&type=&state=`",
+      "dynamic": false,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 183,
+      "method": "GET",
+      "path": "/accounting/daily/summary?{H}",
+      "expression": "`/accounting/daily/summary?${H}`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "DailyCreationAnalysis-MGRzns81.js",
+      "line": 281,
+      "method": "GET",
+      "path": "/reports/ccmax-resources?{U}",
+      "expression": "`/reports/ccmax-resources?${U}`",
+      "dynamic": true,
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "DailyExports-q6_gv_XE.js",
+      "line": 129,
+      "method": "POST",
+      "path": "/accounting/daily/exports",
+      "expression": "y",
+      "dynamic": false,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ExchangeRatesTab-FzGMcdR6.js",
+      "line": 151,
+      "method": "POST",
+      "path": "/exchange-rates",
+      "expression": "`/exchange-rates`",
+      "dynamic": false,
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ExchangeRatesTab-FzGMcdR6.js",
+      "line": 167,
+      "method": "POST",
+      "path": "/exchange-rates/{O.id}/enabled",
+      "expression": "`/exchange-rates/${O.id}/enabled`",
+      "dynamic": true,
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "IntakeAllocationDialog-CW0YASmn.js",
+      "line": 240,
+      "method": "PUT",
+      "path": "/cc-intake/allocations",
+      "expression": "`/cc-intake/allocations`",
+      "dynamic": false,
+      "routeMatches": [
+        "TeamController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "IntakePolicyPanel-DHvOkPUU.js",
+      "line": 311,
+      "method": "GET",
+      "path": "/cc-intake/admin/suppliers/{encodeURIComponent(e)}/members",
+      "expression": "`/cc-intake/admin/suppliers/${encodeURIComponent(e)}/members`",
+      "dynamic": true,
+      "routeMatches": [
+        "IntakeConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "IntakeProjectTypes-FBnV0kVR.js",
+      "line": 33,
+      "method": "GET",
+      "path": "/projects/{encodeURIComponent(r.id)}/intake-channel-types",
+      "expression": "`/projects/${encodeURIComponent(r.id)}/intake-channel-types`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "IntakeProjectTypes-FBnV0kVR.js",
+      "line": 41,
+      "method": "PUT",
+      "path": "/projects/{encodeURIComponent(r.id)}/intake-channel-types",
+      "expression": "`/projects/${encodeURIComponent(r.id)}/intake-channel-types`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "IntakeReviewDialog-C9xZ8Ftb.js",
+      "line": 131,
+      "method": "POST",
+      "path": "/cc-intake/admin/reviews/{encodeURIComponent(k.dispatchId)}/resolve",
+      "expression": "`/cc-intake/admin/reviews/${encodeURIComponent(k.dispatchId)}/resolve`",
+      "dynamic": true,
+      "routeMatches": [
+        "IntakeConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "usePaymentEvidence-DFI1SOk7.js",
+      "line": 275,
+      "method": "POST",
+      "path": "/documents",
+      "expression": "t",
+      "dynamic": false,
+      "routeMatches": [
+        "DocumentController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "MySupplierProfile-DPM4wUP0.js",
+      "line": 69,
+      "method": "PUT",
+      "path": "/suppliers/{n.id}",
+      "expression": "`/suppliers/${n.id}`",
+      "dynamic": true,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 451,
+      "method": "POST",
+      "path": "/accounts",
+      "expression": "`/accounts`",
+      "dynamic": false,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 5916,
+      "method": "GET",
+      "path": "/documents",
+      "expression": "`/documents`",
+      "dynamic": false,
+      "routeMatches": [
+        "DocumentController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "NewDelivery-CYrGthQl.js",
+      "line": 209,
+      "method": "POST",
+      "path": "/resource-intakes/recognize",
+      "expression": "`/resource-intakes/recognize`",
+      "dynamic": false,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "NewDelivery-CYrGthQl.js",
+      "line": 233,
+      "method": "POST",
+      "path": "/resource-intakes/preview",
+      "expression": "`/resource-intakes/preview`",
+      "dynamic": false,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "NewDelivery-CYrGthQl.js",
+      "line": 249,
+      "method": "POST",
+      "path": "/resource-intakes",
+      "expression": "`/resource-intakes`",
+      "dynamic": false,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "NoticeDeliveries-D5ljVxwh.js",
+      "line": 26,
+      "method": "GET",
+      "path": "/notifications/notices/{r.id}/deliveries?search={encodeURIComponent(d)}&state={_}&page={y}&size={x}",
+      "expression": "`/notifications/notices/${r.id}/deliveries?search=${encodeURIComponent(d)}&state=${_}&page=${y}&size=${x}`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 189,
+      "method": "GET",
+      "path": "/notifications/notice-recipients",
+      "expression": "`/notifications/notice-recipients`",
+      "dynamic": false,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 200,
+      "method": "PUT",
+      "path": "/notifications/notices/{n.id}",
+      "expression": "`/notifications/notices/${n.id}`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 204,
+      "method": "POST",
+      "path": "/notifications/notices",
+      "expression": "`/notifications/notices`",
+      "dynamic": false,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 206,
+      "method": "POST",
+      "path": "/notifications/publish",
+      "expression": "`/notifications/publish`",
+      "dynamic": false,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 7853,
+      "method": "GET",
+      "path": "/notifications?unread=true&size=5",
+      "expression": "`/notifications?unread=true&size=5`",
+      "dynamic": false,
+      "routeMatches": [
+        "WorkbenchController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 7891,
+      "method": "POST",
+      "path": "/notifications/{e.id}/read",
+      "expression": "`/notifications/${e.id}/read`",
+      "dynamic": true,
+      "routeMatches": [
+        "WorkbenchController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Notifications-BTntRB-A.js",
+      "line": 44,
+      "method": "POST",
+      "path": "/notifications/read-all",
+      "expression": "`/notifications/read-all`",
+      "dynamic": false,
+      "routeMatches": [
+        "WorkbenchController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Onboarding-BDYVT1sP.js",
+      "line": 27,
+      "method": "POST",
+      "path": "/auth/onboarding",
+      "expression": "`/auth/onboarding`",
+      "dynamic": false,
+      "routeMatches": [
+        "AuthController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "OperatorKpi-NouSWERW.js",
+      "line": 44,
+      "method": "GET",
+      "path": "/suppliers/owner-candidates?includeHistory=true",
+      "expression": "`/suppliers/owner-candidates?includeHistory=true`",
+      "dynamic": false,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 169,
+      "method": "GET",
+      "path": "/outbound-proxies/page?page={t}&size={r}&{n}",
+      "expression": "`/outbound-proxies/page?page=${t}&size=${r}&${n}`",
+      "dynamic": true,
+      "routeMatches": [
+        "ProxyController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 190,
+      "method": "POST",
+      "path": "/outbound-proxies/{encodeURIComponent(e.id)}/test",
+      "expression": "`/outbound-proxies/${encodeURIComponent(e.id)}/test`",
+      "dynamic": true,
+      "routeMatches": [
+        "ProxyController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 238,
+      "method": "POST",
+      "path": "/outbound-proxies",
+      "expression": "`/outbound-proxies`",
+      "dynamic": false,
+      "routeMatches": [
+        "ProxyController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 238,
+      "method": "PUT",
+      "path": "/outbound-proxies/{encodeURIComponent(O.id)}",
+      "expression": "`/outbound-proxies/${encodeURIComponent(O.id)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "ProxyController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 251,
+      "method": "POST",
+      "path": "/outbound-proxies/import",
+      "expression": "`/outbound-proxies/import`",
+      "dynamic": false,
+      "routeMatches": [
+        "ProxyController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "OwnerSection-BV_jBT2b.js",
+      "line": 125,
+      "method": "PUT",
+      "path": "/suppliers/{i}/owner",
+      "expression": "`/suppliers/${i}/owner`",
+      "dynamic": true,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "PaymentForm-DYdHXH-C.js",
+      "line": 179,
+      "method": "POST",
+      "path": "/payments/offline",
+      "expression": "`/payments/offline`",
+      "dynamic": false,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "PaymentForm-DYdHXH-C.js",
+      "line": 184,
+      "method": "POST",
+      "path": "/payments",
+      "expression": "`/payments`",
+      "dynamic": false,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 138,
+      "method": "POST",
+      "path": "/payments/{e.id}/reconcile",
+      "expression": "`/payments/${e.id}/reconcile`",
+      "dynamic": true,
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 253,
+      "method": "POST",
+      "path": "/payments/{e.id}/execute",
+      "expression": "`/payments/${e.id}/execute`",
+      "dynamic": true,
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 213,
+      "method": "POST",
+      "path": "/payments/{e.id}/payout-preview",
+      "expression": "`/payments/${e.id}/payout-preview`",
+      "dynamic": true,
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 294,
+      "method": "POST",
+      "path": "/payments/sandbox/events",
+      "expression": "`/payments/sandbox/events`",
+      "dynamic": false,
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 317,
+      "method": "GET",
+      "path": "/payments?page={T}&size={D}&settlementId={encodeURIComponent(c)}",
+      "expression": "`/payments?page=${T}&size=${D}&settlementId=${encodeURIComponent(c)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 320,
+      "method": "GET",
+      "path": "/payments/{encodeURIComponent(q)}",
+      "expression": "`/payments/` + encodeURIComponent(q)",
+      "dynamic": true,
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 329,
+      "method": "GET",
+      "path": "/payments/{encodeURIComponent(t.id)}",
+      "expression": "`/payments/` + encodeURIComponent(t.id)",
+      "dynamic": true,
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 478,
+      "method": "POST",
+      "path": "/payments/{j.id}/review",
+      "expression": "`/payments/${j.id}/review`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 542,
+      "method": "POST",
+      "path": "/payments/{j.id}/receipt",
+      "expression": "`/payments/${j.id}/receipt`",
+      "dynamic": true,
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 573,
+      "method": "POST",
+      "path": "/payments/{j.id}/close",
+      "expression": "`/payments/${j.id}/close`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 591,
+      "method": "GET",
+      "path": "/settlements/{encodeURIComponent(e.settlementId)}",
+      "expression": "`/settlements/${encodeURIComponent(e.settlementId)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 634,
+      "method": "POST",
+      "path": "/payments/{e.id}/offline-record",
+      "expression": "`/payments/${e.id}/offline-record`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "PayoutCallLogs-DpLZK7rw.js",
+      "line": 37,
+      "method": "GET",
+      "path": "/payout-calls?{E.toString()}",
+      "expression": "`/payout-calls?${E.toString()}`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "PayoutProviders-D9Kgf-te.js",
+      "line": 75,
+      "method": "GET",
+      "path": "/payout-providers/{t.code}",
+      "expression": "`/payout-providers/${t.code}`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "PayoutProviders-D9Kgf-te.js",
+      "line": 119,
+      "method": "PUT",
+      "path": "/payout-providers/{t.code}",
+      "expression": "`/payout-providers/${t.code}`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "PayoutProviders-D9Kgf-te.js",
+      "line": 327,
+      "method": "POST",
+      "path": "/payout-providers/{t.code}/test",
+      "expression": "`/payout-providers/${t.code}/test`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "PrioritySupportDialog-DfV-rWYR.js",
+      "line": 96,
+      "method": "POST",
+      "path": "/system/scheduled-tasks/priority-support",
+      "expression": "_ + `/priority-support`",
+      "dynamic": false,
+      "routeMatches": [
+        "IntakeConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 47,
+      "method": "GET",
+      "path": "/projects/categories",
+      "expression": "`/projects/categories`",
+      "dynamic": false,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1679,
+      "method": "GET",
+      "path": "/projects/category-codes",
+      "expression": "`/projects/category-codes`",
+      "dynamic": false,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2368,
+      "method": "GET",
+      "path": "/projects?size=100",
+      "expression": "`/projects?size=100`",
+      "dynamic": false,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 55,
+      "method": "DELETE",
+      "path": "/projects/category-codes/{code}",
+      "expression": "`/projects/category-codes/${encodeURIComponent(U.code)}?version=${U.version}`",
+      "dynamic": true,
+      "originalMethod": "GET",
+      "originalPath": "/projects/category-codes/{encodeURIComponent(U.code)}?version={U.version}",
+      "manualResolution": "Core export $ request receives method DELETE through a computed alias.",
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 503,
+      "method": "POST",
+      "path": "/projects/category-codes",
+      "expression": "`/projects/category-codes`",
+      "dynamic": false,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 506,
+      "method": "PUT",
+      "path": "/projects/category-codes/{encodeURIComponent(V.code)}",
+      "expression": "`/projects/category-codes/${encodeURIComponent(V.code)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 573,
+      "method": "POST",
+      "path": "/projects",
+      "expression": "`/projects`",
+      "dynamic": false,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 573,
+      "method": "PUT",
+      "path": "/projects/{N.id}",
+      "expression": "`/projects/` + N.id",
+      "dynamic": true,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "QueryFilters-CwGBc_NH.js",
+      "line": 164,
+      "method": "GET",
+      "path": "/suppliers?page={o}&size=100&state={encodeURIComponent(r)}&search={encodeURIComponent(i)}",
+      "expression": "`/suppliers?page=${o}&size=100&state=${encodeURIComponent(r)}&search=${encodeURIComponent(i)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "QuotePeriodPanel-D3BWLIuY.js",
+      "line": 52,
+      "method": "GET",
+      "path": "/quotes/{encodeURIComponent(n.id)}/period-change",
+      "expression": "`/quotes/${encodeURIComponent(n.id)}/period-change`",
+      "dynamic": true,
+      "routeMatches": [
+        "QuotesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "QuotePeriodPanel-D3BWLIuY.js",
+      "line": 121,
+      "method": "POST",
+      "path": "/quotes/{encodeURIComponent(n.id)}/period-change",
+      "expression": "`/quotes/${encodeURIComponent(n.id)}/period-change`",
+      "dynamic": true,
+      "routeMatches": [
+        "QuotesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "QuotePeriodPanel-D3BWLIuY.js",
+      "line": 157,
+      "method": "POST",
+      "path": "/quotes/{encodeURIComponent(n.id)}/period-change/review",
+      "expression": "`/quotes/${encodeURIComponent(n.id)}/period-change/review`",
+      "dynamic": true,
+      "routeMatches": [
+        "QuotesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "QuoteRankingResults-cj8V1Hgu.js",
+      "line": 40,
+      "method": "GET",
+      "path": "/quotes/ranking?projectId={encodeURIComponent(r.id)}&currency={encodeURIComponent(i)}&onDate={encodeURIComponent(l)}&sortBy={y}&sortDirection={x}",
+      "expression": "T",
+      "dynamic": true,
+      "routeMatches": [
+        "QuotesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 164,
+      "method": "GET",
+      "path": "/quotes/{encodeURIComponent(t)}",
+      "expression": "`/quotes/` + encodeURIComponent(t)",
+      "dynamic": true,
+      "routeMatches": [
+        "QuotesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 197,
+      "method": "GET",
+      "path": "/quotes/{encodeURIComponent(t.id)}",
+      "expression": "`/quotes/${encodeURIComponent(t.id)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "QuotesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 300,
+      "method": "PUT",
+      "path": "/quotes/{e.id}",
+      "expression": "`/quotes/${e.id}`",
+      "dynamic": true,
+      "routeMatches": [
+        "QuotesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 300,
+      "method": "POST",
+      "path": "/quotes",
+      "expression": "`/quotes`",
+      "dynamic": false,
+      "routeMatches": [
+        "QuotesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 1122,
+      "method": "POST",
+      "path": "/quotes/{M.id}/review",
+      "expression": "`/quotes/${M.id}/review`",
+      "dynamic": true,
+      "routeMatches": [
+        "QuotesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 1157,
+      "method": "POST",
+      "path": "/quotes/{M.id}/withdraw",
+      "expression": "`/quotes/${M.id}/withdraw`",
+      "dynamic": true,
+      "routeMatches": [
+        "QuotesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Reports-ChHNVTLt.js",
+      "line": 179,
+      "method": "GET",
+      "path": "/reports/settlements?{i.toString()}",
+      "expression": "`/reports/settlements?${i.toString()}`",
+      "dynamic": true,
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 65,
+      "method": "GET",
+      "path": "/resources/{_(a.id)}",
+      "expression": "`/resources/${_(a.id)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 175,
+      "method": "GET",
+      "path": "/resources/{_(Y.id)}",
+      "expression": "`/resources/${_(Y.id)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 108,
+      "method": "POST",
+      "path": "/resources/{_(Y.id)}/dispatch",
+      "expression": "`/resources/${_(Y.id)}/dispatch`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 113,
+      "method": "POST",
+      "path": "/resources/{_(Y.id)}/oauth/authorize",
+      "expression": "`/resources/${_(Y.id)}/oauth/authorize`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 120,
+      "method": "POST",
+      "path": "/resources/{_(Y.id)}/oauth/complete",
+      "expression": "`/resources/${_(Y.id)}/oauth/complete`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 149,
+      "method": "POST",
+      "path": "/resources/{_(Y.id)}/oauth/supplier-retry",
+      "expression": "`/resources/${_(Y.id)}/oauth/supplier-retry`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 168,
+      "method": "POST",
+      "path": "/resources/{_(Y.id)}/submit",
+      "expression": "`/resources/${_(Y.id)}/submit`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 369,
+      "method": "POST",
+      "path": "/resources/oauth/supplier-session/{m(j.sessionId)}/cancel",
+      "expression": "`/resources/oauth/supplier-session/${m(j.sessionId)}/cancel`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 152,
+      "method": "GET",
+      "path": "/resources/{m(t.resourceId)}",
+      "expression": "`/resources/${m(t.resourceId)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 157,
+      "method": "GET",
+      "path": "/resources/{m(t.details.resourceId)}",
+      "expression": "`/resources/${m(t.details.resourceId)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 178,
+      "method": "GET",
+      "path": "/resources/{m(T.id)}",
+      "expression": "`/resources/${m(T.id)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 285,
+      "method": "POST",
+      "path": "/outbound-proxies/resolve",
+      "expression": "`/outbound-proxies/resolve`",
+      "dynamic": false,
+      "routeMatches": [
+        "ProxyController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 309,
+      "method": "POST",
+      "path": "/resources/oauth/supplier-submit",
+      "expression": "`/resources/oauth/supplier-submit`",
+      "dynamic": false,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 317,
+      "method": "POST",
+      "path": "/resources/{m(e.id)}/oauth/supplier-submit",
+      "expression": "`/resources/${m(e.id)}/oauth/supplier-submit`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 353,
+      "method": "POST",
+      "path": "/resources/oauth/supplier-authorize",
+      "expression": "`/resources/oauth/supplier-authorize`",
+      "dynamic": false,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 362,
+      "method": "POST",
+      "path": "/resources/supplier-submit",
+      "expression": "`/resources/supplier-submit`",
+      "dynamic": false,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 379,
+      "method": "PUT",
+      "path": "/resources/{m(T.id)}",
+      "expression": "`/resources/${m(T.id)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 379,
+      "method": "POST",
+      "path": "/resources/drafts",
+      "expression": "`/resources/drafts`",
+      "dynamic": false,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 381,
+      "method": "POST",
+      "path": "/resources/{m(e.id)}/oauth/supplier-authorize",
+      "expression": "`/resources/${m(e.id)}/oauth/supplier-authorize`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 388,
+      "method": "POST",
+      "path": "/resources/{m(e.id)}/submit",
+      "expression": "`/resources/${m(e.id)}/submit`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 401,
+      "method": "GET",
+      "path": "/resources/{m(i)}",
+      "expression": "`/resources/${m(i)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 70,
+      "method": "POST",
+      "path": "/workbench-monitoring/sources/{encodeURIComponent(e.id)}/refresh",
+      "expression": "`/workbench-monitoring/sources/${encodeURIComponent(e.id)}/refresh`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 243,
+      "method": "PUT",
+      "path": "/workbench-monitoring/sources/{encodeURIComponent(v.id)}",
+      "expression": "`/workbench-monitoring/sources/${encodeURIComponent(v.id)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 450,
+      "method": "PUT",
+      "path": "/workbench-monitoring/sources/{encodeURIComponent(a.id)}",
+      "expression": "`/workbench-monitoring/sources/${encodeURIComponent(a.id)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 450,
+      "method": "POST",
+      "path": "/workbench-monitoring/sources",
+      "expression": "`/workbench-monitoring/sources`",
+      "dynamic": false,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 466,
+      "method": "GET",
+      "path": "/resource-targets/{encodeURIComponent(n)}/sync-settings",
+      "expression": "`/resource-targets/${encodeURIComponent(n)}/sync-settings`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 500,
+      "method": "PUT",
+      "path": "/resource-targets/{encodeURIComponent(n)}/sync-settings",
+      "expression": "`/resource-targets/${encodeURIComponent(n)}/sync-settings`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 629,
+      "method": "POST",
+      "path": "/resource-targets/{encodeURIComponent(x.id)}/test",
+      "expression": "`/resource-targets/${encodeURIComponent(x.id)}/test`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 642,
+      "method": "POST",
+      "path": "/resource-targets/{encodeURIComponent(x.id)}/oauth/link",
+      "expression": "`/resource-targets/${encodeURIComponent(x.id)}/oauth/link`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 661,
+      "method": "POST",
+      "path": "/resource-targets/{encodeURIComponent(x.id)}/oauth/complete",
+      "expression": "`/resource-targets/${encodeURIComponent(x.id)}/oauth/complete`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 858,
+      "method": "POST",
+      "path": "/resource-targets",
+      "expression": "`/resource-targets`",
+      "dynamic": false,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 858,
+      "method": "PUT",
+      "path": "/resource-targets/{encodeURIComponent(e.id)}",
+      "expression": "`/resource-targets/${encodeURIComponent(e.id)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 103,
+      "method": "GET",
+      "path": "/resources/submission-capabilities",
+      "expression": "Ae",
+      "dynamic": false,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 248,
+      "method": "POST",
+      "path": "/resource-lifecycle-jobs",
+      "expression": "`/resource-lifecycle-jobs`",
+      "dynamic": false,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 385,
+      "method": "POST",
+      "path": "/resource-intakes/{encodeURIComponent(e.id)}/original-request",
+      "expression": "`/resource-intakes/${encodeURIComponent(e.id)}/original-request`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 398,
+      "method": "POST",
+      "path": "/resource-intakes/{encodeURIComponent(e.id)}/material",
+      "expression": "`/resource-intakes/${encodeURIComponent(e.id)}/material`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 574,
+      "method": "GET",
+      "path": "/resource-proxy-replacements/proxy-options?resourceId={encodeURIComponent(e)}&search={encodeURIComponent(o)}&page={c}&size={d}",
+      "expression": "`/resource-proxy-replacements/proxy-options?resourceId=${encodeURIComponent(e)}&search=${encodeURIComponent(o)}&page=${c}&size=${d}`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 651,
+      "method": "POST",
+      "path": "/resource-proxy-replacements",
+      "expression": "`/resource-proxy-replacements`",
+      "dynamic": false,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 742,
+      "method": "GET",
+      "path": "/resource-proxy-replacements?scope={o}&page={l}&size=10{n?`&resourceId=${encodeURIComponent(n)}`:``}",
+      "expression": "`/resource-proxy-replacements?scope=${o}&page=${l}&size=10${n?`&resourceId=${encodeURIComponent(n)}`:``}`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 805,
+      "method": "GET",
+      "path": "/resource-proxy-replacements/{encodeURIComponent(e)}",
+      "expression": "`/resource-proxy-replacements/${encodeURIComponent(e)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 815,
+      "method": "POST",
+      "path": "/resource-proxy-replacements/{encodeURIComponent(e)}/reconcile",
+      "expression": "`/resource-proxy-replacements/${encodeURIComponent(e)}/reconcile`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1580,
+      "method": "GET",
+      "path": "/resources/{encodeURIComponent(t.id)}/credential-refresh",
+      "expression": "_",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1593,
+      "method": "POST",
+      "path": "/resources/{encodeURIComponent(t.id)}/credential-refresh",
+      "expression": "_",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1702,
+      "method": "GET",
+      "path": "/resource-intakes/{encodeURIComponent(e.id)}",
+      "expression": "`/resource-intakes/${encodeURIComponent(e.id)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1750,
+      "method": "GET",
+      "path": "/resource-intakes/{encodeURIComponent(e.id)}/eligible-projects",
+      "expression": "`/resource-intakes/${encodeURIComponent(e.id)}/eligible-projects`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1761,
+      "method": "POST",
+      "path": "/resource-intakes/{encodeURIComponent(e.id)}/assign-project",
+      "expression": "`/resource-intakes/${encodeURIComponent(e.id)}/assign-project`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1972,
+      "method": "POST",
+      "path": "/resources/{encodeURIComponent(t.id)}/reauthorizations",
+      "expression": "ae",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2175,
+      "method": "POST",
+      "path": "/resources/{encodeURIComponent(e.id)}/say-hi",
+      "expression": "`/resources/${encodeURIComponent(e.id)}/say-hi`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2304,
+      "method": "POST",
+      "path": "/resources/{ge(X.resource.id)}/creation-recovery",
+      "expression": "`/resources/${ge(X.resource.id)}/creation-recovery`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2339,
+      "method": "GET",
+      "path": "/deliveries/filter-options?assignment={Ke}&supplierSearch={encodeURIComponent(Re.supplier)}&creatorSearch={encodeURIComponent(Re.creator)}",
+      "expression": "`/deliveries/filter-options?assignment=${Ke}&supplierSearch=${encodeURIComponent(Re.supplier)}&creatorSearch=${encodeURIComponent(Re.creator)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2356,
+      "method": "GET",
+      "path": "/deliveries?{un}",
+      "expression": "`/deliveries?${un}`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2439,
+      "method": "GET",
+      "path": "/quotes/{ge(jn)}",
+      "expression": "`/quotes/${ge(jn)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "QuotesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2467,
+      "method": "GET",
+      "path": "/resources/{ge(t)}",
+      "expression": "`/resources/${ge(t)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2489,
+      "method": "POST",
+      "path": "/resources/{ge(e.id)}/usage",
+      "expression": "`/resources/${ge(e.id)}/usage`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2523,
+      "method": "GET",
+      "path": "/resources/{ge(t.id)}",
+      "expression": "`/resources/${ge(t.id)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2524,
+      "method": "POST",
+      "path": "/resources/{ge(n.id)}/oauth/supplier-retry",
+      "expression": "`/resources/${ge(n.id)}/oauth/supplier-retry`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2542,
+      "method": "GET",
+      "path": "/resources/{ge(Ht.id)}?version={Ht.version}",
+      "expression": "`/resources/${ge(Ht.id)}?version=${Ht.version}`",
+      "dynamic": true,
+      "routeMatches": [
+        "ResourcesController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "RoleEditor-D-Ljkwz-.js",
+      "line": 264,
+      "method": "POST",
+      "path": "/system/roles",
+      "expression": "`/system/roles`",
+      "dynamic": false,
+      "routeMatches": [
+        "SystemAdminController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "RoleEditor-D-Ljkwz-.js",
+      "line": 264,
+      "method": "PUT",
+      "path": "/system/roles/{t.code}",
+      "expression": "`/system/roles/` + t.code",
+      "dynamic": true,
+      "routeMatches": [
+        "SystemAdminController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Roles-BkB5m-qF.js",
+      "line": 32,
+      "method": "GET",
+      "path": "/system/roles/page?{C.toString()}",
+      "expression": "`/system/roles/page?${C.toString()}`",
+      "dynamic": true,
+      "routeMatches": [
+        "SystemAdminController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ScheduledTasks-DQG4VARN.js",
+      "line": 43,
+      "method": "GET",
+      "path": "/system/scheduled-tasks",
+      "expression": "`/system/scheduled-tasks`",
+      "dynamic": false,
+      "routeMatches": [
+        "SystemAdminController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ScheduledTasks-DQG4VARN.js",
+      "line": 48,
+      "method": "PUT",
+      "path": "/system/scheduled-tasks/{encodeURIComponent(e.key)}",
+      "expression": "`/system/scheduled-tasks/${encodeURIComponent(e.key)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "SystemAdminController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ScheduledTasks-DQG4VARN.js",
+      "line": 71,
+      "method": "GET",
+      "path": "/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings",
+      "expression": "`/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings`",
+      "dynamic": false,
+      "routeMatches": [
+        "SystemAdminController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ScheduledTasks-DQG4VARN.js",
+      "line": 84,
+      "method": "PUT",
+      "path": "/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings",
+      "expression": "`/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings`",
+      "dynamic": false,
+      "routeMatches": [
+        "SystemAdminController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ScheduledTasks-DQG4VARN.js",
+      "line": 92,
+      "method": "PUT",
+      "path": "/system/scheduled-tasks/{encodeURIComponent(k.key)}/config",
+      "expression": "`/system/scheduled-tasks/${encodeURIComponent(k.key)}/config`",
+      "dynamic": true,
+      "routeMatches": [
+        "SystemAdminController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "ScheduledTasks-DQG4VARN.js",
+      "line": 234,
+      "method": "PUT",
+      "path": "/system/scheduled-tasks/{encodeURIComponent(D.key)}/schedule",
+      "expression": "`/system/scheduled-tasks/${encodeURIComponent(D.key)}/schedule`",
+      "dynamic": true,
+      "routeMatches": [
+        "SystemAdminController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 180,
+      "method": "GET",
+      "path": "/settlement-batches?view={_e}",
+      "expression": "`/settlement-batches?view=${_e}`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 186,
+      "method": "GET",
+      "path": "/settlement-batches/{j.id}",
+      "expression": "`/settlement-batches/${j.id}`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 247,
+      "method": "GET",
+      "path": "/settlement-batches/{t}",
+      "expression": "`/settlement-batches/${t}`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 383,
+      "method": "POST",
+      "path": "/settlement-batches/{j.id}/start",
+      "expression": "`/settlement-batches/${j.id}/start`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 390,
+      "method": "POST",
+      "path": "/settlement-batches/{j.id}/retry-preview",
+      "expression": "`/settlement-batches/${j.id}/retry-preview`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 576,
+      "method": "POST",
+      "path": "/settlement-batches/preview",
+      "expression": "`/settlement-batches/preview`",
+      "dynamic": false,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 597,
+      "method": "GET",
+      "path": "/settlement-batches/{j.id}/items/{N}/preview?page={t}&size={n}",
+      "expression": "`/settlement-batches/${j.id}/items/${N}/preview?page=${t}&size=${n}`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 58,
+      "method": "GET",
+      "path": "/settlements/{i}?page={P}&size={I}",
+      "expression": "`/settlements/${i}?page=${P}&size=${I}`",
+      "dynamic": true,
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 282,
+      "method": "POST",
+      "path": "/settlements/{i}/confirm",
+      "expression": "`/settlements/${i}/confirm`",
+      "dynamic": true,
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 300,
+      "method": "POST",
+      "path": "/settlements/{i}/void",
+      "expression": "`/settlements/${i}/void`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 321,
+      "method": "POST",
+      "path": "/settlements/{i}/withdraw",
+      "expression": "`/settlements/${i}/withdraw`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 418,
+      "method": "POST",
+      "path": "/settlements/{t.id}/adjustments",
+      "expression": "`/settlements/${t.id}/adjustments`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SettlementInputs-CZ-QKlwM.js",
+      "line": 48,
+      "method": "GET",
+      "path": "/settlement-inputs?search={encodeURIComponent(c)}&state={O}&page={b}&size={E}",
+      "expression": "`/settlement-inputs?search=${encodeURIComponent(c)}&state=${O}&page=${b}&size=${E}`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SettlementInputs-CZ-QKlwM.js",
+      "line": 215,
+      "method": "POST",
+      "path": "/settlement-inputs/{A.id}/void",
+      "expression": "`/settlement-inputs/${A.id}/void`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 769,
+      "method": "POST",
+      "path": "/settlements/preview?page={e}&size={t}",
+      "expression": "`/settlements/preview?page=${e}&size=${t}`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 775,
+      "method": "POST",
+      "path": "/settlements",
+      "expression": "`/settlements`",
+      "dynamic": false,
+      "routeMatches": [
+        "PlatformFinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierAccounts-CMP57Xp2.js",
+      "line": 65,
+      "method": "POST",
+      "path": "/accounts/{t.id}/reveal",
+      "expression": "`/accounts/${t.id}/reveal`",
+      "dynamic": true,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierAccounts-CMP57Xp2.js",
+      "line": 96,
+      "method": "GET",
+      "path": "/accounts/platform?{W}",
+      "expression": "`/accounts/platform?${W}`",
+      "dynamic": true,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 143,
+      "method": "GET",
+      "path": "/supplier-agents/{encodeURIComponent(r.id)}/projects",
+      "expression": "d",
+      "dynamic": true,
+      "routeMatches": [
+        "TeamController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 154,
+      "method": "PUT",
+      "path": "/supplier-agents/{encodeURIComponent(r.id)}/projects",
+      "expression": "d",
+      "dynamic": true,
+      "routeMatches": [
+        "TeamController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 300,
+      "method": "GET",
+      "path": "/supplier-agents",
+      "expression": "`/supplier-agents`",
+      "dynamic": false,
+      "routeMatches": [
+        "TeamController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 7922,
+      "method": "GET",
+      "path": "/auth/registration-policy",
+      "expression": "`/auth/registration-policy`",
+      "dynamic": false,
+      "routeMatches": [
+        "AuthController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 326,
+      "method": "POST",
+      "path": "/supplier-agents",
+      "expression": "`/supplier-agents`",
+      "dynamic": false,
+      "routeMatches": [
+        "TeamController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 347,
+      "method": "PUT",
+      "path": "/supplier-agents/{encodeURIComponent(e.id)}/enabled",
+      "expression": "`/supplier-agents/${encodeURIComponent(e.id)}/enabled`",
+      "dynamic": true,
+      "routeMatches": [
+        "TeamController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 362,
+      "method": "POST",
+      "path": "/supplier-agents/{encodeURIComponent(e.id)}/password",
+      "expression": "`/supplier-agents/${encodeURIComponent(e.id)}/password`",
+      "dynamic": true,
+      "routeMatches": [
+        "TeamController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierBills-BVKniq6z.js",
+      "line": 60,
+      "method": "GET",
+      "path": "/supplier-bills/filters?{new URLSearchParams({from:G,to:K,department:N})}",
+      "expression": "`/supplier-bills/filters?${new URLSearchParams({from:G,to:K,department:N})}`",
+      "dynamic": true,
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierBills-BVKniq6z.js",
+      "line": 551,
+      "method": "GET",
+      "path": "/supplier-bills/entries?{I}",
+      "expression": "`/supplier-bills/entries?${I}`",
+      "dynamic": true,
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierDailyCreations-C04GFRSJ.js",
+      "line": 49,
+      "method": "GET",
+      "path": "/reports/ccmax-resources/suppliers?{new URLSearchParams(C)}",
+      "expression": "`/reports/ccmax-resources/suppliers?${new URLSearchParams(C)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 59,
+      "method": "GET",
+      "path": "/suppliers/{a}",
+      "expression": "`/suppliers/` + a",
+      "dynamic": true,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 210,
+      "method": "POST",
+      "path": "/suppliers/{a}/review",
+      "expression": "`/suppliers/${a}/review`",
+      "dynamic": true,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 309,
+      "method": "POST",
+      "path": "/accounts/{e.id}/reveal",
+      "expression": "`/accounts/${e.id}/reveal`",
+      "dynamic": true,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 346,
+      "method": "POST",
+      "path": "/accounts/{e.id}/review",
+      "expression": "`/accounts/${e.id}/review`",
+      "dynamic": true,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 474,
+      "method": "POST",
+      "path": "/suppliers/{a}/users",
+      "expression": "`/suppliers/${a}/users`",
+      "dynamic": true,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 497,
+      "method": "PUT",
+      "path": "/suppliers/{a}/note",
+      "expression": "`/suppliers/${a}/note`",
+      "dynamic": true,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 515,
+      "method": "PUT",
+      "path": "/suppliers/{a}/code",
+      "expression": "`/suppliers/${a}/code`",
+      "dynamic": true,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 530,
+      "method": "POST",
+      "path": "/suppliers/{id}/enabled",
+      "expression": "`/suppliers/${a}/enabled`",
+      "dynamic": true,
+      "originalMethod": "POST",
+      "originalPath": "/suppliers/{a}/enabled",
+      "manualResolution": "Supports both frontend POST and backward-compatible PUT.",
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierMemberGroupDialog-7u5cN2us.js",
+      "line": 30,
+      "method": "PUT",
+      "path": "/supplier-team-groups/{encodeURIComponent(x.id)}",
+      "expression": "`/supplier-team-groups/${encodeURIComponent(x.id)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "TeamController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierPlatformSettings-DQ79klgY.js",
+      "line": 50,
+      "method": "PUT",
+      "path": "/suppliers/{encodeURIComponent(n)}/settings",
+      "expression": "h",
+      "dynamic": true,
+      "routeMatches": [
+        "IntakeConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierTeamGroups-Dk9m6lRm.js",
+      "line": 39,
+      "method": "POST",
+      "path": "/supplier-team-groups/{encodeURIComponent(u.id)}/remove",
+      "expression": "`/supplier-team-groups/${encodeURIComponent(u.id)}/remove`",
+      "dynamic": true,
+      "routeMatches": [
+        "TeamController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierTeamGroups-Dk9m6lRm.js",
+      "line": 53,
+      "method": "POST",
+      "path": "/supplier-team-groups",
+      "expression": "`/supplier-team-groups`",
+      "dynamic": false,
+      "routeMatches": [
+        "TeamController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SupplierTeamGroups-Dk9m6lRm.js",
+      "line": 53,
+      "method": "PUT",
+      "path": "/supplier-team-groups/{encodeURIComponent(u.id)}",
+      "expression": "`/supplier-team-groups/${encodeURIComponent(u.id)}`",
+      "dynamic": true,
+      "routeMatches": [
+        "TeamController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Suppliers-BquEthXG.js",
+      "line": 414,
+      "method": "POST",
+      "path": "/suppliers",
+      "expression": "`/suppliers`",
+      "dynamic": false,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Suppliers-BquEthXG.js",
+      "line": 426,
+      "method": "PUT",
+      "path": "/suppliers/{K.id}",
+      "expression": "`/suppliers/` + K.id",
+      "dynamic": true,
+      "routeMatches": [
+        "CatalogController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SystemNotices-BwbR9un8.js",
+      "line": 49,
+      "method": "GET",
+      "path": "/notifications/notices?search={encodeURIComponent(s)}&status={d}&page={x}&size={w}",
+      "expression": "`/notifications/notices?search=${encodeURIComponent(s)}&status=${d}&page=${x}&size=${w}`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SystemNotices-BwbR9un8.js",
+      "line": 54,
+      "method": "POST",
+      "path": "/notifications/notices/{R.id}/revoke",
+      "expression": "`/notifications/notices/${R.id}/revoke`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SystemNotices-BwbR9un8.js",
+      "line": 67,
+      "method": "POST",
+      "path": "/notifications/notices/{I.id}/publish",
+      "expression": "`/notifications/notices/${I.id}/publish`",
+      "dynamic": true,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SystemSettings-CtOVlrw5.js",
+      "line": 113,
+      "method": "PUT",
+      "path": "/workbench-monitoring/multipliers",
+      "expression": "`/workbench-monitoring/multipliers`",
+      "dynamic": false,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "SystemSettings-CtOVlrw5.js",
+      "line": 259,
+      "method": "PUT",
+      "path": "/system/settings",
+      "expression": "`/system/settings`",
+      "dynamic": false,
+      "routeMatches": [
+        "SystemAdminController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 55,
+      "method": "GET",
+      "path": "/system/users?{le.toString()}",
+      "expression": "`/system/users?${le.toString()}`",
+      "dynamic": true,
+      "routeMatches": [
+        "SystemAdminController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 55,
+      "method": "GET",
+      "path": "/system/roles",
+      "expression": "`/system/roles`",
+      "dynamic": false,
+      "routeMatches": [
+        "SystemAdminController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 252,
+      "method": "PUT",
+      "path": "/system/users/{C.id}/enabled",
+      "expression": "`/system/users/${C.id}/enabled`",
+      "dynamic": true,
+      "routeMatches": [
+        "SystemAdminController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 315,
+      "method": "POST",
+      "path": "/system/users",
+      "expression": "`/system/users`",
+      "dynamic": false,
+      "routeMatches": [
+        "SystemAdminController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 371,
+      "method": "PUT",
+      "path": "/system/users/{U.id}",
+      "expression": "`/system/users/` + U.id",
+      "dynamic": true,
+      "routeMatches": [
+        "SystemAdminController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 406,
+      "method": "POST",
+      "path": "/system/users/{G.id}/password",
+      "expression": "`/system/users/${G.id}/password`",
+      "dynamic": true,
+      "routeMatches": [
+        "SystemAdminController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 424,
+      "method": "POST",
+      "path": "/system/users/{q.id}/logout",
+      "expression": "`/system/users/${q.id}/logout`",
+      "dynamic": true,
+      "routeMatches": [
+        "SystemAdminController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 315,
+      "method": "POST",
+      "path": "/turnover",
+      "expression": "`/turnover`",
+      "dynamic": false,
+      "routeMatches": [
+        "PlatformConfigController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 657,
+      "method": "GET",
+      "path": "/workbench",
+      "expression": "`/workbench`",
+      "dynamic": false,
+      "routeMatches": [
+        "WorkbenchController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 717,
+      "method": "POST",
+      "path": "/notifications/{M.announcement.notificationId}/read",
+      "expression": "`/notifications/${M.announcement.notificationId}/read`",
+      "dynamic": true,
+      "routeMatches": [
+        "WorkbenchController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 5903,
+      "method": "POST",
+      "path": "/auth/login",
+      "expression": "`/auth/login`",
+      "dynamic": false,
+      "originalMethod": "GET",
+      "originalPath": "/auth/login",
+      "manualResolution": "Request options are passed through local variable n; form-urlencoded login.",
+      "routeMatches": [
+        "AuthController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 5912,
+      "method": "POST",
+      "path": "/auth/logout",
+      "expression": "`/auth/logout`",
+      "dynamic": false,
+      "routeMatches": [
+        "AuthController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 5922,
+      "method": "GET",
+      "path": "/settlements/{encodeURIComponent(e)}/export",
+      "expression": "`/settlements/${encodeURIComponent(e)}/export`",
+      "dynamic": true,
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 5926,
+      "method": "POST",
+      "path": "/settlements/export",
+      "expression": "`/settlements/export?${e}`",
+      "dynamic": true,
+      "originalMethod": "GET",
+      "originalPath": "/settlements/export?{e}",
+      "manualResolution": "Export helper passes POST with selected ids and CSRF.",
+      "routeMatches": [
+        "FinanceController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 7832,
+      "method": "GET",
+      "path": "/notifications/unread-count",
+      "expression": "`/notifications/unread-count`",
+      "dynamic": false,
+      "routeMatches": [
+        "WorkbenchController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8014,
+      "method": "POST",
+      "path": "/auth/register",
+      "expression": "`/auth/register`",
+      "dynamic": false,
+      "routeMatches": [
+        "AuthController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8399,
+      "method": "GET",
+      "path": "/auth/me",
+      "expression": "`/auth/me`",
+      "dynamic": false,
+      "routeMatches": [
+        "AuthController.java"
+      ],
+      "state": "route-present"
+    },
+    {
+      "module": "useDeliveryProxies-DGHL4QCT.js",
+      "line": 22,
+      "method": "GET",
+      "path": "/outbound-proxies/options?page={r}&size=100",
+      "expression": "`/outbound-proxies/options?page=${r}&size=100`",
+      "dynamic": true,
+      "routeMatches": [
+        "ProxyController.java"
+      ],
+      "state": "route-present"
+    }
+  ],
+  "mappings": [
+    {
+      "method": "GET",
+      "path": "/api/system/api-routes",
+      "controller": "ApiRouteInventoryController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "controller": "AuthController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/csrf",
+      "controller": "AuthController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/registration-policy",
+      "controller": "AuthController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/password-policy",
+      "controller": "AuthController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "controller": "AuthController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/apiapplication/x-www-form-urlencoded",
+      "controller": "AuthController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me",
+      "controller": "AuthController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "controller": "AuthController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/register",
+      "controller": "AuthController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/profile",
+      "controller": "AuthController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/auth/profile",
+      "controller": "AuthController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/password",
+      "controller": "AuthController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/onboarding",
+      "controller": "AuthController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/suppliers/{id}/enabled",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/suppliers/{id}/enabled",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/projects",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/projects/{id}",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/projects/category-codes",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/category-codes",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/projects/category-codes/{code}",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/projects/category-codes/{code}",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/projects/categories",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/projects/{id}",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/suppliers",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/suppliers/{id}",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/suppliers/{id}",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/accounts",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/accounts",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/accounts/{id}/reveal",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/suppliers",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/suppliers/{id}/review",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/suppliers/{id}/code",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/suppliers/{id}/note",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/suppliers/available-users",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/suppliers/owner-candidates",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/suppliers/{id}/owner",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/suppliers/{id}/owner-terms",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/suppliers/{id}/users",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/suppliers/{id}/users",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/suppliers/{id}/users",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/accounts/platform",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/accounts/{id}/review",
+      "controller": "CatalogController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/documents",
+      "controller": "DocumentController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/documents",
+      "controller": "DocumentController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/documents/{id}/download",
+      "controller": "DocumentController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settlements",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settlements/summary",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settlements/pending-summary",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settlements/{id}",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/settlements/{id}/confirm",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settlements/{id}/export",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/settlements/export",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payments",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payments/{id}",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/{id}/receipt",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payments/providers",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payments/provider-capabilities",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/{id}/payout-preview",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/{id}/execute",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/{id}/reconcile",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/sandbox/events",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/exchange-rates/current",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/exchange-rates",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/exchange-rates",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/exchange-rates/{id}/enabled",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/supplier-bills/filters",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/supplier-bills/entries",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/supplier-bills/days",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/supplier-bills/creators",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/supplier-bills/departments",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/supplier-receivables",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/monthly-payables",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/overview",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/settlements",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/export",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/operations",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/ccmax-resources",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/ccmax-resources/current",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/ccmax-resources/suppliers",
+      "controller": "FinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/suppliers/{id}/settings",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/suppliers/{id}/settings",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cc-intake/admin/system",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cc-intake/admin/suppliers/{id}",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cc-intake/admin/suppliers/{id}/members/{memberId}",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/cc-intake/admin/system",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/cc-intake/admin/suppliers/{id}",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/cc-intake/admin/suppliers/{id}/members/{memberId}",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cc-intake/admin/suppliers/{id}/members",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/scheduled-tasks/{key}/rotation-settings",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/system/scheduled-tasks/{key}/rotation-settings",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/system/scheduled-tasks/priority-support",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/system/scheduled-tasks/{key}/rotation-settings/retry-restore",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cc-intake/admin/reviews",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cc-intake/admin/reviews/{dispatchId}/resolve",
+      "controller": "IntakeConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/open/v1/ccmax/projects",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/open/v1/ccmax/proxies",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/open/v1/ccmax/proxies/import",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/open/v1/ccmax/resources",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/open/v1/ccmax/resources/{id}",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/open/v1/ccmax/intake",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/open/v1/ccmax/daily-summary",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/open/v1/ccmax/submissions/credentials",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/open/v1/ccmax/submissions/oauth/authorize",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/open/v1/ccmax/submissions/oauth/complete",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/open/v1/ccmax/proxy-replacements",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/open/v1/ccmax/submissions/{id}",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/open/v1/ccmax/submissions/{id}/cancel",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/open/v1/ccmax/proxy-replacements/{id}",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/open/v1/ccmax/proxy-replacements/{id}/reconcile",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/open/v1/ccmax/resources/{resourceId}/credential-refresh",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/open/v1/ccmax/resources/{resourceId}/reauthorizations/current",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/open/v1/ccmax/resources/{resourceId}/credential-refresh",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/open/v1/ccmax/resources/{resourceId}/reauthorizations",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/open/v1/ccmax/resources/{resourceId}/reauthorizations/{id}",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/open/v1/ccmax/resources/{resourceId}/reauthorizations/{id}",
+      "controller": "OpenCcmaxController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/notice-recipients",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/quote-projects",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/recipient-preview",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/notices",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/notices/{id}",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications/notices",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/notifications/notices/{id}",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications/publish",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications/notices/{id}/publish",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications/notices/{id}/revoke",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/notices/{id}/deliveries",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resource-targets",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resource-targets",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resource-targets/{id}",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/resource-targets/{id}",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resource-targets/{id}/test",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resource-targets/{id}/sync",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/workbench-monitoring/sources/{id}/refresh",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resource-targets/{id}/oauth/link",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resource-targets/{id}/oauth/complete",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/workbench-monitoring/sources",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/workbench-monitoring/sources",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/workbench-monitoring/sources/{id}",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/workbench-monitoring/multipliers",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/workbench-monitoring/multipliers",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payout-providers/{code}",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/payout-providers/{code}",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payout-providers/{code}/test",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payout-calls",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/turnover",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/turnover",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/operator-kpi",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/operator-kpi/lines",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resource-targets/{id}/sync-settings",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/resource-targets/{id}/sync-settings",
+      "controller": "PlatformConfigController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settlement-inputs",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/settlement-inputs",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/settlement-inputs/manual",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/settlement-inputs/manual-direct",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/settlement-inputs/{id}/void",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/settlements/preview",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/settlements",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/settlements/{id}/void",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/settlements/{id}/withdraw",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/settlements/{id}/adjustments",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/offline",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/{id}/review",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/{id}/offline-record",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/{id}/close",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/accounting/daily",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/accounting/daily/groups",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/accounting/daily/summary",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/accounting/daily/exports",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/accounting/daily/exports/estimate",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/accounting/daily/exports",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/accounting/daily/exports/{id}",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/accounting/daily/exports/{id}/preview",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/accounting/daily/exports/{id}/files/{index}",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/accounting/daily/exports/{id}/download",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/accounting/daily/exports/{id}/archive",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/accounting/daily/exports/{id}/cancel",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settlement-batches",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settlement-batches/candidates",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/settlement-batches/preview",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settlement-batches/{id}",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settlement-batches/{id}/items/{itemId}/preview",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/settlement-batches/{id}/start",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/settlement-batches/{id}/retry-preview",
+      "controller": "PlatformFinanceController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/outbound-proxies",
+      "controller": "ProxyController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/outbound-proxies/page",
+      "controller": "ProxyController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/outbound-proxies/options",
+      "controller": "ProxyController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/outbound-proxies",
+      "controller": "ProxyController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/outbound-proxies/{id}",
+      "controller": "ProxyController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/outbound-proxies/import",
+      "controller": "ProxyController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/outbound-proxies/{id}/resources",
+      "controller": "ProxyController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/outbound-proxies/{id}",
+      "controller": "ProxyController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/outbound-proxies/resolve",
+      "controller": "ProxyController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/outbound-proxies/{id}/test",
+      "controller": "ProxyController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/quotes",
+      "controller": "QuotesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/quotes/multiplier-bounds",
+      "controller": "QuotesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/quotes/ranking",
+      "controller": "QuotesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/quotes/{id}",
+      "controller": "QuotesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/quotes",
+      "controller": "QuotesController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/quotes/{id}",
+      "controller": "QuotesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/quotes/{id}/withdraw",
+      "controller": "QuotesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/quotes/{id}/period-change",
+      "controller": "QuotesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/quotes/{id}/period-change",
+      "controller": "QuotesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/quotes/{id}/review",
+      "controller": "QuotesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/quotes/{id}/period-change/review",
+      "controller": "QuotesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/quotes/{id}/reject-approved",
+      "controller": "QuotesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health/live",
+      "controller": "ReadinessController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health/ready",
+      "controller": "ReadinessController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cc-intake/admin/priority/jobs",
+      "controller": "ResourcePriorityController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cc-intake/admin/priority/jobs",
+      "controller": "ResourcePriorityController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cc-intake/admin/priority/jobs/{id}",
+      "controller": "ResourcePriorityController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cc-intake/admin/priority/jobs/{id}/{action}",
+      "controller": "ResourcePriorityController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/projects/{id}/intake-channel-types",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/projects/{id}/intake-channel-types",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/deliveries",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resources",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/deliveries/filter-options",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resources/eligible-projects",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resources/submission-capabilities",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resources/{id}",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resources/drafts",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/resources/{id}",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/resources/{id}",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resources/supplier-submit",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resources/ccmax/batch",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resources/oauth/supplier-authorize",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resources/oauth/supplier-submit",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resources/oauth/supplier-session/{id}",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resources/oauth/supplier-session/{id}/cancel",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resources/{id}/submit",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resources/{id}/dispatch",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resources/{id}/usage",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resources/{id}/say-hi",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resources/{id}/credential-refresh",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resources/{id}/reauthorizations",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resources/{id}/reauthorizations/{op}",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resources/{id}/oauth/authorize",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resources/{id}/oauth/complete",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resources/{id}/oauth/supplier-retry",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resources/{id}/oauth/supplier-submit",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resources/{id}/oauth/supplier-authorize",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/resources/{id}/reauthorizations/{op}",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resources/{id}/dispatches",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resources/{id}/credential-refresh",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resources/{id}/reauthorizations/current",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resources/{id}/reauthorizations/{op}",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resources/{id}/creation-recovery",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resource-lifecycle-jobs",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resource-proxy-replacements",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resource-lifecycle-jobs",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resource-proxy-replacements",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resource-lifecycle-jobs/{id}",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resource-proxy-replacements/{id}",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resource-lifecycle-jobs/{id}/reconcile",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resource-proxy-replacements/{id}/reconcile",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resource-proxy-replacements/proxy-options",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resources/failure-reasons",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resources/summary",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resources/creator-summary",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resources/overview",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cc-intake/mine",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resource-intakes/recognize",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resource-intakes/preview",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resource-intakes",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resource-intakes/{id}",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resource-intakes/{id}/original-request",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resource-intakes/{id}/material",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resource-intakes/{id}/eligible-projects",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/resource-intakes/{id}/assign-project",
+      "controller": "ResourcesController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/users",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/system/users",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/system/users/{id}",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/system/users/{id}/enabled",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/system/users/{id}/password",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/system/users/{id}/logout",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/roles",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/roles/page",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/system/roles",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/system/roles/{code}",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/settings",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/system/settings",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/audit-actions",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/audits",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/audits/{id}",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/scheduled-tasks",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/system/scheduled-tasks/{key}",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/system/scheduled-tasks/{key}/schedule",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/system/scheduled-tasks/{key}/config",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/scheduled-tasks/{key}/runs",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/system/scheduled-tasks/{key}/run",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings",
+      "controller": "SystemAdminController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/supplier-agents",
+      "controller": "TeamController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/supplier-agents",
+      "controller": "TeamController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/supplier-agents/{id}/enabled",
+      "controller": "TeamController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/supplier-agents/{id}/password",
+      "controller": "TeamController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/supplier-agents/{id}/projects",
+      "controller": "TeamController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/supplier-agents/{id}/projects",
+      "controller": "TeamController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/supplier-team-groups",
+      "controller": "TeamController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/supplier-team-groups",
+      "controller": "TeamController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/supplier-team-groups/{id}",
+      "controller": "TeamController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/supplier-team-groups/{id}/remove",
+      "controller": "TeamController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cc-intake/allocations",
+      "controller": "TeamController.java"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/cc-intake/allocations",
+      "controller": "TeamController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/api-tokens",
+      "controller": "TokenController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/{userId}/api-tokens",
+      "controller": "TokenController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/api-tokens",
+      "controller": "TokenController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/users/{userId}/api-tokens",
+      "controller": "TokenController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/api-tokens/{id}/reset",
+      "controller": "TokenController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/users/{userId}/api-tokens/{id}/reset",
+      "controller": "TokenController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/api-tokens/{id}/revoke",
+      "controller": "TokenController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/users/{userId}/api-tokens/{id}/revoke",
+      "controller": "TokenController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/api-tokens/{id}/reveal",
+      "controller": "TokenController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/users/{userId}/api-tokens/{id}/reveal",
+      "controller": "TokenController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/workbench",
+      "controller": "WorkbenchController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/workbench/tasks",
+      "controller": "WorkbenchController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/workbench/monitoring",
+      "controller": "WorkbenchController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/unread-count",
+      "controller": "WorkbenchController.java"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications",
+      "controller": "WorkbenchController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications/{id}/read",
+      "controller": "WorkbenchController.java"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications/read-all",
+      "controller": "WorkbenchController.java"
+    }
+  ]
+}

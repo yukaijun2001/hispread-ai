@@ -1,0 +1,15 @@
+const fs=await import('node:fs/promises'),root='/Users/yukaijun/account-booster/hispread-ai',task=await taskSpace(2),page=task.page('p1'),base='http://127.0.0.1:5173';
+const envText=await fs.readFile(root+'/backend/.env','utf8');const env=Object.fromEntries(envText.split(/\r?\n/).map(l=>l.trim()).filter(l=>l&&!l.startsWith('#')).map(l=>{const i=l.indexOf('=');return[l.slice(0,i),l.slice(i+1).replace(/^(["'])(.*)\1$/,'$2')]}));
+async function api(path,method='GET',body){return page.evaluate(async({path,method,body})=>{const headers={};if(method!=='GET'){const csrf=await(await fetch('/api/auth/csrf')).json();headers[csrf.headerName]=csrf.token;headers['Content-Type']='application/json';}const r=await fetch('/api'+path,{method,headers,...(body===undefined?{}:{body:JSON.stringify(body)})});const data=await r.json();if(!r.ok)throw Error(path+' '+r.status+' '+data.message);return data;},{path,method,body});}
+async function login(prefix){await page.goto(base+'/');await api('/auth/logout','POST',{}).catch(()=>{});await page.reload();await page.waitForSelector('.login-card');await page.fill('input[placeholder="输入账号"]',env[prefix+'_USERNAME']);await page.fill('input[placeholder="输入密码"]',env[prefix+'_PASSWORD']);await page.click('.login-card button[type=submit]');await page.waitForSelector('.app-shell');return api('/auth/me');}
+const report={date:'2026-11-09',scope:'localhost only',submittedReview:false,cleanup:false};
+try{
+ const me=await login('SEED');const supplier=await api('/suppliers/'+encodeURIComponent(me.supplierId));
+ const account=await api('/accounts','POST',{supplierId:supplier.id,accountType:'BANK',providerCode:'BANK',bank:'LOCAL UI QA BANK',holder:supplier.name,accountNumber:'QA-LOCAL-REVIEW-0001',currency:'USD',qaMarker:'operator-finance-ui-account-review'});
+ report.tempAccountId=account.id;report.supplierId=supplier.id;
+ await fs.writeFile(root+'/docs/five-role-account-review-qa.json',JSON.stringify(report,null,2));
+ await login('FINANCE');await page.goto(base+'/#/suppliers?id='+encodeURIComponent(supplier.id)+'&tab=accounts');await page.waitForSelector('dialog[open] .account-card .review-box');
+ report.review=await page.evaluate(()=>({headings:[...document.querySelectorAll('dialog[open] .review-box h3')].map(n=>n.textContent),buttons:[...document.querySelectorAll('dialog[open] .review-box button')].map(n=>({text:n.textContent.trim(),disabled:n.disabled})),text:document.querySelector('dialog[open]').innerText}));
+ await page.cdp('Emulation.setDeviceMetricsOverride',{width:1920,height:1000,deviceScaleFactor:1,mobile:false});report.screenshot=root+'/ui-review/five-role/screenshots/finance-account-review-controls.png';await page.screenshot({path:report.screenshot,raw:true});report.opened=true;
+}catch(error){report.error=String(error);}
+await fs.writeFile(root+'/docs/five-role-account-review-qa.json',JSON.stringify(report,null,2));console.log({opened:report.opened,tempAccountId:report.tempAccountId,error:report.error,submittedReview:report.submittedReview});

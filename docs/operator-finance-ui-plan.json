@@ -1,0 +1,129 @@
+{
+  "basis": "Recovered platform menu and page branches are driven by supplierId and explicit permission strings. OPERATOR and FINANCE reuse the existing platform components; no separate role-name UI fork is needed.",
+  "source": {
+    "shell": "frontend/src/recovered/index-Dnr0i-H9.js",
+    "menuPredicate": "!permission || user.permissions.includes(permission)",
+    "platformPredicate": "!user.supplierId",
+    "settlementTabs": "usage.read => daily+inputs; settlement.read => statements; payment.read => payments; exchange_rate.read => rates",
+    "noAdminOnlyFrontendGate": true,
+    "defaultRoleAllocation": "Local implementation policy v2 in backend/RolePolicy.java; OPERATOR33 permissions includes resource.config.read/write/test; FINANCE28."
+  },
+  "roles": {
+    "OPERATOR": {
+      "expectedPositiveViews": [
+        "workbench",
+        "suppliers",
+        "operator-kpi",
+        "projects",
+        "quotes",
+        "resources",
+        "resources-pending",
+        "outbound-proxies",
+        "ccmax-resource-analysis",
+        "reports",
+        "notifications",
+        "api-docs",
+        "notice-admin",
+        "audits",
+        "resource-targets"
+      ],
+      "permissionDependentViews": [],
+      "expectedDeniedViews": [
+        "supplier-accounts",
+        "settlements",
+        "users",
+        "roles",
+        "settings",
+        "scheduled-tasks",
+        "scheduled-task-runs",
+        "payout-providers",
+        "payout-calls",
+        "payout-recipients"
+      ],
+      "forbiddenWrites": [
+        "POST /api/settlement-inputs/manual",
+        "POST /api/payments",
+        "PUT /api/system/settings"
+      ],
+      "dialogs": [
+        "new supplier",
+        "new project",
+        "quote inline editor or detail/review drawer",
+        "personal profile",
+        "notification bell"
+      ]
+    },
+    "FINANCE": {
+      "expectedPositiveViews": [
+        "workbench",
+        "suppliers",
+        "supplier-accounts",
+        "projects",
+        "quotes",
+        "settlements?tab=daily",
+        "settlements?tab=statements",
+        "settlements?tab=inputs",
+        "settlements?tab=payments",
+        "settlements?tab=rates",
+        "reports",
+        "payout-recipients",
+        "payout-calls",
+        "notifications",
+        "api-docs",
+        "audits"
+      ],
+      "permissionDependentViews": [],
+      "expectedDeniedViews": [
+        "operator-kpi",
+        "resources",
+        "resources-pending",
+        "outbound-proxies",
+        "resource-targets",
+        "ccmax-resource-analysis",
+        "users",
+        "roles",
+        "settings",
+        "scheduled-tasks",
+        "scheduled-task-runs",
+        "notice-admin",
+        "payout-providers"
+      ],
+      "forbiddenWrites": [
+        "POST /api/projects",
+        "POST /api/resources/drafts",
+        "PUT /api/system/settings"
+      ],
+      "dialogs": [
+        "manual money entry",
+        "single settlement creation",
+        "new exchange rate",
+        "personal profile",
+        "notification bell"
+      ]
+    }
+  },
+  "execution": {
+    "taskSpace": 2,
+    "viewport": {
+      "width": 1920,
+      "height": 1000,
+      "deviceScaleFactor": 1
+    },
+    "credentials": "Read OPERATOR_USERNAME/PASSWORD and FINANCE_USERNAME/PASSWORD from backend/.env; do not print password values.",
+    "checks": [
+      "actual permission-aware menu vs readable catalog",
+      "all reachable routes render without runtime error",
+      "forbidden routes show permission denial",
+      "main page GET responses have correct shapes",
+      "forbidden writes return 403 before data validation",
+      "profile and notification UI available",
+      "allowed creation/review dialogs open and close without submitting"
+    ],
+    "report": "ui-review/five-role/report.html",
+    "limitations": [
+      "No online OPERATOR/FINANCE account was supplied; no pixel fidelity score is calculated.",
+      "Local DOM and runtime checks are reported separately from the existing 24 paired screenshot score.",
+      "Forbidden writes use empty/invalid bodies only after static proof of a permission gate, so unexpected acceptance cannot create valid business records."
+    ]
+  }
+}

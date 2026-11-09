@@ -1,0 +1,6364 @@
+{
+  "generatedAt": "2026-11-09T12:53:01.877Z",
+  "basis": "Babel static call-site inventory; imported recovered request functions only. Dynamic or conditional values remain explicit unknowns, not proof of absence.",
+  "callSites": 415,
+  "uniqueLiteralTemplates": 216,
+  "unresolved": [
+    {
+      "module": "ApiTokens-uH0R0C-_.js",
+      "line": 29,
+      "method": "GET",
+      "path": null,
+      "expression": "v",
+      "dynamic": true
+    },
+    {
+      "module": "ApiTokens-uH0R0C-_.js",
+      "line": 42,
+      "method": "POST",
+      "path": null,
+      "expression": "e === `issue` ? v : `${v}/${encodeURIComponent(t)}/${e}`",
+      "dynamic": true
+    },
+    {
+      "module": "Audits-BxINf5wz.js",
+      "line": 334,
+      "method": "GET",
+      "path": null,
+      "expression": "A",
+      "dynamic": true
+    },
+    {
+      "module": "Audits-BxINf5wz.js",
+      "line": 334,
+      "method": "GET",
+      "path": null,
+      "expression": "j",
+      "dynamic": true
+    },
+    {
+      "module": "Audits-BxINf5wz.js",
+      "line": 334,
+      "method": "GET",
+      "path": null,
+      "expression": "M",
+      "dynamic": true
+    },
+    {
+      "module": "Audits-BxINf5wz.js",
+      "line": 334,
+      "method": "GET",
+      "path": null,
+      "expression": "N",
+      "dynamic": true
+    },
+    {
+      "module": "Audits-BxINf5wz.js",
+      "line": 384,
+      "method": "GET",
+      "path": null,
+      "expression": "q ? `/system/audits/${encodeURIComponent(q.id)}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "CcmaxResourceOverview-BpVmtOxH.js",
+      "line": 165,
+      "method": "GET",
+      "path": null,
+      "expression": "h ? `/resources/overview?${S}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 66,
+      "method": "GET",
+      "path": null,
+      "expression": "n => ({\n    type: e,\n    sequence: (n?.sequence || 0) + 1,\n    scope: {\n      filter: {\n        ...t.filter\n      },\n      supplierName: t.supplierName,\n      projectName: t.projectName\n    }\n  })",
+      "dynamic": true
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 183,
+      "method": "GET",
+      "path": null,
+      "expression": "j === `detail` ? `/accounting/daily?${ce}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 183,
+      "method": "GET",
+      "path": null,
+      "expression": "j === `detail` ? null : `/accounting/daily/groups?${H}&page=${L}&size=${z}&groupBy=${j===`supplier`?`SUPPLIER`:`DAY`}${le}`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 187,
+      "method": "GET",
+      "path": null,
+      "expression": "a(`project.read`) ? `/projects?page=1&size=100` : null",
+      "dynamic": true
+    },
+    {
+      "module": "DailyExports-q6_gv_XE.js",
+      "line": 82,
+      "method": "GET",
+      "path": null,
+      "expression": "`${y}?${t}`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyExports-q6_gv_XE.js",
+      "line": 102,
+      "method": "POST",
+      "path": null,
+      "expression": "`${y}/estimate`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyExports-q6_gv_XE.js",
+      "line": 145,
+      "method": "POST",
+      "path": null,
+      "expression": "`${y}/${e.id}/cancel`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyExports-q6_gv_XE.js",
+      "line": 156,
+      "method": "GET",
+      "path": null,
+      "expression": "`${y}/${t.id}/preview`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyExports-q6_gv_XE.js",
+      "line": 166,
+      "method": "GET",
+      "path": null,
+      "expression": "`${y}/${t.id}`",
+      "dynamic": true
+    },
+    {
+      "module": "ExchangeRatesTab-FzGMcdR6.js",
+      "line": 31,
+      "method": "GET",
+      "path": null,
+      "expression": "i ? null : `/exchange-rates?search=${encodeURIComponent(b)}&page=${S}&size=${w}`",
+      "dynamic": true
+    },
+    {
+      "module": "ExchangeRatesTab-FzGMcdR6.js",
+      "line": 31,
+      "method": "GET",
+      "path": null,
+      "expression": "i ? `/exchange-rates/current` : null",
+      "dynamic": true
+    },
+    {
+      "module": "IntakeAllocationDialog-CW0YASmn.js",
+      "line": 34,
+      "method": "GET",
+      "path": null,
+      "expression": "x ? `/cc-intake/allocations` : null",
+      "dynamic": true
+    },
+    {
+      "module": "IntakePolicyPanel-DHvOkPUU.js",
+      "line": 34,
+      "method": "GET",
+      "path": null,
+      "expression": "x ? C : null",
+      "dynamic": true
+    },
+    {
+      "module": "IntakePolicyPanel-DHvOkPUU.js",
+      "line": 126,
+      "method": "PUT",
+      "path": null,
+      "expression": "C",
+      "dynamic": true
+    },
+    {
+      "module": "IntakeReviewDialog-C9xZ8Ftb.js",
+      "line": 34,
+      "method": "GET",
+      "path": null,
+      "expression": "v ? `/deliveries/filter-options?assignment=ASSIGNED&supplierSearch=${encodeURIComponent(x)}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "IntakeReviewDialog-C9xZ8Ftb.js",
+      "line": 39,
+      "method": "GET",
+      "path": null,
+      "expression": "v ? `/cc-intake/admin/reviews?${B}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "IntakeToday-Digz-vi6.js",
+      "line": 24,
+      "method": "GET",
+      "path": null,
+      "expression": "n && f.supplierId ? `/cc-intake/mine` : null",
+      "dynamic": true
+    },
+    {
+      "module": "MySupplierProfile-DPM4wUP0.js",
+      "line": 67,
+      "method": "POST",
+      "path": null,
+      "expression": "!0",
+      "dynamic": true
+    },
+    {
+      "module": "MySupplierProfile-DPM4wUP0.js",
+      "line": 84,
+      "method": "POST",
+      "path": null,
+      "expression": "!1",
+      "dynamic": true
+    },
+    {
+      "module": "MySupplierProfile-DPM4wUP0.js",
+      "line": 281,
+      "method": "GET",
+      "path": null,
+      "expression": "i(`account.read`) ? `/accounts?supplierId=${t.id}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "NewDelivery-CYrGthQl.js",
+      "line": 131,
+      "method": "GET",
+      "path": null,
+      "expression": "v ? `/suppliers?page=1&size=100&search=${encodeURIComponent(S)}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 35,
+      "method": "GET",
+      "path": null,
+      "expression": "A && r ? `/notifications/quote-projects?search=${encodeURIComponent(m)}&page=${b}&size=${S}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 41,
+      "method": "GET",
+      "path": null,
+      "expression": "M ? `/notifications/recipient-preview?${N}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 51,
+      "method": "PUT",
+      "path": null,
+      "expression": "e.target.checked",
+      "dynamic": true
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 69,
+      "method": "POST",
+      "path": null,
+      "expression": "d.filter(t => t.id !== e.id)",
+      "dynamic": true
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 76,
+      "method": "POST",
+      "path": null,
+      "expression": "[]",
+      "dynamic": true
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 101,
+      "method": "POST",
+      "path": null,
+      "expression": "t.target.checked ? [...d, e] : d.filter(t => t.id !== e.id)",
+      "dynamic": true
+    },
+    {
+      "module": "OperatorKpi-NouSWERW.js",
+      "line": 44,
+      "method": "GET",
+      "path": null,
+      "expression": "o === `owners` ? `/suppliers?search=${encodeURIComponent(S)}&owner=${encodeURIComponent(w)}&page=${E}&size=${O}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "OperatorKpi-NouSWERW.js",
+      "line": 44,
+      "method": "GET",
+      "path": null,
+      "expression": "o === `report` ? `/reports/operator-kpi?month=${A}&currency=${M}&owner=${encodeURIComponent(P)}&page=${I}&size=${R}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "OperatorKpi-NouSWERW.js",
+      "line": 44,
+      "method": "GET",
+      "path": null,
+      "expression": "K ? `/reports/operator-kpi/lines?month=${A}&currency=${K.currency}&ownerUserId=${K.ownerUserId||``}&unassigned=${K.ownerUserId?`false`:`true`}&search=${encodeURIComponent(B)}&page=${H}&size=${W}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 46,
+      "method": "GET",
+      "path": null,
+      "expression": "a",
+      "dynamic": true
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 65,
+      "method": "GET",
+      "path": null,
+      "expression": "{\n          id: t.id,\n          name: t.name,\n          state: e.lastTestState,\n          message: f(e.lastTestMessage || ``)\n        }",
+      "dynamic": true
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 72,
+      "method": "GET",
+      "path": null,
+      "expression": "{\n          id: t.id,\n          name: t.name,\n          state: `REQUEST_FAILED`,\n          message: e instanceof Error ? e.message : d(`检测请求失败`)\n        }",
+      "dynamic": true
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 98,
+      "method": "GET",
+      "path": null,
+      "expression": "U ? `/outbound-proxies/${encodeURIComponent(U.id)}/resources` : null",
+      "dynamic": true
+    },
+    {
+      "module": "OwnerSection-BV_jBT2b.js",
+      "line": 34,
+      "method": "GET",
+      "path": null,
+      "expression": "x(`supplier.owner.assign`) && (!b || k) ? `/suppliers/${i}/owner-terms?search=${encodeURIComponent(C)}&page=${T}&size=${D}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "OwnerSection-BV_jBT2b.js",
+      "line": 34,
+      "method": "GET",
+      "path": null,
+      "expression": "x(`supplier.owner.assign`) ? `/suppliers/owner-candidates` : null",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentForm-DYdHXH-C.js",
+      "line": 36,
+      "method": "GET",
+      "path": null,
+      "expression": "b(`account.read`) ? `/accounts?supplierId=` + c.supplierId : null",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentForm-DYdHXH-C.js",
+      "line": 36,
+      "method": "GET",
+      "path": null,
+      "expression": "b(`exchange_rate.read`) ? `/exchange-rates/current` : null",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentForm-DYdHXH-C.js",
+      "line": 36,
+      "method": "GET",
+      "path": null,
+      "expression": "b(`payment.execute`) ? `/payments/providers` : null",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 134,
+      "method": "GET",
+      "path": null,
+      "expression": "c && e.paymentMethod !== `OFFLINE` ? `/payments/providers` : null",
+      "dynamic": true
+    },
+    {
+      "module": "PriorityBatchDialog-DWPDEDJI.js",
+      "line": 44,
+      "method": "GET",
+      "path": null,
+      "expression": "S && C === `SUPPLIER` ? `/deliveries/filter-options?supplierSearch=${encodeURIComponent(re)}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "PriorityBatchDialog-DWPDEDJI.js",
+      "line": 53,
+      "method": "GET",
+      "path": null,
+      "expression": "S && R && !W ? `${_}/${encodeURIComponent(R)}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "PriorityBatchDialog-DWPDEDJI.js",
+      "line": 54,
+      "method": "GET",
+      "path": null,
+      "expression": "S && B ? _ : null",
+      "dynamic": true
+    },
+    {
+      "module": "PriorityBatchDialog-DWPDEDJI.js",
+      "line": 80,
+      "method": "POST",
+      "path": null,
+      "expression": "e === `submit` ? _ : `${_}/${encodeURIComponent(R)}/${e}`",
+      "dynamic": true
+    },
+    {
+      "module": "PriorityBatchDialog-DWPDEDJI.js",
+      "line": 94,
+      "method": "POST",
+      "path": null,
+      "expression": "`${_}/${encodeURIComponent(r.id)}/start`",
+      "dynamic": true
+    },
+    {
+      "module": "PrioritySupportDialog-DfV-rWYR.js",
+      "line": 33,
+      "method": "GET",
+      "path": null,
+      "expression": "m ? y : null",
+      "dynamic": true
+    },
+    {
+      "module": "PrioritySupportDialog-DfV-rWYR.js",
+      "line": 46,
+      "method": "GET",
+      "path": null,
+      "expression": "!K && w === `SELECTED` ? `/deliveries/filter-options?supplierSearch=${encodeURIComponent(W)}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "PrioritySupportDialog-DfV-rWYR.js",
+      "line": 96,
+      "method": "PUT",
+      "path": null,
+      "expression": "y",
+      "dynamic": true
+    },
+    {
+      "module": "PrioritySupportDialog-DfV-rWYR.js",
+      "line": 108,
+      "method": "POST",
+      "path": null,
+      "expression": "y + `/retry-restore`",
+      "dynamic": true
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 48,
+      "method": "GET",
+      "path": null,
+      "expression": "t",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 143,
+      "method": "GET",
+      "path": null,
+      "expression": "v || A === `list` ? `/quotes?${lt.toString()}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 143,
+      "method": "GET",
+      "path": null,
+      "expression": "u(`exchange_rate.read`) ? `/exchange-rates/current` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 143,
+      "method": "GET",
+      "path": null,
+      "expression": "u(`quote.read`) ? `/quotes/multiplier-bounds` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Reports-ChHNVTLt.js",
+      "line": 152,
+      "method": "GET",
+      "path": null,
+      "expression": "n",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 69,
+      "method": "GET",
+      "path": null,
+      "expression": "a.resourceType === `CCMAX` && !o && j(`resource.dispatch`) ? `/resources/${_(a.id)}/dispatches` : null",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 70,
+      "method": "GET",
+      "path": null,
+      "expression": "a.resourceType === `CCMAX` && !o && j(`resource.dispatch`) ? `/resource-targets` : null",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 71,
+      "method": "GET",
+      "path": null,
+      "expression": "o && j(`resource.write`) ? `/resources/eligible-projects` : null",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 89,
+      "method": "GET",
+      "path": null,
+      "expression": "z ? `/outbound-proxies/${encodeURIComponent(z)}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 170,
+      "method": "GET",
+      "path": null,
+      "expression": "t",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 173,
+      "method": "POST",
+      "path": null,
+      "expression": "`${t}/cancel`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 175,
+      "method": "POST",
+      "path": null,
+      "expression": "`${t}/cancel`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceLifecycleDialog-C3CIVivi.js",
+      "line": 48,
+      "method": "GET",
+      "path": null,
+      "expression": "`${_}/${encodeURIComponent(t.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceLifecycleDialog-C3CIVivi.js",
+      "line": 56,
+      "method": "POST",
+      "path": null,
+      "expression": "`${_}/${encodeURIComponent(t.id)}/reconcile`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceLifecycleDialog-C3CIVivi.js",
+      "line": 126,
+      "method": "GET",
+      "path": null,
+      "expression": "`${_}?page=${d}&size=${m}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceLifecycleDialog-C3CIVivi.js",
+      "line": 165,
+      "method": "POST",
+      "path": null,
+      "expression": "1",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 61,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.read`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 61,
+      "method": "GET",
+      "path": null,
+      "expression": "`workbench.monitoring.configure`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 61,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.write`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 61,
+      "method": "GET",
+      "path": null,
+      "expression": "`workbench.monitoring.configure`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 61,
+      "method": "GET",
+      "path": null,
+      "expression": "o ? `/workbench-monitoring/sources` : null",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 61,
+      "method": "GET",
+      "path": null,
+      "expression": "o ? `/projects/category-codes` : null",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 620,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.read`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 620,
+      "method": "GET",
+      "path": null,
+      "expression": "`workbench.monitoring.configure`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 620,
+      "method": "GET",
+      "path": null,
+      "expression": "s ? `/resource-targets` : null",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 677,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.write`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 697,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.write`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 720,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.write`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 729,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.dispatch`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 797,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.test`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 801,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.write`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 95,
+      "method": "GET",
+      "path": null,
+      "expression": "a ? Ae : null",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 276,
+      "method": "PUT",
+      "path": null,
+      "expression": "F(e) ? `RESUME` : `PAUSE`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 302,
+      "method": "PUT",
+      "path": null,
+      "expression": "i ? `RESUME` : `PAUSE`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 335,
+      "method": "PUT",
+      "path": null,
+      "expression": "`REMOVE`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 656,
+      "method": "PUT",
+      "path": null,
+      "expression": "!(e instanceof l && e.status >= 400 && e.status < 500)",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1255,
+      "method": "GET",
+      "path": null,
+      "expression": "n",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1266,
+      "method": "GET",
+      "path": null,
+      "expression": "n",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1569,
+      "method": "GET",
+      "path": null,
+      "expression": "e.reauthorizationAllowed === !0",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1581,
+      "method": "GET",
+      "path": null,
+      "expression": "t.reauthorizationAllowed === !0",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1599,
+      "method": "GET",
+      "path": null,
+      "expression": "!1",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1932,
+      "method": "GET",
+      "path": null,
+      "expression": "e.reauthorizationAllowed",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1937,
+      "method": "GET",
+      "path": null,
+      "expression": "`${ae}/current`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1939,
+      "method": "GET",
+      "path": null,
+      "expression": "!1",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1952,
+      "method": "GET",
+      "path": null,
+      "expression": "!1",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1958,
+      "method": "GET",
+      "path": null,
+      "expression": "`${ae}/${encodeURIComponent(i.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1995,
+      "method": "PUT",
+      "path": null,
+      "expression": "`${ae}/${encodeURIComponent(i.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2361,
+      "method": "GET",
+      "path": null,
+      "expression": "s && V ? `/resources/summary?${ln}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2362,
+      "method": "GET",
+      "path": null,
+      "expression": "on && V ? `/resources/creator-summary?${ln}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2365,
+      "method": "GET",
+      "path": null,
+      "expression": "V ? `/resources/failure-reasons?${xn}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2424,
+      "method": "GET",
+      "path": null,
+      "expression": "Dn && !c ? `/resources/submission-capabilities` : null",
+      "dynamic": true
+    },
+    {
+      "module": "ScheduledTaskRuns-DXdXtjvS.js",
+      "line": 65,
+      "method": "GET",
+      "path": null,
+      "expression": "_ && !L ? `/system/scheduled-tasks/${encodeURIComponent(_.key)}/runs?${R.toString()}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 143,
+      "method": "POST",
+      "path": null,
+      "expression": "p",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 143,
+      "method": "POST",
+      "path": null,
+      "expression": "m",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 180,
+      "method": "GET",
+      "path": null,
+      "expression": "c && !j && U ? `/settlement-batches/candidates?periodStart=${w}&periodEnd=${T}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 176,
+      "method": "GET",
+      "path": null,
+      "expression": "i",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementInputs-CZ-QKlwM.js",
+      "line": 327,
+      "method": "POST",
+      "path": null,
+      "expression": "r === `manual` ? l(e) ? `/settlement-inputs/manual-direct` : `/settlement-inputs/manual` : `/settlement-inputs`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 186,
+      "method": "POST",
+      "path": null,
+      "expression": "z",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 197,
+      "method": "GET",
+      "path": null,
+      "expression": "e",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 222,
+      "method": "GET",
+      "path": null,
+      "expression": "u === `statements` ? `/settlements/summary?currency=` + w : null",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 226,
+      "method": "GET",
+      "path": null,
+      "expression": "u === `statements` ? `/settlements/pending-summary?${dt}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 228,
+      "method": "GET",
+      "path": null,
+      "expression": "u === `statements` ? `/settlements?${z}&page=${Ue}&size=${We}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 252,
+      "method": "GET",
+      "path": null,
+      "expression": "!x && (A || P || I) && d(`project.read`) ? `/projects?size=100` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAccounts-CMP57Xp2.js",
+      "line": 68,
+      "method": "GET",
+      "path": null,
+      "expression": "e.message",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 145,
+      "method": "POST",
+      "path": null,
+      "expression": "f.data.assignedIds",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 189,
+      "method": "POST",
+      "path": null,
+      "expression": "e => D.filter(t => t.assignable !== !1 || e.includes(t.id)).map(e => e.id)",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 193,
+      "method": "POST",
+      "path": null,
+      "expression": "[]",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 224,
+      "method": "POST",
+      "path": null,
+      "expression": "n => t.target.checked ? [...n, e.id] : n.filter(t => t !== e.id)",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 300,
+      "method": "GET",
+      "path": null,
+      "expression": "v ? `/supplier-team-groups` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierBills-BVKniq6z.js",
+      "line": 67,
+      "method": "GET",
+      "path": null,
+      "expression": "n && (!X || R !== `days`) ? null : `/supplier-bills/days?${q}&page=${ce}&size=${le}`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierBills-BVKniq6z.js",
+      "line": 68,
+      "method": "GET",
+      "path": null,
+      "expression": "Y || R !== `creators` || n && !N && !J.data?.groupAdmin ? null : `/supplier-bills/creators?${q}&groupByDate=${ge}&page=${de}&size=${fe}`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierBills-BVKniq6z.js",
+      "line": 69,
+      "method": "GET",
+      "path": null,
+      "expression": "n && (!X || R !== `days`) ? `/supplier-bills/departments?${q}&groupByDate=${L}&page=${ae}&size=${oe}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 59,
+      "method": "GET",
+      "path": null,
+      "expression": "U ? `/suppliers/available-users` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 59,
+      "method": "GET",
+      "path": null,
+      "expression": "C(`account.read`) ? `/accounts?supplierId=` + a : null",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierPlatformSettings-DQ79klgY.js",
+      "line": 31,
+      "method": "GET",
+      "path": null,
+      "expression": "m ? h : null",
+      "dynamic": true
+    },
+    {
+      "module": "Suppliers-BquEthXG.js",
+      "line": 184,
+      "method": "GET",
+      "path": null,
+      "expression": "K === `new` && s(`supplier.users`) ? `/suppliers/available-users` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Suppliers-BquEthXG.js",
+      "line": 184,
+      "method": "GET",
+      "path": null,
+      "expression": "!_ && s(`supplier.owner.assign`) ? `/suppliers/owner-candidates?includeHistory=true` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Suppliers-BquEthXG.js",
+      "line": 184,
+      "method": "GET",
+      "path": null,
+      "expression": "_ ? null : `/suppliers?search=${encodeURIComponent(T)}&state=${A}&owner=${s(`supplier.owner.assign`)?encodeURIComponent(N):``}&page=${L}&size=${H}`",
+      "dynamic": true
+    },
+    {
+      "module": "Suppliers-BquEthXG.js",
+      "line": 184,
+      "method": "GET",
+      "path": null,
+      "expression": "_ ? `/suppliers/${a.supplierId}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SystemSettings-CtOVlrw5.js",
+      "line": 28,
+      "method": "GET",
+      "path": null,
+      "expression": "t(`system.settings`) ? `/workbench-monitoring/multipliers` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SystemSettings-CtOVlrw5.js",
+      "line": 190,
+      "method": "GET",
+      "path": null,
+      "expression": "l ? `/system/settings` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 88,
+      "method": "GET",
+      "path": null,
+      "expression": "i(`workbench.monitoring.read`) ? `/workbench/monitoring` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 200,
+      "method": "GET",
+      "path": null,
+      "expression": "r(`turnover.read`) ? `/turnover` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 348,
+      "method": "GET",
+      "path": null,
+      "expression": "e.value",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 361,
+      "method": "GET",
+      "path": null,
+      "expression": "e",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 362,
+      "method": "GET",
+      "path": null,
+      "expression": "e",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 365,
+      "method": "GET",
+      "path": null,
+      "expression": "e",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 372,
+      "method": "GET",
+      "path": null,
+      "expression": "0",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 372,
+      "method": "GET",
+      "path": null,
+      "expression": "0",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 380,
+      "method": "GET",
+      "path": null,
+      "expression": "0",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 380,
+      "method": "GET",
+      "path": null,
+      "expression": "t.value",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 384,
+      "method": "GET",
+      "path": null,
+      "expression": "t.value",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 658,
+      "method": "GET",
+      "path": null,
+      "expression": "o(`exchange_rate.read`) ? `/exchange-rates/current` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 954,
+      "method": "GET",
+      "path": null,
+      "expression": "n(`workbench.tasks.read`) ? `/workbench/tasks` : null",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 5881,
+      "method": "GET",
+      "path": null,
+      "expression": "e",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 5885,
+      "method": "GET",
+      "path": null,
+      "expression": "e",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 6639,
+      "method": "GET",
+      "path": null,
+      "expression": "e",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8454,
+      "method": "GET",
+      "path": null,
+      "expression": "e.id",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8460,
+      "method": "GET",
+      "path": null,
+      "expression": "e.id",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8468,
+      "method": "GET",
+      "path": null,
+      "expression": "e.id",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8486,
+      "method": "GET",
+      "path": null,
+      "expression": "e.id",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8492,
+      "method": "GET",
+      "path": null,
+      "expression": "e.id",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8557,
+      "method": "GET",
+      "path": null,
+      "expression": "e.id",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8558,
+      "method": "GET",
+      "path": null,
+      "expression": "e.id",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8564,
+      "method": "GET",
+      "path": null,
+      "expression": "e.id",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8682,
+      "method": "GET",
+      "path": null,
+      "expression": "j",
+      "dynamic": true
+    }
+  ],
+  "endpoints": [
+    {
+      "module": "AccountDialogs-DkF7YQod.js",
+      "line": 31,
+      "method": "GET",
+      "path": "/auth/profile",
+      "expression": "`/auth/profile`",
+      "dynamic": false
+    },
+    {
+      "module": "AccountDialogs-DkF7YQod.js",
+      "line": 45,
+      "method": "PUT",
+      "path": "/auth/profile",
+      "expression": "`/auth/profile`",
+      "dynamic": false
+    },
+    {
+      "module": "AccountDialogs-DkF7YQod.js",
+      "line": 172,
+      "method": "GET",
+      "path": "/auth/password-policy",
+      "expression": "`/auth/password-policy`",
+      "dynamic": false
+    },
+    {
+      "module": "AccountDialogs-DkF7YQod.js",
+      "line": 186,
+      "method": "POST",
+      "path": "/auth/password",
+      "expression": "`/auth/password`",
+      "dynamic": false
+    },
+    {
+      "module": "ApprovedQuoteRejection-7MD8D-Rd.js",
+      "line": 23,
+      "method": "GET",
+      "path": "/quotes/{encodeURIComponent(n.id)}",
+      "expression": "`/quotes/${encodeURIComponent(n.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ApprovedQuoteRejection-7MD8D-Rd.js",
+      "line": 42,
+      "method": "POST",
+      "path": "/quotes/{encodeURIComponent(n.id)}/reject-approved",
+      "expression": "`/quotes/${encodeURIComponent(n.id)}/reject-approved`",
+      "dynamic": true
+    },
+    {
+      "module": "Audits-BxINf5wz.js",
+      "line": 386,
+      "method": "GET",
+      "path": "/system/audit-actions?retry={te}",
+      "expression": "`/system/audit-actions?retry=${te}`",
+      "dynamic": true
+    },
+    {
+      "module": "Audits-BxINf5wz.js",
+      "line": 395,
+      "method": "GET",
+      "path": "/system/audits?summaryOnly=true&{Q.toString()}",
+      "expression": "`/system/audits?summaryOnly=true&${Q.toString()}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2441,
+      "method": "GET",
+      "path": "/resources/eligible-projects",
+      "expression": "`/resources/eligible-projects`",
+      "dynamic": false
+    },
+    {
+      "module": "CcmaxBatchDelivery-BSCydCTL.js",
+      "line": 125,
+      "method": "POST",
+      "path": "/resources/ccmax/batch",
+      "expression": "`/resources/ccmax/batch`",
+      "dynamic": false
+    },
+    {
+      "module": "CurrentResourceOverview-Dl-e28oo.js",
+      "line": 41,
+      "method": "GET",
+      "path": "/reports/ccmax-resources/current?{new URLSearchParams({supplierId:E})}",
+      "expression": "`/reports/ccmax-resources/current?${new URLSearchParams({supplierId:E})}`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 53,
+      "method": "GET",
+      "path": "/accounting/daily/exports?page=1&type=&state=",
+      "expression": "`/accounting/daily/exports?page=1&type=&state=`",
+      "dynamic": false
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 183,
+      "method": "GET",
+      "path": "/accounting/daily/summary?{H}",
+      "expression": "`/accounting/daily/summary?${H}`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyCreationAnalysis-MGRzns81.js",
+      "line": 281,
+      "method": "GET",
+      "path": "/reports/ccmax-resources?{U}",
+      "expression": "`/reports/ccmax-resources?${U}`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyExports-q6_gv_XE.js",
+      "line": 129,
+      "method": "POST",
+      "path": "/accounting/daily/exports",
+      "expression": "y",
+      "dynamic": false
+    },
+    {
+      "module": "ExchangeRatesTab-FzGMcdR6.js",
+      "line": 151,
+      "method": "POST",
+      "path": "/exchange-rates",
+      "expression": "`/exchange-rates`",
+      "dynamic": false
+    },
+    {
+      "module": "ExchangeRatesTab-FzGMcdR6.js",
+      "line": 167,
+      "method": "POST",
+      "path": "/exchange-rates/{O.id}/enabled",
+      "expression": "`/exchange-rates/${O.id}/enabled`",
+      "dynamic": true
+    },
+    {
+      "module": "IntakeAllocationDialog-CW0YASmn.js",
+      "line": 240,
+      "method": "PUT",
+      "path": "/cc-intake/allocations",
+      "expression": "`/cc-intake/allocations`",
+      "dynamic": false
+    },
+    {
+      "module": "IntakePolicyPanel-DHvOkPUU.js",
+      "line": 311,
+      "method": "GET",
+      "path": "/cc-intake/admin/suppliers/{encodeURIComponent(e)}/members",
+      "expression": "`/cc-intake/admin/suppliers/${encodeURIComponent(e)}/members`",
+      "dynamic": true
+    },
+    {
+      "module": "IntakeProjectTypes-FBnV0kVR.js",
+      "line": 33,
+      "method": "GET",
+      "path": "/projects/{encodeURIComponent(r.id)}/intake-channel-types",
+      "expression": "`/projects/${encodeURIComponent(r.id)}/intake-channel-types`",
+      "dynamic": true
+    },
+    {
+      "module": "IntakeProjectTypes-FBnV0kVR.js",
+      "line": 41,
+      "method": "PUT",
+      "path": "/projects/{encodeURIComponent(r.id)}/intake-channel-types",
+      "expression": "`/projects/${encodeURIComponent(r.id)}/intake-channel-types`",
+      "dynamic": true
+    },
+    {
+      "module": "IntakeReviewDialog-C9xZ8Ftb.js",
+      "line": 131,
+      "method": "POST",
+      "path": "/cc-intake/admin/reviews/{encodeURIComponent(k.dispatchId)}/resolve",
+      "expression": "`/cc-intake/admin/reviews/${encodeURIComponent(k.dispatchId)}/resolve`",
+      "dynamic": true
+    },
+    {
+      "module": "usePaymentEvidence-DFI1SOk7.js",
+      "line": 275,
+      "method": "POST",
+      "path": "/documents",
+      "expression": "t",
+      "dynamic": false
+    },
+    {
+      "module": "MySupplierProfile-DPM4wUP0.js",
+      "line": 69,
+      "method": "PUT",
+      "path": "/suppliers/{n.id}",
+      "expression": "`/suppliers/${n.id}`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 451,
+      "method": "POST",
+      "path": "/accounts",
+      "expression": "`/accounts`",
+      "dynamic": false
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 5916,
+      "method": "GET",
+      "path": "/documents",
+      "expression": "`/documents`",
+      "dynamic": false
+    },
+    {
+      "module": "NewDelivery-CYrGthQl.js",
+      "line": 209,
+      "method": "POST",
+      "path": "/resource-intakes/recognize",
+      "expression": "`/resource-intakes/recognize`",
+      "dynamic": false
+    },
+    {
+      "module": "NewDelivery-CYrGthQl.js",
+      "line": 233,
+      "method": "POST",
+      "path": "/resource-intakes/preview",
+      "expression": "`/resource-intakes/preview`",
+      "dynamic": false
+    },
+    {
+      "module": "NewDelivery-CYrGthQl.js",
+      "line": 249,
+      "method": "POST",
+      "path": "/resource-intakes",
+      "expression": "`/resource-intakes`",
+      "dynamic": false
+    },
+    {
+      "module": "NoticeDeliveries-D5ljVxwh.js",
+      "line": 26,
+      "method": "GET",
+      "path": "/notifications/notices/{r.id}/deliveries?search={encodeURIComponent(d)}&state={_}&page={y}&size={x}",
+      "expression": "`/notifications/notices/${r.id}/deliveries?search=${encodeURIComponent(d)}&state=${_}&page=${y}&size=${x}`",
+      "dynamic": true
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 189,
+      "method": "GET",
+      "path": "/notifications/notice-recipients",
+      "expression": "`/notifications/notice-recipients`",
+      "dynamic": false
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 200,
+      "method": "PUT",
+      "path": "/notifications/notices/{n.id}",
+      "expression": "`/notifications/notices/${n.id}`",
+      "dynamic": true
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 204,
+      "method": "POST",
+      "path": "/notifications/notices",
+      "expression": "`/notifications/notices`",
+      "dynamic": false
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 206,
+      "method": "POST",
+      "path": "/notifications/publish",
+      "expression": "`/notifications/publish`",
+      "dynamic": false
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 7853,
+      "method": "GET",
+      "path": "/notifications?unread=true&size=5",
+      "expression": "`/notifications?unread=true&size=5`",
+      "dynamic": false
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 7891,
+      "method": "POST",
+      "path": "/notifications/{e.id}/read",
+      "expression": "`/notifications/${e.id}/read`",
+      "dynamic": true
+    },
+    {
+      "module": "Notifications-BTntRB-A.js",
+      "line": 44,
+      "method": "POST",
+      "path": "/notifications/read-all",
+      "expression": "`/notifications/read-all`",
+      "dynamic": false
+    },
+    {
+      "module": "Onboarding-BDYVT1sP.js",
+      "line": 27,
+      "method": "POST",
+      "path": "/auth/onboarding",
+      "expression": "`/auth/onboarding`",
+      "dynamic": false
+    },
+    {
+      "module": "OperatorKpi-NouSWERW.js",
+      "line": 44,
+      "method": "GET",
+      "path": "/suppliers/owner-candidates?includeHistory=true",
+      "expression": "`/suppliers/owner-candidates?includeHistory=true`",
+      "dynamic": false
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 169,
+      "method": "GET",
+      "path": "/outbound-proxies/page?page={t}&size={r}&{n}",
+      "expression": "`/outbound-proxies/page?page=${t}&size=${r}&${n}`",
+      "dynamic": true
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 190,
+      "method": "POST",
+      "path": "/outbound-proxies/{encodeURIComponent(e.id)}/test",
+      "expression": "`/outbound-proxies/${encodeURIComponent(e.id)}/test`",
+      "dynamic": true
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 238,
+      "method": "POST",
+      "path": "/outbound-proxies",
+      "expression": "`/outbound-proxies`",
+      "dynamic": false
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 238,
+      "method": "PUT",
+      "path": "/outbound-proxies/{encodeURIComponent(O.id)}",
+      "expression": "`/outbound-proxies/${encodeURIComponent(O.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 251,
+      "method": "POST",
+      "path": "/outbound-proxies/import",
+      "expression": "`/outbound-proxies/import`",
+      "dynamic": false
+    },
+    {
+      "module": "OwnerSection-BV_jBT2b.js",
+      "line": 125,
+      "method": "PUT",
+      "path": "/suppliers/{i}/owner",
+      "expression": "`/suppliers/${i}/owner`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentForm-DYdHXH-C.js",
+      "line": 179,
+      "method": "POST",
+      "path": "/payments/offline",
+      "expression": "`/payments/offline`",
+      "dynamic": false
+    },
+    {
+      "module": "PaymentForm-DYdHXH-C.js",
+      "line": 184,
+      "method": "POST",
+      "path": "/payments",
+      "expression": "`/payments`",
+      "dynamic": false
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 138,
+      "method": "POST",
+      "path": "/payments/{e.id}/reconcile",
+      "expression": "`/payments/${e.id}/reconcile`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 253,
+      "method": "POST",
+      "path": "/payments/{e.id}/execute",
+      "expression": "`/payments/${e.id}/execute`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 213,
+      "method": "POST",
+      "path": "/payments/{e.id}/payout-preview",
+      "expression": "`/payments/${e.id}/payout-preview`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 294,
+      "method": "POST",
+      "path": "/payments/sandbox/events",
+      "expression": "`/payments/sandbox/events`",
+      "dynamic": false
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 317,
+      "method": "GET",
+      "path": "/payments?page={T}&size={D}&settlementId={encodeURIComponent(c)}",
+      "expression": "`/payments?page=${T}&size=${D}&settlementId=${encodeURIComponent(c)}`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 320,
+      "method": "GET",
+      "path": "/payments/{encodeURIComponent(q)}",
+      "expression": "`/payments/` + encodeURIComponent(q)",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 329,
+      "method": "GET",
+      "path": "/payments/{encodeURIComponent(t.id)}",
+      "expression": "`/payments/` + encodeURIComponent(t.id)",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 478,
+      "method": "POST",
+      "path": "/payments/{j.id}/review",
+      "expression": "`/payments/${j.id}/review`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 542,
+      "method": "POST",
+      "path": "/payments/{j.id}/receipt",
+      "expression": "`/payments/${j.id}/receipt`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 573,
+      "method": "POST",
+      "path": "/payments/{j.id}/close",
+      "expression": "`/payments/${j.id}/close`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 591,
+      "method": "GET",
+      "path": "/settlements/{encodeURIComponent(e.settlementId)}",
+      "expression": "`/settlements/${encodeURIComponent(e.settlementId)}`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 634,
+      "method": "POST",
+      "path": "/payments/{e.id}/offline-record",
+      "expression": "`/payments/${e.id}/offline-record`",
+      "dynamic": true
+    },
+    {
+      "module": "PayoutCallLogs-DpLZK7rw.js",
+      "line": 37,
+      "method": "GET",
+      "path": "/payout-calls?{E.toString()}",
+      "expression": "`/payout-calls?${E.toString()}`",
+      "dynamic": true
+    },
+    {
+      "module": "PayoutProviders-D9Kgf-te.js",
+      "line": 75,
+      "method": "GET",
+      "path": "/payout-providers/{t.code}",
+      "expression": "`/payout-providers/${t.code}`",
+      "dynamic": true
+    },
+    {
+      "module": "PayoutProviders-D9Kgf-te.js",
+      "line": 119,
+      "method": "PUT",
+      "path": "/payout-providers/{t.code}",
+      "expression": "`/payout-providers/${t.code}`",
+      "dynamic": true
+    },
+    {
+      "module": "PayoutProviders-D9Kgf-te.js",
+      "line": 327,
+      "method": "POST",
+      "path": "/payout-providers/{t.code}/test",
+      "expression": "`/payout-providers/${t.code}/test`",
+      "dynamic": true
+    },
+    {
+      "module": "PrioritySupportDialog-DfV-rWYR.js",
+      "line": 96,
+      "method": "POST",
+      "path": "/system/scheduled-tasks/priority-support",
+      "expression": "_ + `/priority-support`",
+      "dynamic": false
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 47,
+      "method": "GET",
+      "path": "/projects/categories",
+      "expression": "`/projects/categories`",
+      "dynamic": false
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1679,
+      "method": "GET",
+      "path": "/projects/category-codes",
+      "expression": "`/projects/category-codes`",
+      "dynamic": false
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2368,
+      "method": "GET",
+      "path": "/projects?size=100",
+      "expression": "`/projects?size=100`",
+      "dynamic": false
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 55,
+      "method": "GET",
+      "path": "/projects/category-codes/{encodeURIComponent(U.code)}?version={U.version}",
+      "expression": "`/projects/category-codes/${encodeURIComponent(U.code)}?version=${U.version}`",
+      "dynamic": true
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 503,
+      "method": "POST",
+      "path": "/projects/category-codes",
+      "expression": "`/projects/category-codes`",
+      "dynamic": false
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 506,
+      "method": "PUT",
+      "path": "/projects/category-codes/{encodeURIComponent(V.code)}",
+      "expression": "`/projects/category-codes/${encodeURIComponent(V.code)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 573,
+      "method": "POST",
+      "path": "/projects",
+      "expression": "`/projects`",
+      "dynamic": false
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 573,
+      "method": "PUT",
+      "path": "/projects/{N.id}",
+      "expression": "`/projects/` + N.id",
+      "dynamic": true
+    },
+    {
+      "module": "QueryFilters-CwGBc_NH.js",
+      "line": 164,
+      "method": "GET",
+      "path": "/suppliers?page={o}&size=100&state={encodeURIComponent(r)}&search={encodeURIComponent(i)}",
+      "expression": "`/suppliers?page=${o}&size=100&state=${encodeURIComponent(r)}&search=${encodeURIComponent(i)}`",
+      "dynamic": true
+    },
+    {
+      "module": "QuotePeriodPanel-D3BWLIuY.js",
+      "line": 52,
+      "method": "GET",
+      "path": "/quotes/{encodeURIComponent(n.id)}/period-change",
+      "expression": "`/quotes/${encodeURIComponent(n.id)}/period-change`",
+      "dynamic": true
+    },
+    {
+      "module": "QuotePeriodPanel-D3BWLIuY.js",
+      "line": 121,
+      "method": "POST",
+      "path": "/quotes/{encodeURIComponent(n.id)}/period-change",
+      "expression": "`/quotes/${encodeURIComponent(n.id)}/period-change`",
+      "dynamic": true
+    },
+    {
+      "module": "QuotePeriodPanel-D3BWLIuY.js",
+      "line": 157,
+      "method": "POST",
+      "path": "/quotes/{encodeURIComponent(n.id)}/period-change/review",
+      "expression": "`/quotes/${encodeURIComponent(n.id)}/period-change/review`",
+      "dynamic": true
+    },
+    {
+      "module": "QuoteRankingResults-cj8V1Hgu.js",
+      "line": 40,
+      "method": "GET",
+      "path": "/quotes/ranking?projectId={encodeURIComponent(r.id)}&currency={encodeURIComponent(i)}&onDate={encodeURIComponent(l)}&sortBy={y}&sortDirection={x}",
+      "expression": "T",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 164,
+      "method": "GET",
+      "path": "/quotes/{encodeURIComponent(t)}",
+      "expression": "`/quotes/` + encodeURIComponent(t)",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 197,
+      "method": "GET",
+      "path": "/quotes/{encodeURIComponent(t.id)}",
+      "expression": "`/quotes/${encodeURIComponent(t.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 300,
+      "method": "PUT",
+      "path": "/quotes/{e.id}",
+      "expression": "`/quotes/${e.id}`",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 300,
+      "method": "POST",
+      "path": "/quotes",
+      "expression": "`/quotes`",
+      "dynamic": false
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 1122,
+      "method": "POST",
+      "path": "/quotes/{M.id}/review",
+      "expression": "`/quotes/${M.id}/review`",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 1157,
+      "method": "POST",
+      "path": "/quotes/{M.id}/withdraw",
+      "expression": "`/quotes/${M.id}/withdraw`",
+      "dynamic": true
+    },
+    {
+      "module": "Reports-ChHNVTLt.js",
+      "line": 179,
+      "method": "GET",
+      "path": "/reports/settlements?{i.toString()}",
+      "expression": "`/reports/settlements?${i.toString()}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 65,
+      "method": "GET",
+      "path": "/resources/{_(a.id)}",
+      "expression": "`/resources/${_(a.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 175,
+      "method": "GET",
+      "path": "/resources/{_(Y.id)}",
+      "expression": "`/resources/${_(Y.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 108,
+      "method": "POST",
+      "path": "/resources/{_(Y.id)}/dispatch",
+      "expression": "`/resources/${_(Y.id)}/dispatch`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 113,
+      "method": "POST",
+      "path": "/resources/{_(Y.id)}/oauth/authorize",
+      "expression": "`/resources/${_(Y.id)}/oauth/authorize`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 120,
+      "method": "POST",
+      "path": "/resources/{_(Y.id)}/oauth/complete",
+      "expression": "`/resources/${_(Y.id)}/oauth/complete`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 149,
+      "method": "POST",
+      "path": "/resources/{_(Y.id)}/oauth/supplier-retry",
+      "expression": "`/resources/${_(Y.id)}/oauth/supplier-retry`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 168,
+      "method": "POST",
+      "path": "/resources/{_(Y.id)}/submit",
+      "expression": "`/resources/${_(Y.id)}/submit`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 369,
+      "method": "POST",
+      "path": "/resources/oauth/supplier-session/{m(j.sessionId)}/cancel",
+      "expression": "`/resources/oauth/supplier-session/${m(j.sessionId)}/cancel`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 152,
+      "method": "GET",
+      "path": "/resources/{m(t.resourceId)}",
+      "expression": "`/resources/${m(t.resourceId)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 157,
+      "method": "GET",
+      "path": "/resources/{m(t.details.resourceId)}",
+      "expression": "`/resources/${m(t.details.resourceId)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 178,
+      "method": "GET",
+      "path": "/resources/{m(T.id)}",
+      "expression": "`/resources/${m(T.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 285,
+      "method": "POST",
+      "path": "/outbound-proxies/resolve",
+      "expression": "`/outbound-proxies/resolve`",
+      "dynamic": false
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 309,
+      "method": "POST",
+      "path": "/resources/oauth/supplier-submit",
+      "expression": "`/resources/oauth/supplier-submit`",
+      "dynamic": false
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 317,
+      "method": "POST",
+      "path": "/resources/{m(e.id)}/oauth/supplier-submit",
+      "expression": "`/resources/${m(e.id)}/oauth/supplier-submit`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 353,
+      "method": "POST",
+      "path": "/resources/oauth/supplier-authorize",
+      "expression": "`/resources/oauth/supplier-authorize`",
+      "dynamic": false
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 362,
+      "method": "POST",
+      "path": "/resources/supplier-submit",
+      "expression": "`/resources/supplier-submit`",
+      "dynamic": false
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 379,
+      "method": "PUT",
+      "path": "/resources/{m(T.id)}",
+      "expression": "`/resources/${m(T.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 379,
+      "method": "POST",
+      "path": "/resources/drafts",
+      "expression": "`/resources/drafts`",
+      "dynamic": false
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 381,
+      "method": "POST",
+      "path": "/resources/{m(e.id)}/oauth/supplier-authorize",
+      "expression": "`/resources/${m(e.id)}/oauth/supplier-authorize`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 388,
+      "method": "POST",
+      "path": "/resources/{m(e.id)}/submit",
+      "expression": "`/resources/${m(e.id)}/submit`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 401,
+      "method": "GET",
+      "path": "/resources/{m(i)}",
+      "expression": "`/resources/${m(i)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 70,
+      "method": "POST",
+      "path": "/workbench-monitoring/sources/{encodeURIComponent(e.id)}/refresh",
+      "expression": "`/workbench-monitoring/sources/${encodeURIComponent(e.id)}/refresh`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 243,
+      "method": "PUT",
+      "path": "/workbench-monitoring/sources/{encodeURIComponent(v.id)}",
+      "expression": "`/workbench-monitoring/sources/${encodeURIComponent(v.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 450,
+      "method": "PUT",
+      "path": "/workbench-monitoring/sources/{encodeURIComponent(a.id)}",
+      "expression": "`/workbench-monitoring/sources/${encodeURIComponent(a.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 450,
+      "method": "POST",
+      "path": "/workbench-monitoring/sources",
+      "expression": "`/workbench-monitoring/sources`",
+      "dynamic": false
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 466,
+      "method": "GET",
+      "path": "/resource-targets/{encodeURIComponent(n)}/sync-settings",
+      "expression": "`/resource-targets/${encodeURIComponent(n)}/sync-settings`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 500,
+      "method": "PUT",
+      "path": "/resource-targets/{encodeURIComponent(n)}/sync-settings",
+      "expression": "`/resource-targets/${encodeURIComponent(n)}/sync-settings`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 629,
+      "method": "POST",
+      "path": "/resource-targets/{encodeURIComponent(x.id)}/test",
+      "expression": "`/resource-targets/${encodeURIComponent(x.id)}/test`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 642,
+      "method": "POST",
+      "path": "/resource-targets/{encodeURIComponent(x.id)}/oauth/link",
+      "expression": "`/resource-targets/${encodeURIComponent(x.id)}/oauth/link`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 661,
+      "method": "POST",
+      "path": "/resource-targets/{encodeURIComponent(x.id)}/oauth/complete",
+      "expression": "`/resource-targets/${encodeURIComponent(x.id)}/oauth/complete`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 858,
+      "method": "POST",
+      "path": "/resource-targets",
+      "expression": "`/resource-targets`",
+      "dynamic": false
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 858,
+      "method": "PUT",
+      "path": "/resource-targets/{encodeURIComponent(e.id)}",
+      "expression": "`/resource-targets/${encodeURIComponent(e.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 103,
+      "method": "GET",
+      "path": "/resources/submission-capabilities",
+      "expression": "Ae",
+      "dynamic": false
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 248,
+      "method": "POST",
+      "path": "/resource-lifecycle-jobs",
+      "expression": "`/resource-lifecycle-jobs`",
+      "dynamic": false
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 385,
+      "method": "POST",
+      "path": "/resource-intakes/{encodeURIComponent(e.id)}/original-request",
+      "expression": "`/resource-intakes/${encodeURIComponent(e.id)}/original-request`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 398,
+      "method": "POST",
+      "path": "/resource-intakes/{encodeURIComponent(e.id)}/material",
+      "expression": "`/resource-intakes/${encodeURIComponent(e.id)}/material`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 574,
+      "method": "GET",
+      "path": "/resource-proxy-replacements/proxy-options?resourceId={encodeURIComponent(e)}&search={encodeURIComponent(o)}&page={c}&size={d}",
+      "expression": "`/resource-proxy-replacements/proxy-options?resourceId=${encodeURIComponent(e)}&search=${encodeURIComponent(o)}&page=${c}&size=${d}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 651,
+      "method": "POST",
+      "path": "/resource-proxy-replacements",
+      "expression": "`/resource-proxy-replacements`",
+      "dynamic": false
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 742,
+      "method": "GET",
+      "path": "/resource-proxy-replacements?scope={o}&page={l}&size=10{n?`&resourceId=${encodeURIComponent(n)}`:``}",
+      "expression": "`/resource-proxy-replacements?scope=${o}&page=${l}&size=10${n?`&resourceId=${encodeURIComponent(n)}`:``}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 805,
+      "method": "GET",
+      "path": "/resource-proxy-replacements/{encodeURIComponent(e)}",
+      "expression": "`/resource-proxy-replacements/${encodeURIComponent(e)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 815,
+      "method": "POST",
+      "path": "/resource-proxy-replacements/{encodeURIComponent(e)}/reconcile",
+      "expression": "`/resource-proxy-replacements/${encodeURIComponent(e)}/reconcile`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1580,
+      "method": "GET",
+      "path": "/resources/{encodeURIComponent(t.id)}/credential-refresh",
+      "expression": "_",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1593,
+      "method": "POST",
+      "path": "/resources/{encodeURIComponent(t.id)}/credential-refresh",
+      "expression": "_",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1702,
+      "method": "GET",
+      "path": "/resource-intakes/{encodeURIComponent(e.id)}",
+      "expression": "`/resource-intakes/${encodeURIComponent(e.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1750,
+      "method": "GET",
+      "path": "/resource-intakes/{encodeURIComponent(e.id)}/eligible-projects",
+      "expression": "`/resource-intakes/${encodeURIComponent(e.id)}/eligible-projects`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1761,
+      "method": "POST",
+      "path": "/resource-intakes/{encodeURIComponent(e.id)}/assign-project",
+      "expression": "`/resource-intakes/${encodeURIComponent(e.id)}/assign-project`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1972,
+      "method": "POST",
+      "path": "/resources/{encodeURIComponent(t.id)}/reauthorizations",
+      "expression": "ae",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2175,
+      "method": "POST",
+      "path": "/resources/{encodeURIComponent(e.id)}/say-hi",
+      "expression": "`/resources/${encodeURIComponent(e.id)}/say-hi`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2304,
+      "method": "POST",
+      "path": "/resources/{ge(X.resource.id)}/creation-recovery",
+      "expression": "`/resources/${ge(X.resource.id)}/creation-recovery`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2339,
+      "method": "GET",
+      "path": "/deliveries/filter-options?assignment={Ke}&supplierSearch={encodeURIComponent(Re.supplier)}&creatorSearch={encodeURIComponent(Re.creator)}",
+      "expression": "`/deliveries/filter-options?assignment=${Ke}&supplierSearch=${encodeURIComponent(Re.supplier)}&creatorSearch=${encodeURIComponent(Re.creator)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2356,
+      "method": "GET",
+      "path": "/deliveries?{un}",
+      "expression": "`/deliveries?${un}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2439,
+      "method": "GET",
+      "path": "/quotes/{ge(jn)}",
+      "expression": "`/quotes/${ge(jn)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2467,
+      "method": "GET",
+      "path": "/resources/{ge(t)}",
+      "expression": "`/resources/${ge(t)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2489,
+      "method": "POST",
+      "path": "/resources/{ge(e.id)}/usage",
+      "expression": "`/resources/${ge(e.id)}/usage`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2523,
+      "method": "GET",
+      "path": "/resources/{ge(t.id)}",
+      "expression": "`/resources/${ge(t.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2524,
+      "method": "POST",
+      "path": "/resources/{ge(n.id)}/oauth/supplier-retry",
+      "expression": "`/resources/${ge(n.id)}/oauth/supplier-retry`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2542,
+      "method": "GET",
+      "path": "/resources/{ge(Ht.id)}?version={Ht.version}",
+      "expression": "`/resources/${ge(Ht.id)}?version=${Ht.version}`",
+      "dynamic": true
+    },
+    {
+      "module": "RoleEditor-D-Ljkwz-.js",
+      "line": 264,
+      "method": "POST",
+      "path": "/system/roles",
+      "expression": "`/system/roles`",
+      "dynamic": false
+    },
+    {
+      "module": "RoleEditor-D-Ljkwz-.js",
+      "line": 264,
+      "method": "PUT",
+      "path": "/system/roles/{t.code}",
+      "expression": "`/system/roles/` + t.code",
+      "dynamic": true
+    },
+    {
+      "module": "Roles-BkB5m-qF.js",
+      "line": 32,
+      "method": "GET",
+      "path": "/system/roles/page?{C.toString()}",
+      "expression": "`/system/roles/page?${C.toString()}`",
+      "dynamic": true
+    },
+    {
+      "module": "ScheduledTasks-DQG4VARN.js",
+      "line": 43,
+      "method": "GET",
+      "path": "/system/scheduled-tasks",
+      "expression": "`/system/scheduled-tasks`",
+      "dynamic": false
+    },
+    {
+      "module": "ScheduledTasks-DQG4VARN.js",
+      "line": 48,
+      "method": "PUT",
+      "path": "/system/scheduled-tasks/{encodeURIComponent(e.key)}",
+      "expression": "`/system/scheduled-tasks/${encodeURIComponent(e.key)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ScheduledTasks-DQG4VARN.js",
+      "line": 71,
+      "method": "GET",
+      "path": "/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings",
+      "expression": "`/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings`",
+      "dynamic": false
+    },
+    {
+      "module": "ScheduledTasks-DQG4VARN.js",
+      "line": 84,
+      "method": "PUT",
+      "path": "/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings",
+      "expression": "`/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings`",
+      "dynamic": false
+    },
+    {
+      "module": "ScheduledTasks-DQG4VARN.js",
+      "line": 92,
+      "method": "PUT",
+      "path": "/system/scheduled-tasks/{encodeURIComponent(k.key)}/config",
+      "expression": "`/system/scheduled-tasks/${encodeURIComponent(k.key)}/config`",
+      "dynamic": true
+    },
+    {
+      "module": "ScheduledTasks-DQG4VARN.js",
+      "line": 234,
+      "method": "PUT",
+      "path": "/system/scheduled-tasks/{encodeURIComponent(D.key)}/schedule",
+      "expression": "`/system/scheduled-tasks/${encodeURIComponent(D.key)}/schedule`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 180,
+      "method": "GET",
+      "path": "/settlement-batches?view={_e}",
+      "expression": "`/settlement-batches?view=${_e}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 186,
+      "method": "GET",
+      "path": "/settlement-batches/{j.id}",
+      "expression": "`/settlement-batches/${j.id}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 247,
+      "method": "GET",
+      "path": "/settlement-batches/{t}",
+      "expression": "`/settlement-batches/${t}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 383,
+      "method": "POST",
+      "path": "/settlement-batches/{j.id}/start",
+      "expression": "`/settlement-batches/${j.id}/start`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 390,
+      "method": "POST",
+      "path": "/settlement-batches/{j.id}/retry-preview",
+      "expression": "`/settlement-batches/${j.id}/retry-preview`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 576,
+      "method": "POST",
+      "path": "/settlement-batches/preview",
+      "expression": "`/settlement-batches/preview`",
+      "dynamic": false
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 597,
+      "method": "GET",
+      "path": "/settlement-batches/{j.id}/items/{N}/preview?page={t}&size={n}",
+      "expression": "`/settlement-batches/${j.id}/items/${N}/preview?page=${t}&size=${n}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 58,
+      "method": "GET",
+      "path": "/settlements/{i}?page={P}&size={I}",
+      "expression": "`/settlements/${i}?page=${P}&size=${I}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 282,
+      "method": "POST",
+      "path": "/settlements/{i}/confirm",
+      "expression": "`/settlements/${i}/confirm`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 300,
+      "method": "POST",
+      "path": "/settlements/{i}/void",
+      "expression": "`/settlements/${i}/void`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 321,
+      "method": "POST",
+      "path": "/settlements/{i}/withdraw",
+      "expression": "`/settlements/${i}/withdraw`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 418,
+      "method": "POST",
+      "path": "/settlements/{t.id}/adjustments",
+      "expression": "`/settlements/${t.id}/adjustments`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementInputs-CZ-QKlwM.js",
+      "line": 48,
+      "method": "GET",
+      "path": "/settlement-inputs?search={encodeURIComponent(c)}&state={O}&page={b}&size={E}",
+      "expression": "`/settlement-inputs?search=${encodeURIComponent(c)}&state=${O}&page=${b}&size=${E}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementInputs-CZ-QKlwM.js",
+      "line": 215,
+      "method": "POST",
+      "path": "/settlement-inputs/{A.id}/void",
+      "expression": "`/settlement-inputs/${A.id}/void`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 769,
+      "method": "POST",
+      "path": "/settlements/preview?page={e}&size={t}",
+      "expression": "`/settlements/preview?page=${e}&size=${t}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 775,
+      "method": "POST",
+      "path": "/settlements",
+      "expression": "`/settlements`",
+      "dynamic": false
+    },
+    {
+      "module": "SupplierAccounts-CMP57Xp2.js",
+      "line": 65,
+      "method": "POST",
+      "path": "/accounts/{t.id}/reveal",
+      "expression": "`/accounts/${t.id}/reveal`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAccounts-CMP57Xp2.js",
+      "line": 96,
+      "method": "GET",
+      "path": "/accounts/platform?{W}",
+      "expression": "`/accounts/platform?${W}`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 143,
+      "method": "GET",
+      "path": "/supplier-agents/{encodeURIComponent(r.id)}/projects",
+      "expression": "d",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 154,
+      "method": "PUT",
+      "path": "/supplier-agents/{encodeURIComponent(r.id)}/projects",
+      "expression": "d",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 300,
+      "method": "GET",
+      "path": "/supplier-agents",
+      "expression": "`/supplier-agents`",
+      "dynamic": false
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 7922,
+      "method": "GET",
+      "path": "/auth/registration-policy",
+      "expression": "`/auth/registration-policy`",
+      "dynamic": false
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 326,
+      "method": "POST",
+      "path": "/supplier-agents",
+      "expression": "`/supplier-agents`",
+      "dynamic": false
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 347,
+      "method": "PUT",
+      "path": "/supplier-agents/{encodeURIComponent(e.id)}/enabled",
+      "expression": "`/supplier-agents/${encodeURIComponent(e.id)}/enabled`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 362,
+      "method": "POST",
+      "path": "/supplier-agents/{encodeURIComponent(e.id)}/password",
+      "expression": "`/supplier-agents/${encodeURIComponent(e.id)}/password`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierBills-BVKniq6z.js",
+      "line": 60,
+      "method": "GET",
+      "path": "/supplier-bills/filters?{new URLSearchParams({from:G,to:K,department:N})}",
+      "expression": "`/supplier-bills/filters?${new URLSearchParams({from:G,to:K,department:N})}`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierBills-BVKniq6z.js",
+      "line": 551,
+      "method": "GET",
+      "path": "/supplier-bills/entries?{I}",
+      "expression": "`/supplier-bills/entries?${I}`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDailyCreations-C04GFRSJ.js",
+      "line": 49,
+      "method": "GET",
+      "path": "/reports/ccmax-resources/suppliers?{new URLSearchParams(C)}",
+      "expression": "`/reports/ccmax-resources/suppliers?${new URLSearchParams(C)}`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 59,
+      "method": "GET",
+      "path": "/suppliers/{a}",
+      "expression": "`/suppliers/` + a",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 210,
+      "method": "POST",
+      "path": "/suppliers/{a}/review",
+      "expression": "`/suppliers/${a}/review`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 309,
+      "method": "POST",
+      "path": "/accounts/{e.id}/reveal",
+      "expression": "`/accounts/${e.id}/reveal`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 346,
+      "method": "POST",
+      "path": "/accounts/{e.id}/review",
+      "expression": "`/accounts/${e.id}/review`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 474,
+      "method": "POST",
+      "path": "/suppliers/{a}/users",
+      "expression": "`/suppliers/${a}/users`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 497,
+      "method": "PUT",
+      "path": "/suppliers/{a}/note",
+      "expression": "`/suppliers/${a}/note`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 515,
+      "method": "PUT",
+      "path": "/suppliers/{a}/code",
+      "expression": "`/suppliers/${a}/code`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 530,
+      "method": "POST",
+      "path": "/suppliers/{a}/enabled",
+      "expression": "`/suppliers/${a}/enabled`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierMemberGroupDialog-7u5cN2us.js",
+      "line": 30,
+      "method": "PUT",
+      "path": "/supplier-team-groups/{encodeURIComponent(x.id)}",
+      "expression": "`/supplier-team-groups/${encodeURIComponent(x.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierPlatformSettings-DQ79klgY.js",
+      "line": 50,
+      "method": "PUT",
+      "path": "/suppliers/{encodeURIComponent(n)}/settings",
+      "expression": "h",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierTeamGroups-Dk9m6lRm.js",
+      "line": 39,
+      "method": "POST",
+      "path": "/supplier-team-groups/{encodeURIComponent(u.id)}/remove",
+      "expression": "`/supplier-team-groups/${encodeURIComponent(u.id)}/remove`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierTeamGroups-Dk9m6lRm.js",
+      "line": 53,
+      "method": "POST",
+      "path": "/supplier-team-groups",
+      "expression": "`/supplier-team-groups`",
+      "dynamic": false
+    },
+    {
+      "module": "SupplierTeamGroups-Dk9m6lRm.js",
+      "line": 53,
+      "method": "PUT",
+      "path": "/supplier-team-groups/{encodeURIComponent(u.id)}",
+      "expression": "`/supplier-team-groups/${encodeURIComponent(u.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Suppliers-BquEthXG.js",
+      "line": 414,
+      "method": "POST",
+      "path": "/suppliers",
+      "expression": "`/suppliers`",
+      "dynamic": false
+    },
+    {
+      "module": "Suppliers-BquEthXG.js",
+      "line": 426,
+      "method": "PUT",
+      "path": "/suppliers/{K.id}",
+      "expression": "`/suppliers/` + K.id",
+      "dynamic": true
+    },
+    {
+      "module": "SystemNotices-BwbR9un8.js",
+      "line": 49,
+      "method": "GET",
+      "path": "/notifications/notices?search={encodeURIComponent(s)}&status={d}&page={x}&size={w}",
+      "expression": "`/notifications/notices?search=${encodeURIComponent(s)}&status=${d}&page=${x}&size=${w}`",
+      "dynamic": true
+    },
+    {
+      "module": "SystemNotices-BwbR9un8.js",
+      "line": 54,
+      "method": "POST",
+      "path": "/notifications/notices/{R.id}/revoke",
+      "expression": "`/notifications/notices/${R.id}/revoke`",
+      "dynamic": true
+    },
+    {
+      "module": "SystemNotices-BwbR9un8.js",
+      "line": 67,
+      "method": "POST",
+      "path": "/notifications/notices/{I.id}/publish",
+      "expression": "`/notifications/notices/${I.id}/publish`",
+      "dynamic": true
+    },
+    {
+      "module": "SystemSettings-CtOVlrw5.js",
+      "line": 113,
+      "method": "PUT",
+      "path": "/workbench-monitoring/multipliers",
+      "expression": "`/workbench-monitoring/multipliers`",
+      "dynamic": false
+    },
+    {
+      "module": "SystemSettings-CtOVlrw5.js",
+      "line": 259,
+      "method": "PUT",
+      "path": "/system/settings",
+      "expression": "`/system/settings`",
+      "dynamic": false
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 55,
+      "method": "GET",
+      "path": "/system/users?{le.toString()}",
+      "expression": "`/system/users?${le.toString()}`",
+      "dynamic": true
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 55,
+      "method": "GET",
+      "path": "/system/roles",
+      "expression": "`/system/roles`",
+      "dynamic": false
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 252,
+      "method": "PUT",
+      "path": "/system/users/{C.id}/enabled",
+      "expression": "`/system/users/${C.id}/enabled`",
+      "dynamic": true
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 315,
+      "method": "POST",
+      "path": "/system/users",
+      "expression": "`/system/users`",
+      "dynamic": false
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 371,
+      "method": "PUT",
+      "path": "/system/users/{U.id}",
+      "expression": "`/system/users/` + U.id",
+      "dynamic": true
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 406,
+      "method": "POST",
+      "path": "/system/users/{G.id}/password",
+      "expression": "`/system/users/${G.id}/password`",
+      "dynamic": true
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 424,
+      "method": "POST",
+      "path": "/system/users/{q.id}/logout",
+      "expression": "`/system/users/${q.id}/logout`",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 315,
+      "method": "POST",
+      "path": "/turnover",
+      "expression": "`/turnover`",
+      "dynamic": false
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 657,
+      "method": "GET",
+      "path": "/workbench",
+      "expression": "`/workbench`",
+      "dynamic": false
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 717,
+      "method": "POST",
+      "path": "/notifications/{M.announcement.notificationId}/read",
+      "expression": "`/notifications/${M.announcement.notificationId}/read`",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 5903,
+      "method": "GET",
+      "path": "/auth/login",
+      "expression": "`/auth/login`",
+      "dynamic": false
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 5912,
+      "method": "POST",
+      "path": "/auth/logout",
+      "expression": "`/auth/logout`",
+      "dynamic": false
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 5922,
+      "method": "GET",
+      "path": "/settlements/{encodeURIComponent(e)}/export",
+      "expression": "`/settlements/${encodeURIComponent(e)}/export`",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 5926,
+      "method": "GET",
+      "path": "/settlements/export?{e}",
+      "expression": "`/settlements/export?${e}`",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 7832,
+      "method": "GET",
+      "path": "/notifications/unread-count",
+      "expression": "`/notifications/unread-count`",
+      "dynamic": false
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8014,
+      "method": "POST",
+      "path": "/auth/register",
+      "expression": "`/auth/register`",
+      "dynamic": false
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8399,
+      "method": "GET",
+      "path": "/auth/me",
+      "expression": "`/auth/me`",
+      "dynamic": false
+    },
+    {
+      "module": "useDeliveryProxies-DGHL4QCT.js",
+      "line": 22,
+      "method": "GET",
+      "path": "/outbound-proxies/options?page={r}&size=100",
+      "expression": "`/outbound-proxies/options?page=${r}&size=100`",
+      "dynamic": true
+    }
+  ],
+  "allCallSites": [
+    {
+      "module": "AccountDialogs-DkF7YQod.js",
+      "line": 31,
+      "method": "GET",
+      "path": "/auth/profile",
+      "expression": "`/auth/profile`",
+      "dynamic": false
+    },
+    {
+      "module": "AccountDialogs-DkF7YQod.js",
+      "line": 45,
+      "method": "PUT",
+      "path": "/auth/profile",
+      "expression": "`/auth/profile`",
+      "dynamic": false
+    },
+    {
+      "module": "AccountDialogs-DkF7YQod.js",
+      "line": 172,
+      "method": "GET",
+      "path": "/auth/password-policy",
+      "expression": "`/auth/password-policy`",
+      "dynamic": false
+    },
+    {
+      "module": "AccountDialogs-DkF7YQod.js",
+      "line": 186,
+      "method": "POST",
+      "path": "/auth/password",
+      "expression": "`/auth/password`",
+      "dynamic": false
+    },
+    {
+      "module": "ApiTokens-uH0R0C-_.js",
+      "line": 29,
+      "method": "GET",
+      "path": null,
+      "expression": "v",
+      "dynamic": true
+    },
+    {
+      "module": "ApiTokens-uH0R0C-_.js",
+      "line": 42,
+      "method": "POST",
+      "path": null,
+      "expression": "e === `issue` ? v : `${v}/${encodeURIComponent(t)}/${e}`",
+      "dynamic": true
+    },
+    {
+      "module": "ApprovedQuoteRejection-7MD8D-Rd.js",
+      "line": 23,
+      "method": "GET",
+      "path": "/quotes/{encodeURIComponent(n.id)}",
+      "expression": "`/quotes/${encodeURIComponent(n.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ApprovedQuoteRejection-7MD8D-Rd.js",
+      "line": 42,
+      "method": "POST",
+      "path": "/quotes/{encodeURIComponent(n.id)}/reject-approved",
+      "expression": "`/quotes/${encodeURIComponent(n.id)}/reject-approved`",
+      "dynamic": true
+    },
+    {
+      "module": "Audits-BxINf5wz.js",
+      "line": 334,
+      "method": "GET",
+      "path": null,
+      "expression": "A",
+      "dynamic": true
+    },
+    {
+      "module": "Audits-BxINf5wz.js",
+      "line": 334,
+      "method": "GET",
+      "path": null,
+      "expression": "j",
+      "dynamic": true
+    },
+    {
+      "module": "Audits-BxINf5wz.js",
+      "line": 334,
+      "method": "GET",
+      "path": null,
+      "expression": "M",
+      "dynamic": true
+    },
+    {
+      "module": "Audits-BxINf5wz.js",
+      "line": 334,
+      "method": "GET",
+      "path": null,
+      "expression": "N",
+      "dynamic": true
+    },
+    {
+      "module": "Audits-BxINf5wz.js",
+      "line": 384,
+      "method": "GET",
+      "path": null,
+      "expression": "q ? `/system/audits/${encodeURIComponent(q.id)}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Audits-BxINf5wz.js",
+      "line": 386,
+      "method": "GET",
+      "path": "/system/audit-actions?retry={te}",
+      "expression": "`/system/audit-actions?retry=${te}`",
+      "dynamic": true
+    },
+    {
+      "module": "Audits-BxINf5wz.js",
+      "line": 395,
+      "method": "GET",
+      "path": "/system/audits?summaryOnly=true&{Q.toString()}",
+      "expression": "`/system/audits?summaryOnly=true&${Q.toString()}`",
+      "dynamic": true
+    },
+    {
+      "module": "CcmaxBatchDelivery-BSCydCTL.js",
+      "line": 82,
+      "method": "GET",
+      "path": "/resources/eligible-projects",
+      "expression": "`/resources/eligible-projects`",
+      "dynamic": false
+    },
+    {
+      "module": "CcmaxBatchDelivery-BSCydCTL.js",
+      "line": 125,
+      "method": "POST",
+      "path": "/resources/ccmax/batch",
+      "expression": "`/resources/ccmax/batch`",
+      "dynamic": false
+    },
+    {
+      "module": "CcmaxResourceOverview-BpVmtOxH.js",
+      "line": 165,
+      "method": "GET",
+      "path": null,
+      "expression": "h ? `/resources/overview?${S}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "CurrentResourceOverview-Dl-e28oo.js",
+      "line": 41,
+      "method": "GET",
+      "path": "/reports/ccmax-resources/current?{new URLSearchParams({supplierId:E})}",
+      "expression": "`/reports/ccmax-resources/current?${new URLSearchParams({supplierId:E})}`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 53,
+      "method": "GET",
+      "path": "/accounting/daily/exports?page=1&type=&state=",
+      "expression": "`/accounting/daily/exports?page=1&type=&state=`",
+      "dynamic": false
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 66,
+      "method": "GET",
+      "path": null,
+      "expression": "n => ({\n    type: e,\n    sequence: (n?.sequence || 0) + 1,\n    scope: {\n      filter: {\n        ...t.filter\n      },\n      supplierName: t.supplierName,\n      projectName: t.projectName\n    }\n  })",
+      "dynamic": true
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 183,
+      "method": "GET",
+      "path": null,
+      "expression": "j === `detail` ? `/accounting/daily?${ce}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 183,
+      "method": "GET",
+      "path": "/accounting/daily/summary?{H}",
+      "expression": "`/accounting/daily/summary?${H}`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 183,
+      "method": "GET",
+      "path": null,
+      "expression": "j === `detail` ? null : `/accounting/daily/groups?${H}&page=${L}&size=${z}&groupBy=${j===`supplier`?`SUPPLIER`:`DAY`}${le}`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 187,
+      "method": "GET",
+      "path": null,
+      "expression": "a(`project.read`) ? `/projects?page=1&size=100` : null",
+      "dynamic": true
+    },
+    {
+      "module": "DailyCreationAnalysis-MGRzns81.js",
+      "line": 281,
+      "method": "GET",
+      "path": "/reports/ccmax-resources?{U}",
+      "expression": "`/reports/ccmax-resources?${U}`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyExports-q6_gv_XE.js",
+      "line": 82,
+      "method": "GET",
+      "path": null,
+      "expression": "`${y}?${t}`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyExports-q6_gv_XE.js",
+      "line": 102,
+      "method": "POST",
+      "path": null,
+      "expression": "`${y}/estimate`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyExports-q6_gv_XE.js",
+      "line": 129,
+      "method": "POST",
+      "path": "/accounting/daily/exports",
+      "expression": "y",
+      "dynamic": false
+    },
+    {
+      "module": "DailyExports-q6_gv_XE.js",
+      "line": 145,
+      "method": "POST",
+      "path": null,
+      "expression": "`${y}/${e.id}/cancel`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyExports-q6_gv_XE.js",
+      "line": 156,
+      "method": "GET",
+      "path": null,
+      "expression": "`${y}/${t.id}/preview`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyExports-q6_gv_XE.js",
+      "line": 166,
+      "method": "GET",
+      "path": null,
+      "expression": "`${y}/${t.id}`",
+      "dynamic": true
+    },
+    {
+      "module": "ExchangeRatesTab-FzGMcdR6.js",
+      "line": 31,
+      "method": "GET",
+      "path": null,
+      "expression": "i ? null : `/exchange-rates?search=${encodeURIComponent(b)}&page=${S}&size=${w}`",
+      "dynamic": true
+    },
+    {
+      "module": "ExchangeRatesTab-FzGMcdR6.js",
+      "line": 31,
+      "method": "GET",
+      "path": null,
+      "expression": "i ? `/exchange-rates/current` : null",
+      "dynamic": true
+    },
+    {
+      "module": "ExchangeRatesTab-FzGMcdR6.js",
+      "line": 151,
+      "method": "POST",
+      "path": "/exchange-rates",
+      "expression": "`/exchange-rates`",
+      "dynamic": false
+    },
+    {
+      "module": "ExchangeRatesTab-FzGMcdR6.js",
+      "line": 167,
+      "method": "POST",
+      "path": "/exchange-rates/{O.id}/enabled",
+      "expression": "`/exchange-rates/${O.id}/enabled`",
+      "dynamic": true
+    },
+    {
+      "module": "IntakeAllocationDialog-CW0YASmn.js",
+      "line": 34,
+      "method": "GET",
+      "path": null,
+      "expression": "x ? `/cc-intake/allocations` : null",
+      "dynamic": true
+    },
+    {
+      "module": "IntakeAllocationDialog-CW0YASmn.js",
+      "line": 240,
+      "method": "PUT",
+      "path": "/cc-intake/allocations",
+      "expression": "`/cc-intake/allocations`",
+      "dynamic": false
+    },
+    {
+      "module": "IntakePolicyPanel-DHvOkPUU.js",
+      "line": 34,
+      "method": "GET",
+      "path": null,
+      "expression": "x ? C : null",
+      "dynamic": true
+    },
+    {
+      "module": "IntakePolicyPanel-DHvOkPUU.js",
+      "line": 126,
+      "method": "PUT",
+      "path": null,
+      "expression": "C",
+      "dynamic": true
+    },
+    {
+      "module": "IntakePolicyPanel-DHvOkPUU.js",
+      "line": 311,
+      "method": "GET",
+      "path": "/cc-intake/admin/suppliers/{encodeURIComponent(e)}/members",
+      "expression": "`/cc-intake/admin/suppliers/${encodeURIComponent(e)}/members`",
+      "dynamic": true
+    },
+    {
+      "module": "IntakeProjectTypes-FBnV0kVR.js",
+      "line": 33,
+      "method": "GET",
+      "path": "/projects/{encodeURIComponent(r.id)}/intake-channel-types",
+      "expression": "`/projects/${encodeURIComponent(r.id)}/intake-channel-types`",
+      "dynamic": true
+    },
+    {
+      "module": "IntakeProjectTypes-FBnV0kVR.js",
+      "line": 41,
+      "method": "PUT",
+      "path": "/projects/{encodeURIComponent(r.id)}/intake-channel-types",
+      "expression": "`/projects/${encodeURIComponent(r.id)}/intake-channel-types`",
+      "dynamic": true
+    },
+    {
+      "module": "IntakeReviewDialog-C9xZ8Ftb.js",
+      "line": 34,
+      "method": "GET",
+      "path": null,
+      "expression": "v ? `/deliveries/filter-options?assignment=ASSIGNED&supplierSearch=${encodeURIComponent(x)}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "IntakeReviewDialog-C9xZ8Ftb.js",
+      "line": 39,
+      "method": "GET",
+      "path": null,
+      "expression": "v ? `/cc-intake/admin/reviews?${B}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "IntakeReviewDialog-C9xZ8Ftb.js",
+      "line": 131,
+      "method": "POST",
+      "path": "/cc-intake/admin/reviews/{encodeURIComponent(k.dispatchId)}/resolve",
+      "expression": "`/cc-intake/admin/reviews/${encodeURIComponent(k.dispatchId)}/resolve`",
+      "dynamic": true
+    },
+    {
+      "module": "IntakeToday-Digz-vi6.js",
+      "line": 24,
+      "method": "GET",
+      "path": null,
+      "expression": "n && f.supplierId ? `/cc-intake/mine` : null",
+      "dynamic": true
+    },
+    {
+      "module": "MySupplierProfile-DPM4wUP0.js",
+      "line": 53,
+      "method": "POST",
+      "path": "/documents",
+      "expression": "!0",
+      "dynamic": false
+    },
+    {
+      "module": "MySupplierProfile-DPM4wUP0.js",
+      "line": 67,
+      "method": "POST",
+      "path": null,
+      "expression": "!0",
+      "dynamic": true
+    },
+    {
+      "module": "MySupplierProfile-DPM4wUP0.js",
+      "line": 69,
+      "method": "PUT",
+      "path": "/suppliers/{n.id}",
+      "expression": "`/suppliers/${n.id}`",
+      "dynamic": true
+    },
+    {
+      "module": "MySupplierProfile-DPM4wUP0.js",
+      "line": 80,
+      "method": "POST",
+      "path": "/documents",
+      "expression": "!1",
+      "dynamic": false
+    },
+    {
+      "module": "MySupplierProfile-DPM4wUP0.js",
+      "line": 84,
+      "method": "POST",
+      "path": null,
+      "expression": "!1",
+      "dynamic": true
+    },
+    {
+      "module": "MySupplierProfile-DPM4wUP0.js",
+      "line": 254,
+      "method": "POST",
+      "path": "/documents",
+      "expression": "!1",
+      "dynamic": false
+    },
+    {
+      "module": "MySupplierProfile-DPM4wUP0.js",
+      "line": 281,
+      "method": "GET",
+      "path": null,
+      "expression": "i(`account.read`) ? `/accounts?supplierId=${t.id}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "MySupplierProfile-DPM4wUP0.js",
+      "line": 299,
+      "method": "POST",
+      "path": "/accounts",
+      "expression": "`/accounts`",
+      "dynamic": false
+    },
+    {
+      "module": "MySupplierProfile-DPM4wUP0.js",
+      "line": 553,
+      "method": "GET",
+      "path": "/documents?supplierId={r}",
+      "expression": "`/documents?supplierId=${r}`",
+      "dynamic": true
+    },
+    {
+      "module": "MySupplierProfile-DPM4wUP0.js",
+      "line": 558,
+      "method": "POST",
+      "path": "/documents",
+      "expression": "r",
+      "dynamic": false
+    },
+    {
+      "module": "NewDelivery-CYrGthQl.js",
+      "line": 131,
+      "method": "GET",
+      "path": null,
+      "expression": "v ? `/suppliers?page=1&size=100&search=${encodeURIComponent(S)}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "NewDelivery-CYrGthQl.js",
+      "line": 209,
+      "method": "POST",
+      "path": "/resource-intakes/recognize",
+      "expression": "`/resource-intakes/recognize`",
+      "dynamic": false
+    },
+    {
+      "module": "NewDelivery-CYrGthQl.js",
+      "line": 233,
+      "method": "POST",
+      "path": "/resource-intakes/preview",
+      "expression": "`/resource-intakes/preview`",
+      "dynamic": false
+    },
+    {
+      "module": "NewDelivery-CYrGthQl.js",
+      "line": 249,
+      "method": "POST",
+      "path": "/resource-intakes",
+      "expression": "`/resource-intakes`",
+      "dynamic": false
+    },
+    {
+      "module": "NoticeDeliveries-D5ljVxwh.js",
+      "line": 26,
+      "method": "GET",
+      "path": "/notifications/notices/{r.id}/deliveries?search={encodeURIComponent(d)}&state={_}&page={y}&size={x}",
+      "expression": "`/notifications/notices/${r.id}/deliveries?search=${encodeURIComponent(d)}&state=${_}&page=${y}&size=${x}`",
+      "dynamic": true
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 35,
+      "method": "GET",
+      "path": null,
+      "expression": "A && r ? `/notifications/quote-projects?search=${encodeURIComponent(m)}&page=${b}&size=${S}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 41,
+      "method": "GET",
+      "path": null,
+      "expression": "M ? `/notifications/recipient-preview?${N}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 51,
+      "method": "PUT",
+      "path": null,
+      "expression": "e.target.checked",
+      "dynamic": true
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 69,
+      "method": "POST",
+      "path": null,
+      "expression": "d.filter(t => t.id !== e.id)",
+      "dynamic": true
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 76,
+      "method": "POST",
+      "path": null,
+      "expression": "[]",
+      "dynamic": true
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 101,
+      "method": "POST",
+      "path": null,
+      "expression": "t.target.checked ? [...d, e] : d.filter(t => t.id !== e.id)",
+      "dynamic": true
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 189,
+      "method": "GET",
+      "path": "/notifications/notice-recipients",
+      "expression": "`/notifications/notice-recipients`",
+      "dynamic": false
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 200,
+      "method": "PUT",
+      "path": "/notifications/notices/{n.id}",
+      "expression": "`/notifications/notices/${n.id}`",
+      "dynamic": true
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 204,
+      "method": "POST",
+      "path": "/notifications/notices",
+      "expression": "`/notifications/notices`",
+      "dynamic": false
+    },
+    {
+      "module": "NoticeEditor-CI-sPhtw.js",
+      "line": 206,
+      "method": "POST",
+      "path": "/notifications/publish",
+      "expression": "`/notifications/publish`",
+      "dynamic": false
+    },
+    {
+      "module": "Notifications-BTntRB-A.js",
+      "line": 29,
+      "method": "GET",
+      "path": "/notifications?unread={g}&page={x}&size={C}",
+      "expression": "`/notifications?unread=${g}&page=${x}&size=${C}`",
+      "dynamic": true
+    },
+    {
+      "module": "Notifications-BTntRB-A.js",
+      "line": 32,
+      "method": "POST",
+      "path": "/notifications/{e.id}/read",
+      "expression": "`/notifications/${e.id}/read`",
+      "dynamic": true
+    },
+    {
+      "module": "Notifications-BTntRB-A.js",
+      "line": 44,
+      "method": "POST",
+      "path": "/notifications/read-all",
+      "expression": "`/notifications/read-all`",
+      "dynamic": false
+    },
+    {
+      "module": "Onboarding-BDYVT1sP.js",
+      "line": 27,
+      "method": "POST",
+      "path": "/auth/onboarding",
+      "expression": "`/auth/onboarding`",
+      "dynamic": false
+    },
+    {
+      "module": "OperatorKpi-NouSWERW.js",
+      "line": 44,
+      "method": "GET",
+      "path": "/suppliers/owner-candidates?includeHistory=true",
+      "expression": "`/suppliers/owner-candidates?includeHistory=true`",
+      "dynamic": false
+    },
+    {
+      "module": "OperatorKpi-NouSWERW.js",
+      "line": 44,
+      "method": "GET",
+      "path": null,
+      "expression": "o === `owners` ? `/suppliers?search=${encodeURIComponent(S)}&owner=${encodeURIComponent(w)}&page=${E}&size=${O}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "OperatorKpi-NouSWERW.js",
+      "line": 44,
+      "method": "GET",
+      "path": null,
+      "expression": "o === `report` ? `/reports/operator-kpi?month=${A}&currency=${M}&owner=${encodeURIComponent(P)}&page=${I}&size=${R}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "OperatorKpi-NouSWERW.js",
+      "line": 44,
+      "method": "GET",
+      "path": null,
+      "expression": "K ? `/reports/operator-kpi/lines?month=${A}&currency=${K.currency}&ownerUserId=${K.ownerUserId||``}&unassigned=${K.ownerUserId?`false`:`true`}&search=${encodeURIComponent(B)}&page=${H}&size=${W}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 46,
+      "method": "GET",
+      "path": null,
+      "expression": "a",
+      "dynamic": true
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 65,
+      "method": "GET",
+      "path": null,
+      "expression": "{\n          id: t.id,\n          name: t.name,\n          state: e.lastTestState,\n          message: f(e.lastTestMessage || ``)\n        }",
+      "dynamic": true
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 72,
+      "method": "GET",
+      "path": null,
+      "expression": "{\n          id: t.id,\n          name: t.name,\n          state: `REQUEST_FAILED`,\n          message: e instanceof Error ? e.message : d(`检测请求失败`)\n        }",
+      "dynamic": true
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 94,
+      "method": "GET",
+      "path": "/outbound-proxies/page?page={pe}&size={me}&search={encodeURIComponent(b)}&state={C}&protocol={T}{i?`&supplierSearch=${encodeURIComponent(x)}`:``}",
+      "expression": "`/outbound-proxies/page?page=${pe}&size=${me}&search=${encodeURIComponent(b)}&state=${C}&protocol=${T}${i?`&supplierSearch=${encodeURIComponent(x)}`:``}`",
+      "dynamic": true
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 98,
+      "method": "GET",
+      "path": null,
+      "expression": "U ? `/outbound-proxies/${encodeURIComponent(U.id)}/resources` : null",
+      "dynamic": true
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 116,
+      "method": "POST",
+      "path": "/outbound-proxies/{encodeURIComponent(e.id)}/test",
+      "expression": "`/outbound-proxies/${encodeURIComponent(e.id)}/test`",
+      "dynamic": true
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 169,
+      "method": "GET",
+      "path": "/outbound-proxies/page?page={t}&size={r}&{n}",
+      "expression": "`/outbound-proxies/page?page=${t}&size=${r}&${n}`",
+      "dynamic": true
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 190,
+      "method": "POST",
+      "path": "/outbound-proxies/{encodeURIComponent(e.id)}/test",
+      "expression": "`/outbound-proxies/${encodeURIComponent(e.id)}/test`",
+      "dynamic": true
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 238,
+      "method": "POST",
+      "path": "/outbound-proxies",
+      "expression": "`/outbound-proxies`",
+      "dynamic": false
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 238,
+      "method": "PUT",
+      "path": "/outbound-proxies/{encodeURIComponent(O.id)}",
+      "expression": "`/outbound-proxies/${encodeURIComponent(O.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "OutboundProxies-BILxGplZ.js",
+      "line": 251,
+      "method": "POST",
+      "path": "/outbound-proxies/import",
+      "expression": "`/outbound-proxies/import`",
+      "dynamic": false
+    },
+    {
+      "module": "OwnerSection-BV_jBT2b.js",
+      "line": 34,
+      "method": "GET",
+      "path": null,
+      "expression": "x(`supplier.owner.assign`) && (!b || k) ? `/suppliers/${i}/owner-terms?search=${encodeURIComponent(C)}&page=${T}&size=${D}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "OwnerSection-BV_jBT2b.js",
+      "line": 34,
+      "method": "GET",
+      "path": null,
+      "expression": "x(`supplier.owner.assign`) ? `/suppliers/owner-candidates` : null",
+      "dynamic": true
+    },
+    {
+      "module": "OwnerSection-BV_jBT2b.js",
+      "line": 125,
+      "method": "PUT",
+      "path": "/suppliers/{i}/owner",
+      "expression": "`/suppliers/${i}/owner`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentForm-DYdHXH-C.js",
+      "line": 36,
+      "method": "GET",
+      "path": null,
+      "expression": "b(`account.read`) ? `/accounts?supplierId=` + c.supplierId : null",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentForm-DYdHXH-C.js",
+      "line": 36,
+      "method": "GET",
+      "path": null,
+      "expression": "b(`exchange_rate.read`) ? `/exchange-rates/current` : null",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentForm-DYdHXH-C.js",
+      "line": 36,
+      "method": "GET",
+      "path": null,
+      "expression": "b(`payment.execute`) ? `/payments/providers` : null",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentForm-DYdHXH-C.js",
+      "line": 179,
+      "method": "POST",
+      "path": "/payments/offline",
+      "expression": "`/payments/offline`",
+      "dynamic": false
+    },
+    {
+      "module": "PaymentForm-DYdHXH-C.js",
+      "line": 184,
+      "method": "POST",
+      "path": "/payments",
+      "expression": "`/payments`",
+      "dynamic": false
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 134,
+      "method": "GET",
+      "path": null,
+      "expression": "c && e.paymentMethod !== `OFFLINE` ? `/payments/providers` : null",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 138,
+      "method": "POST",
+      "path": "/payments/{e.id}/reconcile",
+      "expression": "`/payments/${e.id}/reconcile`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 210,
+      "method": "POST",
+      "path": "/payments/{e.id}/execute",
+      "expression": "`/payments/${e.id}/execute`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 213,
+      "method": "POST",
+      "path": "/payments/{e.id}/payout-preview",
+      "expression": "`/payments/${e.id}/payout-preview`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 253,
+      "method": "POST",
+      "path": "/payments/{e.id}/execute",
+      "expression": "`/payments/${e.id}/execute`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 294,
+      "method": "POST",
+      "path": "/payments/sandbox/events",
+      "expression": "`/payments/sandbox/events`",
+      "dynamic": false
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 317,
+      "method": "GET",
+      "path": "/payments?page={T}&size={D}&settlementId={encodeURIComponent(c)}",
+      "expression": "`/payments?page=${T}&size=${D}&settlementId=${encodeURIComponent(c)}`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 320,
+      "method": "GET",
+      "path": "/payments/{encodeURIComponent(q)}",
+      "expression": "`/payments/` + encodeURIComponent(q)",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 329,
+      "method": "GET",
+      "path": "/payments/{encodeURIComponent(t.id)}",
+      "expression": "`/payments/` + encodeURIComponent(t.id)",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 478,
+      "method": "POST",
+      "path": "/payments/{j.id}/review",
+      "expression": "`/payments/${j.id}/review`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 542,
+      "method": "POST",
+      "path": "/payments/{j.id}/receipt",
+      "expression": "`/payments/${j.id}/receipt`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 573,
+      "method": "POST",
+      "path": "/payments/{j.id}/close",
+      "expression": "`/payments/${j.id}/close`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 591,
+      "method": "GET",
+      "path": "/settlements/{encodeURIComponent(e.settlementId)}",
+      "expression": "`/settlements/${encodeURIComponent(e.settlementId)}`",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 634,
+      "method": "POST",
+      "path": "/payments/{e.id}/offline-record",
+      "expression": "`/payments/${e.id}/offline-record`",
+      "dynamic": true
+    },
+    {
+      "module": "PayoutCallLogs-DpLZK7rw.js",
+      "line": 37,
+      "method": "GET",
+      "path": "/payout-calls?{E.toString()}",
+      "expression": "`/payout-calls?${E.toString()}`",
+      "dynamic": true
+    },
+    {
+      "module": "PayoutProviders-D9Kgf-te.js",
+      "line": 75,
+      "method": "GET",
+      "path": "/payout-providers/{t.code}",
+      "expression": "`/payout-providers/${t.code}`",
+      "dynamic": true
+    },
+    {
+      "module": "PayoutProviders-D9Kgf-te.js",
+      "line": 119,
+      "method": "PUT",
+      "path": "/payout-providers/{t.code}",
+      "expression": "`/payout-providers/${t.code}`",
+      "dynamic": true
+    },
+    {
+      "module": "PayoutProviders-D9Kgf-te.js",
+      "line": 327,
+      "method": "POST",
+      "path": "/payout-providers/{t.code}/test",
+      "expression": "`/payout-providers/${t.code}/test`",
+      "dynamic": true
+    },
+    {
+      "module": "PriorityBatchDialog-DWPDEDJI.js",
+      "line": 44,
+      "method": "GET",
+      "path": null,
+      "expression": "S && C === `SUPPLIER` ? `/deliveries/filter-options?supplierSearch=${encodeURIComponent(re)}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "PriorityBatchDialog-DWPDEDJI.js",
+      "line": 53,
+      "method": "GET",
+      "path": null,
+      "expression": "S && R && !W ? `${_}/${encodeURIComponent(R)}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "PriorityBatchDialog-DWPDEDJI.js",
+      "line": 54,
+      "method": "GET",
+      "path": null,
+      "expression": "S && B ? _ : null",
+      "dynamic": true
+    },
+    {
+      "module": "PriorityBatchDialog-DWPDEDJI.js",
+      "line": 80,
+      "method": "POST",
+      "path": null,
+      "expression": "e === `submit` ? _ : `${_}/${encodeURIComponent(R)}/${e}`",
+      "dynamic": true
+    },
+    {
+      "module": "PriorityBatchDialog-DWPDEDJI.js",
+      "line": 94,
+      "method": "POST",
+      "path": null,
+      "expression": "`${_}/${encodeURIComponent(r.id)}/start`",
+      "dynamic": true
+    },
+    {
+      "module": "PrioritySupportDialog-DfV-rWYR.js",
+      "line": 33,
+      "method": "GET",
+      "path": null,
+      "expression": "m ? y : null",
+      "dynamic": true
+    },
+    {
+      "module": "PrioritySupportDialog-DfV-rWYR.js",
+      "line": 46,
+      "method": "GET",
+      "path": null,
+      "expression": "!K && w === `SELECTED` ? `/deliveries/filter-options?supplierSearch=${encodeURIComponent(W)}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "PrioritySupportDialog-DfV-rWYR.js",
+      "line": 96,
+      "method": "PUT",
+      "path": null,
+      "expression": "y",
+      "dynamic": true
+    },
+    {
+      "module": "PrioritySupportDialog-DfV-rWYR.js",
+      "line": 96,
+      "method": "POST",
+      "path": "/system/scheduled-tasks/priority-support",
+      "expression": "_ + `/priority-support`",
+      "dynamic": false
+    },
+    {
+      "module": "PrioritySupportDialog-DfV-rWYR.js",
+      "line": 108,
+      "method": "POST",
+      "path": null,
+      "expression": "y + `/retry-restore`",
+      "dynamic": true
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 47,
+      "method": "GET",
+      "path": "/projects/categories",
+      "expression": "`/projects/categories`",
+      "dynamic": false
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 47,
+      "method": "GET",
+      "path": "/projects/category-codes",
+      "expression": "`/projects/category-codes`",
+      "dynamic": false
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 47,
+      "method": "GET",
+      "path": "/projects?search={encodeURIComponent(x)}&category={encodeURIComponent(k)}&settlementMethod={A}&deliveryMethod={j}&enabled={M}&page={T}&size={D}",
+      "expression": "`/projects?search=${encodeURIComponent(x)}&category=${encodeURIComponent(k)}&settlementMethod=${A}&deliveryMethod=${j}&enabled=${M}&page=${T}&size=${D}`",
+      "dynamic": true
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 48,
+      "method": "GET",
+      "path": null,
+      "expression": "t",
+      "dynamic": true
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 55,
+      "method": "GET",
+      "path": "/projects/category-codes/{encodeURIComponent(U.code)}?version={U.version}",
+      "expression": "`/projects/category-codes/${encodeURIComponent(U.code)}?version=${U.version}`",
+      "dynamic": true
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 503,
+      "method": "POST",
+      "path": "/projects/category-codes",
+      "expression": "`/projects/category-codes`",
+      "dynamic": false
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 506,
+      "method": "PUT",
+      "path": "/projects/category-codes/{encodeURIComponent(V.code)}",
+      "expression": "`/projects/category-codes/${encodeURIComponent(V.code)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 573,
+      "method": "POST",
+      "path": "/projects",
+      "expression": "`/projects`",
+      "dynamic": false
+    },
+    {
+      "module": "Projects-BlZGF-3J.js",
+      "line": 573,
+      "method": "PUT",
+      "path": "/projects/{N.id}",
+      "expression": "`/projects/` + N.id",
+      "dynamic": true
+    },
+    {
+      "module": "QueryFilters-CwGBc_NH.js",
+      "line": 164,
+      "method": "GET",
+      "path": "/suppliers?page={o}&size=100&state={encodeURIComponent(r)}&search={encodeURIComponent(i)}",
+      "expression": "`/suppliers?page=${o}&size=100&state=${encodeURIComponent(r)}&search=${encodeURIComponent(i)}`",
+      "dynamic": true
+    },
+    {
+      "module": "QuotePeriodPanel-D3BWLIuY.js",
+      "line": 52,
+      "method": "GET",
+      "path": "/quotes/{encodeURIComponent(n.id)}/period-change",
+      "expression": "`/quotes/${encodeURIComponent(n.id)}/period-change`",
+      "dynamic": true
+    },
+    {
+      "module": "QuotePeriodPanel-D3BWLIuY.js",
+      "line": 121,
+      "method": "POST",
+      "path": "/quotes/{encodeURIComponent(n.id)}/period-change",
+      "expression": "`/quotes/${encodeURIComponent(n.id)}/period-change`",
+      "dynamic": true
+    },
+    {
+      "module": "QuotePeriodPanel-D3BWLIuY.js",
+      "line": 157,
+      "method": "POST",
+      "path": "/quotes/{encodeURIComponent(n.id)}/period-change/review",
+      "expression": "`/quotes/${encodeURIComponent(n.id)}/period-change/review`",
+      "dynamic": true
+    },
+    {
+      "module": "QuoteRankingResults-cj8V1Hgu.js",
+      "line": 40,
+      "method": "GET",
+      "path": "/quotes/ranking?projectId={encodeURIComponent(r.id)}&currency={encodeURIComponent(i)}&onDate={encodeURIComponent(l)}&sortBy={y}&sortDirection={x}",
+      "expression": "T",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 143,
+      "method": "GET",
+      "path": null,
+      "expression": "v || A === `list` ? `/quotes?${lt.toString()}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 143,
+      "method": "GET",
+      "path": "/projects?size=100",
+      "expression": "`/projects?size=100`",
+      "dynamic": false
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 143,
+      "method": "GET",
+      "path": null,
+      "expression": "u(`exchange_rate.read`) ? `/exchange-rates/current` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 143,
+      "method": "GET",
+      "path": null,
+      "expression": "u(`quote.read`) ? `/quotes/multiplier-bounds` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 155,
+      "method": "GET",
+      "path": "/quotes/{encodeURIComponent(t)}",
+      "expression": "`/quotes/` + encodeURIComponent(t)",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 164,
+      "method": "GET",
+      "path": "/quotes/{encodeURIComponent(t)}",
+      "expression": "`/quotes/` + encodeURIComponent(t)",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 181,
+      "method": "GET",
+      "path": "/quotes/{encodeURIComponent(t.id)}",
+      "expression": "`/quotes/${encodeURIComponent(t.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 197,
+      "method": "GET",
+      "path": "/quotes/{encodeURIComponent(t.id)}",
+      "expression": "`/quotes/${encodeURIComponent(t.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 300,
+      "method": "PUT",
+      "path": "/quotes/{e.id}",
+      "expression": "`/quotes/${e.id}`",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 300,
+      "method": "POST",
+      "path": "/quotes",
+      "expression": "`/quotes`",
+      "dynamic": false
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 1122,
+      "method": "POST",
+      "path": "/quotes/{M.id}/review",
+      "expression": "`/quotes/${M.id}/review`",
+      "dynamic": true
+    },
+    {
+      "module": "Quotes-BL6CyQ42.js",
+      "line": 1157,
+      "method": "POST",
+      "path": "/quotes/{M.id}/withdraw",
+      "expression": "`/quotes/${M.id}/withdraw`",
+      "dynamic": true
+    },
+    {
+      "module": "Reports-ChHNVTLt.js",
+      "line": 148,
+      "method": "GET",
+      "path": "/projects?enabled=true&page=1&size=100",
+      "expression": "`/projects?enabled=true&page=1&size=100`",
+      "dynamic": false
+    },
+    {
+      "module": "Reports-ChHNVTLt.js",
+      "line": 152,
+      "method": "GET",
+      "path": null,
+      "expression": "n",
+      "dynamic": true
+    },
+    {
+      "module": "Reports-ChHNVTLt.js",
+      "line": 179,
+      "method": "GET",
+      "path": "/reports/settlements?{i.toString()}",
+      "expression": "`/reports/settlements?${i.toString()}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 65,
+      "method": "GET",
+      "path": "/projects?size=100",
+      "expression": "`/projects?size=100`",
+      "dynamic": false
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 65,
+      "method": "GET",
+      "path": "/resources/{_(a.id)}",
+      "expression": "`/resources/${_(a.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 69,
+      "method": "GET",
+      "path": null,
+      "expression": "a.resourceType === `CCMAX` && !o && j(`resource.dispatch`) ? `/resources/${_(a.id)}/dispatches` : null",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 70,
+      "method": "GET",
+      "path": null,
+      "expression": "a.resourceType === `CCMAX` && !o && j(`resource.dispatch`) ? `/resource-targets` : null",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 71,
+      "method": "GET",
+      "path": null,
+      "expression": "o && j(`resource.write`) ? `/resources/eligible-projects` : null",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 104,
+      "method": "GET",
+      "path": "/resources/{_(Y.id)}?version={Y.version}",
+      "expression": "`/resources/${_(Y.id)}?version=${Y.version}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 108,
+      "method": "POST",
+      "path": "/resources/{_(Y.id)}/dispatch",
+      "expression": "`/resources/${_(Y.id)}/dispatch`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 113,
+      "method": "POST",
+      "path": "/resources/{_(Y.id)}/oauth/authorize",
+      "expression": "`/resources/${_(Y.id)}/oauth/authorize`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 120,
+      "method": "POST",
+      "path": "/resources/{_(Y.id)}/oauth/complete",
+      "expression": "`/resources/${_(Y.id)}/oauth/complete`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 149,
+      "method": "POST",
+      "path": "/resources/{_(Y.id)}/oauth/supplier-retry",
+      "expression": "`/resources/${_(Y.id)}/oauth/supplier-retry`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 168,
+      "method": "GET",
+      "path": "/resources/{_(Y.id)}",
+      "expression": "`/resources/${_(Y.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 168,
+      "method": "POST",
+      "path": "/resources/{_(Y.id)}/submit",
+      "expression": "`/resources/${_(Y.id)}/submit`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceDetail-PGeCmPlL.js",
+      "line": 175,
+      "method": "GET",
+      "path": "/resources/{_(Y.id)}",
+      "expression": "`/resources/${_(Y.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 68,
+      "method": "GET",
+      "path": "/projects?page=1&size=100",
+      "expression": "`/projects?page=1&size=100`",
+      "dynamic": false
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 69,
+      "method": "GET",
+      "path": "/resources/eligible-projects",
+      "expression": "`/resources/eligible-projects`",
+      "dynamic": false
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 89,
+      "method": "GET",
+      "path": null,
+      "expression": "z ? `/outbound-proxies/${encodeURIComponent(z)}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 105,
+      "method": "POST",
+      "path": "/resources/oauth/supplier-session/{m(j.sessionId)}/cancel",
+      "expression": "`/resources/oauth/supplier-session/${m(j.sessionId)}/cancel`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 129,
+      "method": "POST",
+      "path": "/resources/oauth/supplier-session/{m(j.sessionId)}/cancel",
+      "expression": "`/resources/oauth/supplier-session/${m(j.sessionId)}/cancel`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 152,
+      "method": "GET",
+      "path": "/resources/{m(t.resourceId)}",
+      "expression": "`/resources/${m(t.resourceId)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 157,
+      "method": "GET",
+      "path": "/resources/{m(t.details.resourceId)}",
+      "expression": "`/resources/${m(t.details.resourceId)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 170,
+      "method": "GET",
+      "path": null,
+      "expression": "t",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 173,
+      "method": "POST",
+      "path": null,
+      "expression": "`${t}/cancel`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 175,
+      "method": "POST",
+      "path": null,
+      "expression": "`${t}/cancel`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 178,
+      "method": "GET",
+      "path": "/resources/{m(T.id)}",
+      "expression": "`/resources/${m(T.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 285,
+      "method": "POST",
+      "path": "/outbound-proxies/resolve",
+      "expression": "`/outbound-proxies/resolve`",
+      "dynamic": false
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 309,
+      "method": "POST",
+      "path": "/resources/oauth/supplier-submit",
+      "expression": "`/resources/oauth/supplier-submit`",
+      "dynamic": false
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 317,
+      "method": "POST",
+      "path": "/resources/{m(e.id)}/oauth/supplier-submit",
+      "expression": "`/resources/${m(e.id)}/oauth/supplier-submit`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 353,
+      "method": "POST",
+      "path": "/resources/oauth/supplier-authorize",
+      "expression": "`/resources/oauth/supplier-authorize`",
+      "dynamic": false
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 362,
+      "method": "POST",
+      "path": "/resources/supplier-submit",
+      "expression": "`/resources/supplier-submit`",
+      "dynamic": false
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 369,
+      "method": "POST",
+      "path": "/resources/oauth/supplier-session/{m(j.sessionId)}/cancel",
+      "expression": "`/resources/oauth/supplier-session/${m(j.sessionId)}/cancel`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 379,
+      "method": "PUT",
+      "path": "/resources/{m(T.id)}",
+      "expression": "`/resources/${m(T.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 379,
+      "method": "POST",
+      "path": "/resources/drafts",
+      "expression": "`/resources/drafts`",
+      "dynamic": false
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 381,
+      "method": "POST",
+      "path": "/resources/{m(e.id)}/oauth/supplier-authorize",
+      "expression": "`/resources/${m(e.id)}/oauth/supplier-authorize`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 388,
+      "method": "POST",
+      "path": "/resources/{m(e.id)}/submit",
+      "expression": "`/resources/${m(e.id)}/submit`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceForm-CV4-f1sb.js",
+      "line": 401,
+      "method": "GET",
+      "path": "/resources/{m(i)}",
+      "expression": "`/resources/${m(i)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceLifecycleDialog-C3CIVivi.js",
+      "line": 48,
+      "method": "GET",
+      "path": null,
+      "expression": "`${_}/${encodeURIComponent(t.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceLifecycleDialog-C3CIVivi.js",
+      "line": 56,
+      "method": "POST",
+      "path": null,
+      "expression": "`${_}/${encodeURIComponent(t.id)}/reconcile`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceLifecycleDialog-C3CIVivi.js",
+      "line": 126,
+      "method": "GET",
+      "path": null,
+      "expression": "`${_}?page=${d}&size=${m}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceLifecycleDialog-C3CIVivi.js",
+      "line": 165,
+      "method": "POST",
+      "path": null,
+      "expression": "1",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 61,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.read`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 61,
+      "method": "GET",
+      "path": null,
+      "expression": "`workbench.monitoring.configure`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 61,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.write`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 61,
+      "method": "GET",
+      "path": null,
+      "expression": "`workbench.monitoring.configure`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 61,
+      "method": "GET",
+      "path": null,
+      "expression": "o ? `/workbench-monitoring/sources` : null",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 61,
+      "method": "GET",
+      "path": null,
+      "expression": "o ? `/projects/category-codes` : null",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 70,
+      "method": "POST",
+      "path": "/workbench-monitoring/sources/{encodeURIComponent(e.id)}/refresh",
+      "expression": "`/workbench-monitoring/sources/${encodeURIComponent(e.id)}/refresh`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 243,
+      "method": "PUT",
+      "path": "/workbench-monitoring/sources/{encodeURIComponent(v.id)}",
+      "expression": "`/workbench-monitoring/sources/${encodeURIComponent(v.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 450,
+      "method": "PUT",
+      "path": "/workbench-monitoring/sources/{encodeURIComponent(a.id)}",
+      "expression": "`/workbench-monitoring/sources/${encodeURIComponent(a.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 450,
+      "method": "POST",
+      "path": "/workbench-monitoring/sources",
+      "expression": "`/workbench-monitoring/sources`",
+      "dynamic": false
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 466,
+      "method": "GET",
+      "path": "/resource-targets/{encodeURIComponent(n)}/sync-settings",
+      "expression": "`/resource-targets/${encodeURIComponent(n)}/sync-settings`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 500,
+      "method": "PUT",
+      "path": "/resource-targets/{encodeURIComponent(n)}/sync-settings",
+      "expression": "`/resource-targets/${encodeURIComponent(n)}/sync-settings`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 620,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.read`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 620,
+      "method": "GET",
+      "path": null,
+      "expression": "`workbench.monitoring.configure`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 620,
+      "method": "GET",
+      "path": null,
+      "expression": "s ? `/resource-targets` : null",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 629,
+      "method": "POST",
+      "path": "/resource-targets/{encodeURIComponent(x.id)}/test",
+      "expression": "`/resource-targets/${encodeURIComponent(x.id)}/test`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 642,
+      "method": "POST",
+      "path": "/resource-targets/{encodeURIComponent(x.id)}/oauth/link",
+      "expression": "`/resource-targets/${encodeURIComponent(x.id)}/oauth/link`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 661,
+      "method": "POST",
+      "path": "/resource-targets/{encodeURIComponent(x.id)}/oauth/complete",
+      "expression": "`/resource-targets/${encodeURIComponent(x.id)}/oauth/complete`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 677,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.write`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 697,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.write`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 720,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.write`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 729,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.dispatch`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 797,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.test`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 801,
+      "method": "GET",
+      "path": null,
+      "expression": "`resource.config.write`",
+      "dynamic": true
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 858,
+      "method": "POST",
+      "path": "/resource-targets",
+      "expression": "`/resource-targets`",
+      "dynamic": false
+    },
+    {
+      "module": "ResourceTargets-DskGxaTi.js",
+      "line": 858,
+      "method": "PUT",
+      "path": "/resource-targets/{encodeURIComponent(e.id)}",
+      "expression": "`/resource-targets/${encodeURIComponent(e.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 95,
+      "method": "GET",
+      "path": null,
+      "expression": "a ? Ae : null",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 103,
+      "method": "GET",
+      "path": "/resources/submission-capabilities",
+      "expression": "Ae",
+      "dynamic": false
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 248,
+      "method": "POST",
+      "path": "/resource-lifecycle-jobs",
+      "expression": "`/resource-lifecycle-jobs`",
+      "dynamic": false
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 276,
+      "method": "PUT",
+      "path": null,
+      "expression": "F(e) ? `RESUME` : `PAUSE`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 302,
+      "method": "PUT",
+      "path": null,
+      "expression": "i ? `RESUME` : `PAUSE`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 335,
+      "method": "PUT",
+      "path": null,
+      "expression": "`REMOVE`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 385,
+      "method": "POST",
+      "path": "/resource-intakes/{encodeURIComponent(e.id)}/original-request",
+      "expression": "`/resource-intakes/${encodeURIComponent(e.id)}/original-request`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 398,
+      "method": "POST",
+      "path": "/resource-intakes/{encodeURIComponent(e.id)}/material",
+      "expression": "`/resource-intakes/${encodeURIComponent(e.id)}/material`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 574,
+      "method": "GET",
+      "path": "/resource-proxy-replacements/proxy-options?resourceId={encodeURIComponent(e)}&search={encodeURIComponent(o)}&page={c}&size={d}",
+      "expression": "`/resource-proxy-replacements/proxy-options?resourceId=${encodeURIComponent(e)}&search=${encodeURIComponent(o)}&page=${c}&size=${d}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 651,
+      "method": "POST",
+      "path": "/resource-proxy-replacements",
+      "expression": "`/resource-proxy-replacements`",
+      "dynamic": false
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 656,
+      "method": "PUT",
+      "path": null,
+      "expression": "!(e instanceof l && e.status >= 400 && e.status < 500)",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 742,
+      "method": "GET",
+      "path": "/resource-proxy-replacements?scope={o}&page={l}&size=10{n?`&resourceId=${encodeURIComponent(n)}`:``}",
+      "expression": "`/resource-proxy-replacements?scope=${o}&page=${l}&size=10${n?`&resourceId=${encodeURIComponent(n)}`:``}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 805,
+      "method": "GET",
+      "path": "/resource-proxy-replacements/{encodeURIComponent(e)}",
+      "expression": "`/resource-proxy-replacements/${encodeURIComponent(e)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 815,
+      "method": "POST",
+      "path": "/resource-proxy-replacements/{encodeURIComponent(e)}/reconcile",
+      "expression": "`/resource-proxy-replacements/${encodeURIComponent(e)}/reconcile`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1255,
+      "method": "GET",
+      "path": null,
+      "expression": "n",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1266,
+      "method": "GET",
+      "path": null,
+      "expression": "n",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1568,
+      "method": "GET",
+      "path": "/resources/{encodeURIComponent(t.id)}/credential-refresh",
+      "expression": "_",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1569,
+      "method": "GET",
+      "path": null,
+      "expression": "e.reauthorizationAllowed === !0",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1580,
+      "method": "GET",
+      "path": "/resources/{encodeURIComponent(t.id)}/credential-refresh",
+      "expression": "_",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1581,
+      "method": "GET",
+      "path": null,
+      "expression": "t.reauthorizationAllowed === !0",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1593,
+      "method": "POST",
+      "path": "/resources/{encodeURIComponent(t.id)}/credential-refresh",
+      "expression": "_",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1599,
+      "method": "GET",
+      "path": null,
+      "expression": "!1",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1679,
+      "method": "GET",
+      "path": "/projects/category-codes",
+      "expression": "`/projects/category-codes`",
+      "dynamic": false
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1702,
+      "method": "GET",
+      "path": "/resource-intakes/{encodeURIComponent(e.id)}",
+      "expression": "`/resource-intakes/${encodeURIComponent(e.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1750,
+      "method": "GET",
+      "path": "/resource-intakes/{encodeURIComponent(e.id)}/eligible-projects",
+      "expression": "`/resource-intakes/${encodeURIComponent(e.id)}/eligible-projects`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1761,
+      "method": "POST",
+      "path": "/resource-intakes/{encodeURIComponent(e.id)}/assign-project",
+      "expression": "`/resource-intakes/${encodeURIComponent(e.id)}/assign-project`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1932,
+      "method": "GET",
+      "path": null,
+      "expression": "e.reauthorizationAllowed",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1937,
+      "method": "GET",
+      "path": null,
+      "expression": "`${ae}/current`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1939,
+      "method": "GET",
+      "path": null,
+      "expression": "!1",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1952,
+      "method": "GET",
+      "path": null,
+      "expression": "!1",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1958,
+      "method": "GET",
+      "path": null,
+      "expression": "`${ae}/${encodeURIComponent(i.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1972,
+      "method": "POST",
+      "path": "/resources/{encodeURIComponent(t.id)}/reauthorizations",
+      "expression": "ae",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 1995,
+      "method": "PUT",
+      "path": null,
+      "expression": "`${ae}/${encodeURIComponent(i.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2175,
+      "method": "POST",
+      "path": "/resources/{encodeURIComponent(e.id)}/say-hi",
+      "expression": "`/resources/${encodeURIComponent(e.id)}/say-hi`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2304,
+      "method": "POST",
+      "path": "/resources/{ge(X.resource.id)}/creation-recovery",
+      "expression": "`/resources/${ge(X.resource.id)}/creation-recovery`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2339,
+      "method": "GET",
+      "path": "/deliveries/filter-options?assignment={Ke}&supplierSearch={encodeURIComponent(Re.supplier)}&creatorSearch={encodeURIComponent(Re.creator)}",
+      "expression": "`/deliveries/filter-options?assignment=${Ke}&supplierSearch=${encodeURIComponent(Re.supplier)}&creatorSearch=${encodeURIComponent(Re.creator)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2356,
+      "method": "GET",
+      "path": "/deliveries?{un}",
+      "expression": "`/deliveries?${un}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2361,
+      "method": "GET",
+      "path": null,
+      "expression": "s && V ? `/resources/summary?${ln}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2362,
+      "method": "GET",
+      "path": null,
+      "expression": "on && V ? `/resources/creator-summary?${ln}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2365,
+      "method": "GET",
+      "path": null,
+      "expression": "V ? `/resources/failure-reasons?${xn}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2368,
+      "method": "GET",
+      "path": "/projects?size=100",
+      "expression": "`/projects?size=100`",
+      "dynamic": false
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2424,
+      "method": "GET",
+      "path": null,
+      "expression": "Dn && !c ? `/resources/submission-capabilities` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2439,
+      "method": "GET",
+      "path": "/quotes/{ge(jn)}",
+      "expression": "`/quotes/${ge(jn)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2441,
+      "method": "GET",
+      "path": "/resources/eligible-projects",
+      "expression": "`/resources/eligible-projects`",
+      "dynamic": false
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2467,
+      "method": "GET",
+      "path": "/resources/{ge(t)}",
+      "expression": "`/resources/${ge(t)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2489,
+      "method": "POST",
+      "path": "/resources/{ge(e.id)}/usage",
+      "expression": "`/resources/${ge(e.id)}/usage`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2523,
+      "method": "GET",
+      "path": "/resources/{ge(t.id)}",
+      "expression": "`/resources/${ge(t.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2524,
+      "method": "POST",
+      "path": "/resources/{ge(n.id)}/oauth/supplier-retry",
+      "expression": "`/resources/${ge(n.id)}/oauth/supplier-retry`",
+      "dynamic": true
+    },
+    {
+      "module": "Resources-CXo1DF00.js",
+      "line": 2542,
+      "method": "GET",
+      "path": "/resources/{ge(Ht.id)}?version={Ht.version}",
+      "expression": "`/resources/${ge(Ht.id)}?version=${Ht.version}`",
+      "dynamic": true
+    },
+    {
+      "module": "RoleEditor-D-Ljkwz-.js",
+      "line": 264,
+      "method": "POST",
+      "path": "/system/roles",
+      "expression": "`/system/roles`",
+      "dynamic": false
+    },
+    {
+      "module": "RoleEditor-D-Ljkwz-.js",
+      "line": 264,
+      "method": "PUT",
+      "path": "/system/roles/{t.code}",
+      "expression": "`/system/roles/` + t.code",
+      "dynamic": true
+    },
+    {
+      "module": "Roles-BkB5m-qF.js",
+      "line": 32,
+      "method": "GET",
+      "path": "/system/roles/page?{C.toString()}",
+      "expression": "`/system/roles/page?${C.toString()}`",
+      "dynamic": true
+    },
+    {
+      "module": "ScheduledTaskRuns-DXdXtjvS.js",
+      "line": 60,
+      "method": "GET",
+      "path": "/system/scheduled-tasks",
+      "expression": "`/system/scheduled-tasks`",
+      "dynamic": false
+    },
+    {
+      "module": "ScheduledTaskRuns-DXdXtjvS.js",
+      "line": 65,
+      "method": "GET",
+      "path": null,
+      "expression": "_ && !L ? `/system/scheduled-tasks/${encodeURIComponent(_.key)}/runs?${R.toString()}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "ScheduledTasks-DQG4VARN.js",
+      "line": 43,
+      "method": "GET",
+      "path": "/system/scheduled-tasks",
+      "expression": "`/system/scheduled-tasks`",
+      "dynamic": false
+    },
+    {
+      "module": "ScheduledTasks-DQG4VARN.js",
+      "line": 48,
+      "method": "PUT",
+      "path": "/system/scheduled-tasks/{encodeURIComponent(e.key)}",
+      "expression": "`/system/scheduled-tasks/${encodeURIComponent(e.key)}`",
+      "dynamic": true
+    },
+    {
+      "module": "ScheduledTasks-DQG4VARN.js",
+      "line": 71,
+      "method": "GET",
+      "path": "/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings",
+      "expression": "`/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings`",
+      "dynamic": false
+    },
+    {
+      "module": "ScheduledTasks-DQG4VARN.js",
+      "line": 84,
+      "method": "PUT",
+      "path": "/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings",
+      "expression": "`/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings`",
+      "dynamic": false
+    },
+    {
+      "module": "ScheduledTasks-DQG4VARN.js",
+      "line": 92,
+      "method": "PUT",
+      "path": "/system/scheduled-tasks/{encodeURIComponent(k.key)}/config",
+      "expression": "`/system/scheduled-tasks/${encodeURIComponent(k.key)}/config`",
+      "dynamic": true
+    },
+    {
+      "module": "ScheduledTasks-DQG4VARN.js",
+      "line": 234,
+      "method": "PUT",
+      "path": "/system/scheduled-tasks/{encodeURIComponent(D.key)}/schedule",
+      "expression": "`/system/scheduled-tasks/${encodeURIComponent(D.key)}/schedule`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 143,
+      "method": "POST",
+      "path": null,
+      "expression": "p",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 143,
+      "method": "POST",
+      "path": null,
+      "expression": "m",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 180,
+      "method": "GET",
+      "path": null,
+      "expression": "c && !j && U ? `/settlement-batches/candidates?periodStart=${w}&periodEnd=${T}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 180,
+      "method": "GET",
+      "path": "/settlement-batches?view={_e}",
+      "expression": "`/settlement-batches?view=${_e}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 186,
+      "method": "GET",
+      "path": "/settlement-batches/{j.id}",
+      "expression": "`/settlement-batches/${j.id}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 247,
+      "method": "GET",
+      "path": "/settlement-batches/{t}",
+      "expression": "`/settlement-batches/${t}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 383,
+      "method": "POST",
+      "path": "/settlement-batches/{j.id}/start",
+      "expression": "`/settlement-batches/${j.id}/start`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 390,
+      "method": "POST",
+      "path": "/settlement-batches/{j.id}/retry-preview",
+      "expression": "`/settlement-batches/${j.id}/retry-preview`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 576,
+      "method": "POST",
+      "path": "/settlement-batches/preview",
+      "expression": "`/settlement-batches/preview`",
+      "dynamic": false
+    },
+    {
+      "module": "SettlementBatch-C6NFYAZd.js",
+      "line": 597,
+      "method": "GET",
+      "path": "/settlement-batches/{j.id}/items/{N}/preview?page={t}&size={n}",
+      "expression": "`/settlement-batches/${j.id}/items/${N}/preview?page=${t}&size=${n}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 58,
+      "method": "GET",
+      "path": "/settlements/{i}?page={P}&size={I}",
+      "expression": "`/settlements/${i}?page=${P}&size=${I}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 176,
+      "method": "GET",
+      "path": null,
+      "expression": "i",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 282,
+      "method": "POST",
+      "path": "/settlements/{i}/confirm",
+      "expression": "`/settlements/${i}/confirm`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 300,
+      "method": "POST",
+      "path": "/settlements/{i}/void",
+      "expression": "`/settlements/${i}/void`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 321,
+      "method": "POST",
+      "path": "/settlements/{i}/withdraw",
+      "expression": "`/settlements/${i}/withdraw`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementDetail-B_4PzTZg.js",
+      "line": 418,
+      "method": "POST",
+      "path": "/settlements/{t.id}/adjustments",
+      "expression": "`/settlements/${t.id}/adjustments`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementInputs-CZ-QKlwM.js",
+      "line": 48,
+      "method": "GET",
+      "path": "/settlement-inputs?search={encodeURIComponent(c)}&state={O}&page={b}&size={E}",
+      "expression": "`/settlement-inputs?search=${encodeURIComponent(c)}&state=${O}&page=${b}&size=${E}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementInputs-CZ-QKlwM.js",
+      "line": 215,
+      "method": "POST",
+      "path": "/settlement-inputs/{A.id}/void",
+      "expression": "`/settlement-inputs/${A.id}/void`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementInputs-CZ-QKlwM.js",
+      "line": 327,
+      "method": "POST",
+      "path": null,
+      "expression": "r === `manual` ? l(e) ? `/settlement-inputs/manual-direct` : `/settlement-inputs/manual` : `/settlement-inputs`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 186,
+      "method": "POST",
+      "path": null,
+      "expression": "z",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 197,
+      "method": "GET",
+      "path": null,
+      "expression": "e",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 222,
+      "method": "GET",
+      "path": null,
+      "expression": "u === `statements` ? `/settlements/summary?currency=` + w : null",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 226,
+      "method": "GET",
+      "path": null,
+      "expression": "u === `statements` ? `/settlements/pending-summary?${dt}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 228,
+      "method": "GET",
+      "path": null,
+      "expression": "u === `statements` ? `/settlements?${z}&page=${Ue}&size=${We}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 252,
+      "method": "GET",
+      "path": null,
+      "expression": "!x && (A || P || I) && d(`project.read`) ? `/projects?size=100` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 754,
+      "method": "POST",
+      "path": "/settlements/preview",
+      "expression": "`/settlements/preview`",
+      "dynamic": false
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 769,
+      "method": "POST",
+      "path": "/settlements/preview?page={e}&size={t}",
+      "expression": "`/settlements/preview?page=${e}&size=${t}`",
+      "dynamic": true
+    },
+    {
+      "module": "SettlementManagement-DAgYDp-f.js",
+      "line": 775,
+      "method": "POST",
+      "path": "/settlements",
+      "expression": "`/settlements`",
+      "dynamic": false
+    },
+    {
+      "module": "SupplierAccounts-CMP57Xp2.js",
+      "line": 65,
+      "method": "POST",
+      "path": "/accounts/{t.id}/reveal",
+      "expression": "`/accounts/${t.id}/reveal`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAccounts-CMP57Xp2.js",
+      "line": 68,
+      "method": "GET",
+      "path": null,
+      "expression": "e.message",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAccounts-CMP57Xp2.js",
+      "line": 96,
+      "method": "GET",
+      "path": "/accounts/platform?{W}",
+      "expression": "`/accounts/platform?${W}`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 143,
+      "method": "GET",
+      "path": "/supplier-agents/{encodeURIComponent(r.id)}/projects",
+      "expression": "d",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 145,
+      "method": "POST",
+      "path": null,
+      "expression": "f.data.assignedIds",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 154,
+      "method": "PUT",
+      "path": "/supplier-agents/{encodeURIComponent(r.id)}/projects",
+      "expression": "d",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 189,
+      "method": "POST",
+      "path": null,
+      "expression": "e => D.filter(t => t.assignable !== !1 || e.includes(t.id)).map(e => e.id)",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 193,
+      "method": "POST",
+      "path": null,
+      "expression": "[]",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 224,
+      "method": "POST",
+      "path": null,
+      "expression": "n => t.target.checked ? [...n, e.id] : n.filter(t => t !== e.id)",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 300,
+      "method": "GET",
+      "path": "/supplier-agents",
+      "expression": "`/supplier-agents`",
+      "dynamic": false
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 300,
+      "method": "GET",
+      "path": null,
+      "expression": "v ? `/supplier-team-groups` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 300,
+      "method": "GET",
+      "path": "/auth/registration-policy",
+      "expression": "`/auth/registration-policy`",
+      "dynamic": false
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 326,
+      "method": "POST",
+      "path": "/supplier-agents",
+      "expression": "`/supplier-agents`",
+      "dynamic": false
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 347,
+      "method": "PUT",
+      "path": "/supplier-agents/{encodeURIComponent(e.id)}/enabled",
+      "expression": "`/supplier-agents/${encodeURIComponent(e.id)}/enabled`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierAgents-GOZSRGGY.js",
+      "line": 362,
+      "method": "POST",
+      "path": "/supplier-agents/{encodeURIComponent(e.id)}/password",
+      "expression": "`/supplier-agents/${encodeURIComponent(e.id)}/password`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierBills-BVKniq6z.js",
+      "line": 60,
+      "method": "GET",
+      "path": "/supplier-bills/filters?{new URLSearchParams({from:G,to:K,department:N})}",
+      "expression": "`/supplier-bills/filters?${new URLSearchParams({from:G,to:K,department:N})}`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierBills-BVKniq6z.js",
+      "line": 67,
+      "method": "GET",
+      "path": null,
+      "expression": "n && (!X || R !== `days`) ? null : `/supplier-bills/days?${q}&page=${ce}&size=${le}`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierBills-BVKniq6z.js",
+      "line": 68,
+      "method": "GET",
+      "path": null,
+      "expression": "Y || R !== `creators` || n && !N && !J.data?.groupAdmin ? null : `/supplier-bills/creators?${q}&groupByDate=${ge}&page=${de}&size=${fe}`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierBills-BVKniq6z.js",
+      "line": 69,
+      "method": "GET",
+      "path": null,
+      "expression": "n && (!X || R !== `days`) ? `/supplier-bills/departments?${q}&groupByDate=${L}&page=${ae}&size=${oe}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierBills-BVKniq6z.js",
+      "line": 551,
+      "method": "GET",
+      "path": "/supplier-bills/entries?{I}",
+      "expression": "`/supplier-bills/entries?${I}`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDailyCreations-C04GFRSJ.js",
+      "line": 49,
+      "method": "GET",
+      "path": "/reports/ccmax-resources/suppliers?{new URLSearchParams(C)}",
+      "expression": "`/reports/ccmax-resources/suppliers?${new URLSearchParams(C)}`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 59,
+      "method": "GET",
+      "path": null,
+      "expression": "U ? `/suppliers/available-users` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 59,
+      "method": "GET",
+      "path": "/suppliers/{a}",
+      "expression": "`/suppliers/` + a",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 59,
+      "method": "GET",
+      "path": null,
+      "expression": "C(`account.read`) ? `/accounts?supplierId=` + a : null",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 59,
+      "method": "GET",
+      "path": "/documents?supplierId={a}",
+      "expression": "`/documents?supplierId=` + a",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 64,
+      "method": "POST",
+      "path": "/documents",
+      "expression": "a",
+      "dynamic": false
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 210,
+      "method": "POST",
+      "path": "/suppliers/{a}/review",
+      "expression": "`/suppliers/${a}/review`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 309,
+      "method": "POST",
+      "path": "/accounts/{e.id}/reveal",
+      "expression": "`/accounts/${e.id}/reveal`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 346,
+      "method": "POST",
+      "path": "/accounts/{e.id}/review",
+      "expression": "`/accounts/${e.id}/review`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 451,
+      "method": "POST",
+      "path": "/accounts",
+      "expression": "`/accounts`",
+      "dynamic": false
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 474,
+      "method": "POST",
+      "path": "/suppliers/{a}/users",
+      "expression": "`/suppliers/${a}/users`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 497,
+      "method": "PUT",
+      "path": "/suppliers/{a}/note",
+      "expression": "`/suppliers/${a}/note`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 515,
+      "method": "PUT",
+      "path": "/suppliers/{a}/code",
+      "expression": "`/suppliers/${a}/code`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierDetail-CJpHR0kK.js",
+      "line": 530,
+      "method": "POST",
+      "path": "/suppliers/{a}/enabled",
+      "expression": "`/suppliers/${a}/enabled`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierMemberGroupDialog-7u5cN2us.js",
+      "line": 30,
+      "method": "PUT",
+      "path": "/supplier-team-groups/{encodeURIComponent(x.id)}",
+      "expression": "`/supplier-team-groups/${encodeURIComponent(x.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierPlatformSettings-DQ79klgY.js",
+      "line": 31,
+      "method": "GET",
+      "path": null,
+      "expression": "m ? h : null",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierPlatformSettings-DQ79klgY.js",
+      "line": 50,
+      "method": "PUT",
+      "path": "/suppliers/{encodeURIComponent(n)}/settings",
+      "expression": "h",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierTeamGroups-Dk9m6lRm.js",
+      "line": 39,
+      "method": "POST",
+      "path": "/supplier-team-groups/{encodeURIComponent(u.id)}/remove",
+      "expression": "`/supplier-team-groups/${encodeURIComponent(u.id)}/remove`",
+      "dynamic": true
+    },
+    {
+      "module": "SupplierTeamGroups-Dk9m6lRm.js",
+      "line": 53,
+      "method": "POST",
+      "path": "/supplier-team-groups",
+      "expression": "`/supplier-team-groups`",
+      "dynamic": false
+    },
+    {
+      "module": "SupplierTeamGroups-Dk9m6lRm.js",
+      "line": 53,
+      "method": "PUT",
+      "path": "/supplier-team-groups/{encodeURIComponent(u.id)}",
+      "expression": "`/supplier-team-groups/${encodeURIComponent(u.id)}`",
+      "dynamic": true
+    },
+    {
+      "module": "Suppliers-BquEthXG.js",
+      "line": 184,
+      "method": "GET",
+      "path": null,
+      "expression": "K === `new` && s(`supplier.users`) ? `/suppliers/available-users` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Suppliers-BquEthXG.js",
+      "line": 184,
+      "method": "GET",
+      "path": null,
+      "expression": "!_ && s(`supplier.owner.assign`) ? `/suppliers/owner-candidates?includeHistory=true` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Suppliers-BquEthXG.js",
+      "line": 184,
+      "method": "GET",
+      "path": null,
+      "expression": "_ ? null : `/suppliers?search=${encodeURIComponent(T)}&state=${A}&owner=${s(`supplier.owner.assign`)?encodeURIComponent(N):``}&page=${L}&size=${H}`",
+      "dynamic": true
+    },
+    {
+      "module": "Suppliers-BquEthXG.js",
+      "line": 184,
+      "method": "GET",
+      "path": null,
+      "expression": "_ ? `/suppliers/${a.supplierId}` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Suppliers-BquEthXG.js",
+      "line": 414,
+      "method": "POST",
+      "path": "/suppliers",
+      "expression": "`/suppliers`",
+      "dynamic": false
+    },
+    {
+      "module": "Suppliers-BquEthXG.js",
+      "line": 426,
+      "method": "PUT",
+      "path": "/suppliers/{K.id}",
+      "expression": "`/suppliers/` + K.id",
+      "dynamic": true
+    },
+    {
+      "module": "SystemNotices-BwbR9un8.js",
+      "line": 49,
+      "method": "GET",
+      "path": "/notifications/notices?search={encodeURIComponent(s)}&status={d}&page={x}&size={w}",
+      "expression": "`/notifications/notices?search=${encodeURIComponent(s)}&status=${d}&page=${x}&size=${w}`",
+      "dynamic": true
+    },
+    {
+      "module": "SystemNotices-BwbR9un8.js",
+      "line": 54,
+      "method": "POST",
+      "path": "/notifications/notices/{R.id}/revoke",
+      "expression": "`/notifications/notices/${R.id}/revoke`",
+      "dynamic": true
+    },
+    {
+      "module": "SystemNotices-BwbR9un8.js",
+      "line": 67,
+      "method": "POST",
+      "path": "/notifications/notices/{I.id}/publish",
+      "expression": "`/notifications/notices/${I.id}/publish`",
+      "dynamic": true
+    },
+    {
+      "module": "SystemSettings-CtOVlrw5.js",
+      "line": 28,
+      "method": "GET",
+      "path": null,
+      "expression": "t(`system.settings`) ? `/workbench-monitoring/multipliers` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SystemSettings-CtOVlrw5.js",
+      "line": 113,
+      "method": "PUT",
+      "path": "/workbench-monitoring/multipliers",
+      "expression": "`/workbench-monitoring/multipliers`",
+      "dynamic": false
+    },
+    {
+      "module": "SystemSettings-CtOVlrw5.js",
+      "line": 190,
+      "method": "GET",
+      "path": null,
+      "expression": "l ? `/system/settings` : null",
+      "dynamic": true
+    },
+    {
+      "module": "SystemSettings-CtOVlrw5.js",
+      "line": 259,
+      "method": "PUT",
+      "path": "/system/settings",
+      "expression": "`/system/settings`",
+      "dynamic": false
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 55,
+      "method": "GET",
+      "path": "/system/users?{le.toString()}",
+      "expression": "`/system/users?${le.toString()}`",
+      "dynamic": true
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 55,
+      "method": "GET",
+      "path": "/system/roles",
+      "expression": "`/system/roles`",
+      "dynamic": false
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 252,
+      "method": "PUT",
+      "path": "/system/users/{C.id}/enabled",
+      "expression": "`/system/users/${C.id}/enabled`",
+      "dynamic": true
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 315,
+      "method": "POST",
+      "path": "/system/users",
+      "expression": "`/system/users`",
+      "dynamic": false
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 371,
+      "method": "PUT",
+      "path": "/system/users/{U.id}",
+      "expression": "`/system/users/` + U.id",
+      "dynamic": true
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 406,
+      "method": "POST",
+      "path": "/system/users/{G.id}/password",
+      "expression": "`/system/users/${G.id}/password`",
+      "dynamic": true
+    },
+    {
+      "module": "Users-B5SmzLla.js",
+      "line": 424,
+      "method": "POST",
+      "path": "/system/users/{q.id}/logout",
+      "expression": "`/system/users/${q.id}/logout`",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 88,
+      "method": "GET",
+      "path": null,
+      "expression": "i(`workbench.monitoring.read`) ? `/workbench/monitoring` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 200,
+      "method": "GET",
+      "path": null,
+      "expression": "r(`turnover.read`) ? `/turnover` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 315,
+      "method": "POST",
+      "path": "/turnover",
+      "expression": "`/turnover`",
+      "dynamic": false
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 348,
+      "method": "GET",
+      "path": null,
+      "expression": "e.value",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 361,
+      "method": "GET",
+      "path": null,
+      "expression": "e",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 362,
+      "method": "GET",
+      "path": null,
+      "expression": "e",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 365,
+      "method": "GET",
+      "path": null,
+      "expression": "e",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 372,
+      "method": "GET",
+      "path": null,
+      "expression": "0",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 372,
+      "method": "GET",
+      "path": null,
+      "expression": "0",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 380,
+      "method": "GET",
+      "path": null,
+      "expression": "0",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 380,
+      "method": "GET",
+      "path": null,
+      "expression": "t.value",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 384,
+      "method": "GET",
+      "path": null,
+      "expression": "t.value",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 545,
+      "method": "POST",
+      "path": "/notifications/{e.id}/read",
+      "expression": "`/notifications/${e.id}/read`",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 558,
+      "method": "POST",
+      "path": "/notifications/{e.id}/read",
+      "expression": "`/notifications/${e.id}/read`",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 657,
+      "method": "GET",
+      "path": "/workbench",
+      "expression": "`/workbench`",
+      "dynamic": false
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 658,
+      "method": "GET",
+      "path": null,
+      "expression": "o(`exchange_rate.read`) ? `/exchange-rates/current` : null",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 717,
+      "method": "POST",
+      "path": "/notifications/{M.announcement.notificationId}/read",
+      "expression": "`/notifications/${M.announcement.notificationId}/read`",
+      "dynamic": true
+    },
+    {
+      "module": "Workbench-CVusO4pD.js",
+      "line": 954,
+      "method": "GET",
+      "path": null,
+      "expression": "n(`workbench.tasks.read`) ? `/workbench/tasks` : null",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 5881,
+      "method": "GET",
+      "path": null,
+      "expression": "e",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 5885,
+      "method": "GET",
+      "path": null,
+      "expression": "e",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 5903,
+      "method": "GET",
+      "path": "/auth/login",
+      "expression": "`/auth/login`",
+      "dynamic": false
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 5912,
+      "method": "POST",
+      "path": "/auth/logout",
+      "expression": "`/auth/logout`",
+      "dynamic": false
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 5916,
+      "method": "GET",
+      "path": "/documents",
+      "expression": "`/documents`",
+      "dynamic": false
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 5922,
+      "method": "GET",
+      "path": "/settlements/{encodeURIComponent(e)}/export",
+      "expression": "`/settlements/${encodeURIComponent(e)}/export`",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 5926,
+      "method": "GET",
+      "path": "/settlements/export?{e}",
+      "expression": "`/settlements/export?${e}`",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 6639,
+      "method": "GET",
+      "path": null,
+      "expression": "e",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 7832,
+      "method": "GET",
+      "path": "/notifications/unread-count",
+      "expression": "`/notifications/unread-count`",
+      "dynamic": false
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 7853,
+      "method": "GET",
+      "path": "/notifications?unread=true&size=5",
+      "expression": "`/notifications?unread=true&size=5`",
+      "dynamic": false
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 7891,
+      "method": "POST",
+      "path": "/notifications/{e.id}/read",
+      "expression": "`/notifications/${e.id}/read`",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 7922,
+      "method": "GET",
+      "path": "/auth/registration-policy",
+      "expression": "`/auth/registration-policy`",
+      "dynamic": false
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8014,
+      "method": "POST",
+      "path": "/auth/register",
+      "expression": "`/auth/register`",
+      "dynamic": false
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8018,
+      "method": "GET",
+      "path": "/auth/me",
+      "expression": "`/auth/me`",
+      "dynamic": false
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8325,
+      "method": "GET",
+      "path": "/auth/me",
+      "expression": "`/auth/me`",
+      "dynamic": false
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8377,
+      "method": "GET",
+      "path": "/auth/me",
+      "expression": "`/auth/me`",
+      "dynamic": false
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8399,
+      "method": "GET",
+      "path": "/auth/me",
+      "expression": "`/auth/me`",
+      "dynamic": false
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8454,
+      "method": "GET",
+      "path": null,
+      "expression": "e.id",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8460,
+      "method": "GET",
+      "path": null,
+      "expression": "e.id",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8468,
+      "method": "GET",
+      "path": null,
+      "expression": "e.id",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8486,
+      "method": "GET",
+      "path": null,
+      "expression": "e.id",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8492,
+      "method": "GET",
+      "path": null,
+      "expression": "e.id",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8557,
+      "method": "GET",
+      "path": null,
+      "expression": "e.id",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8558,
+      "method": "GET",
+      "path": null,
+      "expression": "e.id",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8564,
+      "method": "GET",
+      "path": null,
+      "expression": "e.id",
+      "dynamic": true
+    },
+    {
+      "module": "index-Dnr0i-H9.js",
+      "line": 8682,
+      "method": "GET",
+      "path": null,
+      "expression": "j",
+      "dynamic": true
+    },
+    {
+      "module": "useDeliveryProxies-DGHL4QCT.js",
+      "line": 22,
+      "method": "GET",
+      "path": "/outbound-proxies/options?page={r}&size=100",
+      "expression": "`/outbound-proxies/options?page=${r}&size=100`",
+      "dynamic": true
+    },
+    {
+      "module": "usePaymentEvidence-DFI1SOk7.js",
+      "line": 275,
+      "method": "POST",
+      "path": "/documents",
+      "expression": "t",
+      "dynamic": false
+    }
+  ]
+}
