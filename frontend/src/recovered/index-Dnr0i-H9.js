@@ -1,4 +1,5 @@
 import { ReactShim, jsxRuntime, createPortal } from "../runtime/vue-compat.js";
+import { Toast } from "../runtime/toast.js";
 // origin: assets/index-Dnr0i-H9.js
 const __vite__mapDeps = (i, m = __vite__mapDeps, d = (m.f || (m.f = ["assets/OperatorKpi-NouSWERW.js", "assets/OwnerSection-BV_jBT2b.js", "assets/OutboundProxies-BILxGplZ.js", "assets/QueryFilters-CwGBc_NH.js", "assets/Projects-BlZGF-3J.js", "assets/systemLabels-DqpNuQ-_.js", "assets/Quotes-BL6CyQ42.js", "assets/DateRangePicker-DtOG4QUZ.js", "assets/projectOptions-RFlNxqPH.js", "assets/quoteHelpers-Fmn-ErWD.js", "assets/Reports-ChHNVTLt.js", "assets/CcmaxResourceAnalysis-DJRiAnAd.js", "assets/CcmaxResourceAnalysis-BcXKi-LX.css", "assets/Resources-CXo1DF00.js", "assets/CcmaxResourceOverview-BpVmtOxH.js", "assets/MoneyDisplay-Bphc56N8.js", "assets/resourceHelpers-DoyalwRL.js", "assets/Resources-CMSdJ6EA.css", "assets/ScheduledTaskRuns-DXdXtjvS.js", "assets/ScheduledTasks-DQG4VARN.js", "assets/SupplierAccounts-CMP57Xp2.js", "assets/SupplierAgents-GOZSRGGY.js", "assets/SupplierAgents-CDsbewjG.css", "assets/Suppliers-BquEthXG.js", "assets/AccountDialogs-DkF7YQod.js", "assets/SystemNotices-BwbR9un8.js", "assets/SystemNotices-Bi3Ra51o.css", "assets/Workbench-CVusO4pD.js", "assets/Workbench-CUVm9rHy.css", "assets/ApiDocs-BOQ6E5CN.js", "assets/ApiDocs-DpVANaVB.css"]))) => i.map(i => d[i]);
 var e = Object.create,
@@ -8780,9 +8781,9 @@ function On() {
             }), u(e => e + 1), D(!1), k(S(`个人信息已更新`))
           }
         })
-      }), d && (0, P.jsxs)(`div`, {
-        role: `status`,
-        className: `toast ${d.error?`toast-error`:``}`,
+      }), d && (0, P.jsxs)(Toast, {
+        message: d.message,
+        error: d.error,
         children: [(0, P.jsx)(F, {
           name: d.error ? `info` : `check`,
           size: 19
