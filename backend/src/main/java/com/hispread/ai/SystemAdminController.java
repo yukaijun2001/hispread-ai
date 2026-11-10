@@ -165,9 +165,11 @@ public class SystemAdminController {
       @PathVariable String id, @RequestBody ObjectNode body, HttpServletRequest r) {
     guard(r, "system.users");
     if (id.equals(a.userId(r))) throw new ApiException(409, "不能修改当前登录账号权限");
-    ObjectNode u = a.findUser(id);
+    ObjectNode u = a.lockUser(id);
     if (!body.has("version") || body.path("version").asLong() != u.path("version").asLong())
       throw new ApiException(409, "账号已变化，请刷新");
+    if (body.has("enabled") && !body.path("enabled").isBoolean())
+      throw new ApiException(400, "请提供有效的账号启用状态");
     String code = body.has("roleCode") ? text(body, "roleCode") : text(u, "role");
     protectLastAdministrator(
         u, code, body.has("enabled") ? body.path("enabled").asBoolean() : true);
@@ -180,22 +182,23 @@ public class SystemAdminController {
       throw new ApiException(400, "请通过供应商账号关联流程修改归属");
     assign(u, code, extras(body, u), supplier);
     u.put("version", u.path("version").asLong() + 1);
-    a.saveUser(u);
     if (body.has("enabled"))
-      s.jdbc.update(
-          "update hub_user set enabled=?,session_version=session_version+1 where id=?",
-          body.path("enabled").asBoolean(),
-          id);
-    else a.invalidate(id);
+      a.setEnabled(u, body.path("enabled").asBoolean());
+    else {
+      a.saveUser(u);
+      a.invalidate(id);
+    }
     return u;
   }
 
   @PutMapping("/system/users/{id}/enabled")
+  @Transactional
   public Object enabled(
       @PathVariable String id, @RequestBody ObjectNode body, HttpServletRequest r) {
     guard(r, "system.users");
     ObjectNode u = a.findUser(id);
     if (!body.has("version")) throw new ApiException(400, "请提供当前账号版本");
+    if (!body.path("enabled").isBoolean()) throw new ApiException(400, "请提供有效的账号启用状态");
     ObjectNode patch = body.deepCopy();
     return updateUser(id, patch, r);
   }
