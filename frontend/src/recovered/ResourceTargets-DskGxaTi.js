@@ -460,7 +460,8 @@ function O({
 }
 
 function k({
-  targetId: n
+  targetId: n,
+  onSaved
 }) {
   let {
     has: r
@@ -511,7 +512,7 @@ function k({
         globalVersion: o.globalVersion
       });
       if (!P.current) return;
-      s(e), l(String(e.perTargetConcurrency)), g(String(e.globalConcurrency)), k(!1), N(!0)
+      s(e), l(String(e.perTargetConcurrency)), g(String(e.globalConcurrency)), k(!1), N(!0), onSaved?.(e)
     } catch (e) {
       if (!P.current) return;
       e instanceof i && e.status === 409 ? (D(!0), T(h(`并发配置已被其他人修改。输入已保留，请先重新读取最新配置，再核对并保存。`))) : (j(e instanceof i && e.status === 403), T(h(`并发配置保存失败：{0}`, [e.message])))
@@ -733,7 +734,11 @@ function A() {
           [h(`状态`), x.enabled ? h(`已启用`) : h(`已停用`)]
         ]
       }), (0, C.jsx)(k, {
-        targetId: x.id
+        targetId: x.id,
+        onSaved: settings => {
+          w(target => target ? { ...target, version: settings.targetVersion } : target);
+          f.reload()
+        }
       }, x.id), e(`resource.dispatch`) && x.enabled && x.protocol !== `NEWAPI` && (0, C.jsxs)(`section`, {
         className: `resource-target-oauth`,
         children: [(0, C.jsx)(`h3`, {

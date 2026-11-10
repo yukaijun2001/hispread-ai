@@ -43,6 +43,8 @@ final class NewApiResourceAdapter {
       return mapped;
     }
     ObjectNode resource = store.get("resource", pieces[2], null);
+    if (resource.path("operationalState").asText().equals("GONE"))
+      throw new ApiException(409, "渠道已移除，不可再操作", "RESOURCE_CHANNEL_REMOVED");
     long channel = channel(resource);
     if (action.equals("usage")) {
       ObjectNode reply = send(target, "GET", "/channel/" + channel, null, key);
@@ -93,9 +95,17 @@ final class NewApiResourceAdapter {
     ObjectNode result = store.object();
     ArrayNode items = result.putArray("items");
     String action = body.path("action").asText();
+    Set<String> confirmedRemovals = new HashSet<>();
+    if (readOnly && action.equals("REMOVE"))
+      for (JsonNode item : body.path("confirmedItems"))
+        if (item.path("state").asText().equals("GONE")) confirmedRemovals.add(item.path("resourceId").asText());
     int failed = 0, unknown = 0;
     for (var entry : channels.entrySet()) {
       ObjectNode item = items.addObject().put("resourceId", entry.getKey());
+      if (confirmedRemovals.contains(entry.getKey())) {
+        item.put("state", "GONE");
+        continue;
+      }
       try {
         long id = entry.getValue();
         if (readOnly) {
@@ -124,9 +134,11 @@ final class NewApiResourceAdapter {
         }
         item.put("state", action.equals("PAUSE") ? "PAUSED" : action.equals("RESUME") ? "RESUMED" : "GONE");
       } catch (ApiException e) {
-        boolean uncertain = e.status >= 500 || e.status == 408;
+        boolean uncertain = e.status >= 500 || e.status == 408 || readOnly && action.equals("REMOVE");
         if (uncertain) unknown++; else failed++;
-        item.put("state", uncertain ? "UNKNOWN" : "FAILED").put("errorCode", e.code);
+        item.put("state", uncertain ? "UNKNOWN" : "FAILED").put("errorCode", e.code)
+            .put("errorMessage", readOnly && action.equals("REMOVE")
+                ? "无法从上游查询确认删除结果，请人工核对，勿重复删除" : e.getMessage());
       }
     }
     return result.put("state", unknown > 0 ? "UNKNOWN" : failed == channels.size() ? "FAILED" : failed > 0 ? "PARTIAL" : "COMPLETED")

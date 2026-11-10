@@ -26,12 +26,18 @@ export function NewApiChannelDialog({ resource, onClose, onChanged }) {
   const [uncertainJob, setUncertainJob] = hooks.useState(null);
   const [priorityJob, setPriorityJob] = hooks.useState(null);
   const allowed = !current.readOnly && has(user.supplierId ? 'resource.write' : 'resource.dispatch');
+  const removed = current.operationalState === 'GONE';
   const changed = data => { setCurrent(data); onChanged(); };
   async function run(action) {
     if (busy) return;
     setBusy(true); setError('');
     try {
-    const latest = await get(`/resources/${encodeURIComponent(current.id)}`);
+      const latest = await get(`/resources/${encodeURIComponent(current.id)}`);
+      setCurrent(latest);
+      if (latest.operationalState === 'GONE' && !['reconcile', 'priority-reconcile'].includes(action)) {
+        onChanged();
+        throw new Error('渠道已移除，不可再操作');
+      }
       let result;
       if (action === 'usage') {
         result = await post(`/resources/${encodeURIComponent(current.id)}/usage`, { requestKey: crypto.randomUUID() });
@@ -74,15 +80,16 @@ export function NewApiChannelDialog({ resource, onClose, onChanged }) {
   return jsx(Dialog, { title: 'New API 渠道详情', onClose, children: [
     jsx(Details, { items: [['资源名称', current.name], ['渠道 ID', current.upstreamChannelId], ['供应商', current.supplierName || '—'], ['项目', current.projectName], ['渠道状态', channelLabel(current)], ['上游优先级', number(current.upstreamPriority)]] }),
     jsx(Notice, { children: '此资源关联上游已有渠道，不代表新建交付成功；配额保持上游原始单位。' }),
+    removed && jsx(Notice, { tone: 'amber', children: '该渠道已移除，仅保留历史信息；无法启停、修改优先级、刷新用量或测试连通性。' }),
     jsx('section', { className: 'subsection', children: [jsx('h3', { children: '渠道用量' }), jsx(ChannelUsage, { resource: current }), jsx('p', { className: 'muted', children: `查询时间：${current.usage?.queriedAt || '未查询'}` })] }),
     error && jsx(Notice, { tone: 'red', children: error }),
     uncertainJob && jsx(Button, { disabled: busy, onClick: () => run('reconcile'), children: '核对原启停操作' }),
     allowed && !uncertainJob && jsx('div', { className: 'form-actions', children: [
       confirmation ? jsx(Notice, { tone: 'amber', children: [confirmation === 'PAUSE' ? '确认临时停用该真实渠道？' : '确认恢复该真实渠道？', jsx(Button, { disabled: busy, onClick: () => run(confirmation), children: '确认执行' }), jsx(Button, { disabled: busy, onClick: () => setConfirmation(''), children: '取消' })] })
-        : jsx(Button, { disabled: busy || current.operationalState === 'GONE', onClick: () => setConfirmation(current.operationalState === 'PAUSED' ? 'RESUME' : 'PAUSE'), children: current.operationalState === 'PAUSED' ? '恢复启用' : '停用渠道' }),
+        : jsx(Button, { disabled: busy || removed, onClick: () => setConfirmation(current.operationalState === 'PAUSED' ? 'RESUME' : 'PAUSE'), children: current.operationalState === 'PAUSED' ? '恢复启用' : '停用渠道' }),
     ] }),
-    user.role === 'ADMIN' && has('resource.dispatch') && jsx('section', { className: 'subsection', children: [field('上游优先级（0–1000）', jsx('input', { type: 'number', min: 0, max: 1000, value: priority, disabled: !!priorityJob, onChange: event => setPriority(event.target.value) })), jsx(Button, { disabled: busy, onClick: () => run(priorityJob ? 'priority-reconcile' : 'priority'), children: priorityJob ? '核对原优先级任务' : '保存渠道优先级' })] }),
-    jsx('footer', { className: 'dialog-footer', children: [has('resource.usage') && jsx(Button, { disabled: busy, onClick: () => run('usage'), children: busy ? '处理中…' : '刷新状态和用量' }), jsx(Button, { disabled: busy, onClick: () => run('test'), children: '测试连通性（会调用模型）' }), jsx(Button, { onClick: onClose, children: '关闭' })] }),
+    user.role === 'ADMIN' && has('resource.dispatch') && jsx('section', { className: 'subsection', children: [field('上游优先级（0–1000）', jsx('input', { type: 'number', min: 0, max: 1000, value: priority, disabled: busy || removed || !!priorityJob, onChange: event => setPriority(event.target.value) })), jsx(Button, { disabled: busy || removed && !priorityJob, onClick: () => run(priorityJob ? 'priority-reconcile' : 'priority'), children: priorityJob ? '核对原优先级任务' : '保存渠道优先级' })] }),
+    jsx('footer', { className: 'dialog-footer', children: [has('resource.usage') && jsx(Button, { disabled: busy || removed, onClick: () => run('usage'), children: busy ? '处理中…' : '刷新状态和用量' }), jsx(Button, { disabled: busy || removed, onClick: () => run('test'), children: '测试连通性（会调用模型）' }), jsx(Button, { onClick: onClose, children: '关闭' })] }),
   ] });
 }
 

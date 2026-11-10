@@ -19,6 +19,7 @@ public class ResourceIntegrationGateway {
   private final HttpClient client;
   private final ProxyProbeService proxyProbe;
   private final NewApiResourceAdapter newApi;
+  private final ResourceSyncSettings syncSettings;
 
   @Value("${app.integrations.allow-private-targets:false}")
   boolean allowPrivateTargets;
@@ -26,10 +27,12 @@ public class ResourceIntegrationGateway {
   @Value("${app.integrations.request-timeout-ms:15000}")
   int timeoutMs;
 
-  public ResourceIntegrationGateway(Store store, Environment environment, ProxyProbeService proxyProbe) {
+  public ResourceIntegrationGateway(Store store, Environment environment, ProxyProbeService proxyProbe,
+      ResourceSyncSettings syncSettings) {
     this.store = store;
     this.environment = environment;
     this.proxyProbe = proxyProbe;
+    this.syncSettings = syncSettings;
     this.newApi = new NewApiResourceAdapter(store, this::transport);
     client =
         HttpClient.newBuilder()
@@ -109,7 +112,18 @@ public class ResourceIntegrationGateway {
     if (protocol.equals("NEWAPI")) return newApi.exchange(config, method, path, body, key);
     if (!protocol.equals("CUSTOM"))
       throw new ApiException(400, "资源协议未受支持", "INVALID_RESOURCE_PROTOCOL");
+    if (Set.of("/jobs/ccmax/daily-sync", "/jobs/ccmax/status-sync", "/resources/sync").contains(path))
+      return syncSettings.withPermit(config.path("id").asText(), config.path("timeoutMs").asInt(timeoutMs),
+          () -> transport(config, method, path, body, key));
     return transport(config, method, path, body, key);
+  }
+
+  public ObjectNode syncSettings(String targetId) {
+    return syncSettings.read(targetId);
+  }
+
+  public ObjectNode saveSyncSettings(String targetId, ObjectNode input) {
+    return syncSettings.save(targetId, input);
   }
 
   private ObjectNode transport(
