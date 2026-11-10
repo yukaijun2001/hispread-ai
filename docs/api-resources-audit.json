@@ -156,8 +156,8 @@
       "shape": "JSON object; actual recovered fields preserved; upstream adapter shapes validated",
       "normalizedPath": "/outbound-proxies/{id}/test",
       "manualResolution": true,
-      "status": "externally-configured",
-      "implementation": "ResourceOperations + ResourceIntegrationGateway; RESOURCE_UPSTREAM_NOT_CONFIGURED 503 until ADMIN target configured"
+      "status": "implemented",
+      "implementation": "ProxyProbeService performs CONNECT/HTTPS/SOCKS5 authentication, TLS destination and exit-IP verification; no configured CCMAX target needed."
     },
     {
       "method": "GET",
@@ -178,8 +178,8 @@
       "shape": "JSON object; actual recovered fields preserved; upstream adapter shapes validated",
       "normalizedPath": "/outbound-proxies/{id}/test",
       "manualResolution": true,
-      "status": "externally-configured",
-      "implementation": "ResourceOperations + ResourceIntegrationGateway; RESOURCE_UPSTREAM_NOT_CONFIGURED 503 until ADMIN target configured"
+      "status": "implemented",
+      "implementation": "ProxyProbeService performs CONNECT/HTTPS/SOCKS5 authentication, TLS destination and exit-IP verification; no configured CCMAX target needed."
     },
     {
       "method": "POST",
@@ -1106,13 +1106,13 @@
       "implementation": "ResourcesController / ProxyController / TeamController / CatalogController"
     }
   ],
-  "generatedAt": "2026-11-09T12:24:26.488Z",
+  "generatedAt": "2026-11-09T14:34:30.724568+00:00",
   "basis": "Babel AST callsites from recovered modules, manual resolution of dynamic locals, matched against local controller methods. externally-configured means real adapter calls with fixture-tested HTTP responses; no configured target yields code RESOURCE_UPSTREAM_NOT_CONFIGURED.",
   "summary": {
     "modules": 13,
     "calls": 99,
-    "implemented": 58,
-    "externallyConfigured": 41,
+    "implemented": 60,
+    "externallyConfigured": 39,
     "missing": 0,
     "excludedScopeShadowedNonHttp": 3
   },
@@ -1146,5 +1146,6 @@
     "source": "evidence/前端/api/ccmax-openapi.recovered.json",
     "operations": 21,
     "coverage": "All documented gateway routes delegate ResourceOperations; local reads and imports implemented; configured upstream required for credential/OAuth/refresh/mutation effects."
-  }
+  },
+  "latestImplementation": "resource-integration-implementation.md"
 }

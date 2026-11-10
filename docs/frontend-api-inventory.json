@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-11-09T12:53:01.877Z",
+  "generatedAt": "2026-11-09T14:43:26.151Z",
   "basis": "Babel static call-site inventory; imported recovered request functions only. Dynamic or conditional values remain explicit unknowns, not proof of absence.",
-  "callSites": 415,
-  "uniqueLiteralTemplates": 216,
+  "callSites": 418,
+  "uniqueLiteralTemplates": 218,
   "unresolved": [
     {
       "module": "ApiTokens-uH0R0C-_.js",
@@ -70,7 +70,7 @@
     },
     {
       "module": "DailyAccounting-z_8v-GqX.js",
-      "line": 66,
+      "line": 67,
       "method": "GET",
       "path": null,
       "expression": "n => ({\n    type: e,\n    sequence: (n?.sequence || 0) + 1,\n    scope: {\n      filter: {\n        ...t.filter\n      },\n      supplierName: t.supplierName,\n      projectName: t.projectName\n    }\n  })",
@@ -78,7 +78,7 @@
     },
     {
       "module": "DailyAccounting-z_8v-GqX.js",
-      "line": 183,
+      "line": 185,
       "method": "GET",
       "path": null,
       "expression": "j === `detail` ? `/accounting/daily?${ce}` : null",
@@ -86,7 +86,7 @@
     },
     {
       "module": "DailyAccounting-z_8v-GqX.js",
-      "line": 183,
+      "line": 185,
       "method": "GET",
       "path": null,
       "expression": "j === `detail` ? null : `/accounting/daily/groups?${H}&page=${L}&size=${z}&groupBy=${j===`supplier`?`SUPPLIER`:`DAY`}${le}`",
@@ -94,7 +94,7 @@
     },
     {
       "module": "DailyAccounting-z_8v-GqX.js",
-      "line": 187,
+      "line": 189,
       "method": "GET",
       "path": null,
       "expression": "a(`project.read`) ? `/projects?page=1&size=100` : null",
@@ -389,6 +389,14 @@
       "dynamic": true
     },
     {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 136,
+      "method": "GET",
+      "path": null,
+      "expression": "c ? `/payments/sandbox-capabilities` : null",
+      "dynamic": true
+    },
+    {
       "module": "PriorityBatchDialog-DWPDEDJI.js",
       "line": 44,
       "method": "GET",
@@ -638,7 +646,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 620,
+      "line": 627,
       "method": "GET",
       "path": null,
       "expression": "`resource.config.read`",
@@ -646,7 +654,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 620,
+      "line": 627,
       "method": "GET",
       "path": null,
       "expression": "`workbench.monitoring.configure`",
@@ -654,7 +662,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 620,
+      "line": 627,
       "method": "GET",
       "path": null,
       "expression": "s ? `/resource-targets` : null",
@@ -662,7 +670,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 677,
+      "line": 684,
       "method": "GET",
       "path": null,
       "expression": "`resource.config.write`",
@@ -670,7 +678,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 697,
+      "line": 704,
       "method": "GET",
       "path": null,
       "expression": "`resource.config.write`",
@@ -678,7 +686,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 720,
+      "line": 727,
       "method": "GET",
       "path": null,
       "expression": "`resource.config.write`",
@@ -686,7 +694,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 729,
+      "line": 737,
       "method": "GET",
       "path": null,
       "expression": "`resource.dispatch`",
@@ -694,7 +702,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 797,
+      "line": 805,
       "method": "GET",
       "path": null,
       "expression": "`resource.config.test`",
@@ -702,7 +710,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 801,
+      "line": 809,
       "method": "GET",
       "path": null,
       "expression": "`resource.config.write`",
@@ -1400,7 +1408,7 @@
     },
     {
       "module": "DailyAccounting-z_8v-GqX.js",
-      "line": 53,
+      "line": 54,
       "method": "GET",
       "path": "/accounting/daily/exports?page=1&type=&state=",
       "expression": "`/accounting/daily/exports?page=1&type=&state=`",
@@ -1408,10 +1416,18 @@
     },
     {
       "module": "DailyAccounting-z_8v-GqX.js",
-      "line": 183,
+      "line": 185,
       "method": "GET",
       "path": "/accounting/daily/summary?{H}",
       "expression": "`/accounting/daily/summary?${H}`",
+      "dynamic": true
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 586,
+      "method": "GET",
+      "path": "/settlement-inputs/{encodeURIComponent(row.sourceId || row.id)}/confirm",
+      "expression": "`/settlement-inputs/${encodeURIComponent(row.sourceId || row.id)}/confirm`",
       "dynamic": true
     },
     {
@@ -1688,7 +1704,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 138,
+      "line": 140,
       "method": "POST",
       "path": "/payments/{e.id}/reconcile",
       "expression": "`/payments/${e.id}/reconcile`",
@@ -1696,7 +1712,15 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 253,
+      "line": 157,
+      "method": "POST",
+      "path": "/payments/sandbox",
+      "expression": "`/payments/sandbox`",
+      "dynamic": false
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 274,
       "method": "POST",
       "path": "/payments/{e.id}/execute",
       "expression": "`/payments/${e.id}/execute`",
@@ -1704,7 +1728,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 213,
+      "line": 232,
       "method": "POST",
       "path": "/payments/{e.id}/payout-preview",
       "expression": "`/payments/${e.id}/payout-preview`",
@@ -1712,7 +1736,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 294,
+      "line": 315,
       "method": "POST",
       "path": "/payments/sandbox/events",
       "expression": "`/payments/sandbox/events`",
@@ -1720,7 +1744,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 317,
+      "line": 338,
       "method": "GET",
       "path": "/payments?page={T}&size={D}&settlementId={encodeURIComponent(c)}",
       "expression": "`/payments?page=${T}&size=${D}&settlementId=${encodeURIComponent(c)}`",
@@ -1728,7 +1752,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 320,
+      "line": 341,
       "method": "GET",
       "path": "/payments/{encodeURIComponent(q)}",
       "expression": "`/payments/` + encodeURIComponent(q)",
@@ -1736,7 +1760,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 329,
+      "line": 350,
       "method": "GET",
       "path": "/payments/{encodeURIComponent(t.id)}",
       "expression": "`/payments/` + encodeURIComponent(t.id)",
@@ -1744,7 +1768,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 478,
+      "line": 499,
       "method": "POST",
       "path": "/payments/{j.id}/review",
       "expression": "`/payments/${j.id}/review`",
@@ -1752,7 +1776,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 542,
+      "line": 563,
       "method": "POST",
       "path": "/payments/{j.id}/receipt",
       "expression": "`/payments/${j.id}/receipt`",
@@ -1760,7 +1784,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 573,
+      "line": 594,
       "method": "POST",
       "path": "/payments/{j.id}/close",
       "expression": "`/payments/${j.id}/close`",
@@ -1768,7 +1792,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 591,
+      "line": 612,
       "method": "GET",
       "path": "/settlements/{encodeURIComponent(e.settlementId)}",
       "expression": "`/settlements/${encodeURIComponent(e.settlementId)}`",
@@ -1776,7 +1800,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 634,
+      "line": 655,
       "method": "POST",
       "path": "/payments/{e.id}/offline-record",
       "expression": "`/payments/${e.id}/offline-record`",
@@ -1800,7 +1824,7 @@
     },
     {
       "module": "PayoutProviders-D9Kgf-te.js",
-      "line": 119,
+      "line": 134,
       "method": "PUT",
       "path": "/payout-providers/{t.code}",
       "expression": "`/payout-providers/${t.code}`",
@@ -1808,7 +1832,7 @@
     },
     {
       "module": "PayoutProviders-D9Kgf-te.js",
-      "line": 327,
+      "line": 375,
       "method": "POST",
       "path": "/payout-providers/{t.code}/test",
       "expression": "`/payout-providers/${t.code}/test`",
@@ -2168,7 +2192,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 450,
+      "line": 457,
       "method": "PUT",
       "path": "/workbench-monitoring/sources/{encodeURIComponent(a.id)}",
       "expression": "`/workbench-monitoring/sources/${encodeURIComponent(a.id)}`",
@@ -2176,7 +2200,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 450,
+      "line": 457,
       "method": "POST",
       "path": "/workbench-monitoring/sources",
       "expression": "`/workbench-monitoring/sources`",
@@ -2184,7 +2208,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 466,
+      "line": 473,
       "method": "GET",
       "path": "/resource-targets/{encodeURIComponent(n)}/sync-settings",
       "expression": "`/resource-targets/${encodeURIComponent(n)}/sync-settings`",
@@ -2192,7 +2216,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 500,
+      "line": 507,
       "method": "PUT",
       "path": "/resource-targets/{encodeURIComponent(n)}/sync-settings",
       "expression": "`/resource-targets/${encodeURIComponent(n)}/sync-settings`",
@@ -2200,7 +2224,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 629,
+      "line": 636,
       "method": "POST",
       "path": "/resource-targets/{encodeURIComponent(x.id)}/test",
       "expression": "`/resource-targets/${encodeURIComponent(x.id)}/test`",
@@ -2208,7 +2232,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 642,
+      "line": 649,
       "method": "POST",
       "path": "/resource-targets/{encodeURIComponent(x.id)}/oauth/link",
       "expression": "`/resource-targets/${encodeURIComponent(x.id)}/oauth/link`",
@@ -2216,7 +2240,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 661,
+      "line": 668,
       "method": "POST",
       "path": "/resource-targets/{encodeURIComponent(x.id)}/oauth/complete",
       "expression": "`/resource-targets/${encodeURIComponent(x.id)}/oauth/complete`",
@@ -2224,7 +2248,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 858,
+      "line": 876,
       "method": "POST",
       "path": "/resource-targets",
       "expression": "`/resource-targets`",
@@ -2232,7 +2256,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 858,
+      "line": 876,
       "method": "PUT",
       "path": "/resource-targets/{encodeURIComponent(e.id)}",
       "expression": "`/resource-targets/${encodeURIComponent(e.id)}`",
@@ -3194,7 +3218,7 @@
     },
     {
       "module": "DailyAccounting-z_8v-GqX.js",
-      "line": 53,
+      "line": 54,
       "method": "GET",
       "path": "/accounting/daily/exports?page=1&type=&state=",
       "expression": "`/accounting/daily/exports?page=1&type=&state=`",
@@ -3202,7 +3226,7 @@
     },
     {
       "module": "DailyAccounting-z_8v-GqX.js",
-      "line": 66,
+      "line": 67,
       "method": "GET",
       "path": null,
       "expression": "n => ({\n    type: e,\n    sequence: (n?.sequence || 0) + 1,\n    scope: {\n      filter: {\n        ...t.filter\n      },\n      supplierName: t.supplierName,\n      projectName: t.projectName\n    }\n  })",
@@ -3210,7 +3234,7 @@
     },
     {
       "module": "DailyAccounting-z_8v-GqX.js",
-      "line": 183,
+      "line": 185,
       "method": "GET",
       "path": null,
       "expression": "j === `detail` ? `/accounting/daily?${ce}` : null",
@@ -3218,7 +3242,7 @@
     },
     {
       "module": "DailyAccounting-z_8v-GqX.js",
-      "line": 183,
+      "line": 185,
       "method": "GET",
       "path": "/accounting/daily/summary?{H}",
       "expression": "`/accounting/daily/summary?${H}`",
@@ -3226,7 +3250,7 @@
     },
     {
       "module": "DailyAccounting-z_8v-GqX.js",
-      "line": 183,
+      "line": 185,
       "method": "GET",
       "path": null,
       "expression": "j === `detail` ? null : `/accounting/daily/groups?${H}&page=${L}&size=${z}&groupBy=${j===`supplier`?`SUPPLIER`:`DAY`}${le}`",
@@ -3234,10 +3258,18 @@
     },
     {
       "module": "DailyAccounting-z_8v-GqX.js",
-      "line": 187,
+      "line": 189,
       "method": "GET",
       "path": null,
       "expression": "a(`project.read`) ? `/projects?page=1&size=100` : null",
+      "dynamic": true
+    },
+    {
+      "module": "DailyAccounting-z_8v-GqX.js",
+      "line": 586,
+      "method": "GET",
+      "path": "/settlement-inputs/{encodeURIComponent(row.sourceId || row.id)}/confirm",
+      "expression": "`/settlement-inputs/${encodeURIComponent(row.sourceId || row.id)}/confirm`",
       "dynamic": true
     },
     {
@@ -3842,7 +3874,15 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 138,
+      "line": 136,
+      "method": "GET",
+      "path": null,
+      "expression": "c ? `/payments/sandbox-capabilities` : null",
+      "dynamic": true
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 140,
       "method": "POST",
       "path": "/payments/{e.id}/reconcile",
       "expression": "`/payments/${e.id}/reconcile`",
@@ -3850,7 +3890,15 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 210,
+      "line": 157,
+      "method": "POST",
+      "path": "/payments/sandbox",
+      "expression": "`/payments/sandbox`",
+      "dynamic": false
+    },
+    {
+      "module": "PaymentsTab-c0WtyzS3.js",
+      "line": 229,
       "method": "POST",
       "path": "/payments/{e.id}/execute",
       "expression": "`/payments/${e.id}/execute`",
@@ -3858,7 +3906,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 213,
+      "line": 232,
       "method": "POST",
       "path": "/payments/{e.id}/payout-preview",
       "expression": "`/payments/${e.id}/payout-preview`",
@@ -3866,7 +3914,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 253,
+      "line": 274,
       "method": "POST",
       "path": "/payments/{e.id}/execute",
       "expression": "`/payments/${e.id}/execute`",
@@ -3874,7 +3922,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 294,
+      "line": 315,
       "method": "POST",
       "path": "/payments/sandbox/events",
       "expression": "`/payments/sandbox/events`",
@@ -3882,7 +3930,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 317,
+      "line": 338,
       "method": "GET",
       "path": "/payments?page={T}&size={D}&settlementId={encodeURIComponent(c)}",
       "expression": "`/payments?page=${T}&size=${D}&settlementId=${encodeURIComponent(c)}`",
@@ -3890,7 +3938,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 320,
+      "line": 341,
       "method": "GET",
       "path": "/payments/{encodeURIComponent(q)}",
       "expression": "`/payments/` + encodeURIComponent(q)",
@@ -3898,7 +3946,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 329,
+      "line": 350,
       "method": "GET",
       "path": "/payments/{encodeURIComponent(t.id)}",
       "expression": "`/payments/` + encodeURIComponent(t.id)",
@@ -3906,7 +3954,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 478,
+      "line": 499,
       "method": "POST",
       "path": "/payments/{j.id}/review",
       "expression": "`/payments/${j.id}/review`",
@@ -3914,7 +3962,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 542,
+      "line": 563,
       "method": "POST",
       "path": "/payments/{j.id}/receipt",
       "expression": "`/payments/${j.id}/receipt`",
@@ -3922,7 +3970,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 573,
+      "line": 594,
       "method": "POST",
       "path": "/payments/{j.id}/close",
       "expression": "`/payments/${j.id}/close`",
@@ -3930,7 +3978,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 591,
+      "line": 612,
       "method": "GET",
       "path": "/settlements/{encodeURIComponent(e.settlementId)}",
       "expression": "`/settlements/${encodeURIComponent(e.settlementId)}`",
@@ -3938,7 +3986,7 @@
     },
     {
       "module": "PaymentsTab-c0WtyzS3.js",
-      "line": 634,
+      "line": 655,
       "method": "POST",
       "path": "/payments/{e.id}/offline-record",
       "expression": "`/payments/${e.id}/offline-record`",
@@ -3962,7 +4010,7 @@
     },
     {
       "module": "PayoutProviders-D9Kgf-te.js",
-      "line": 119,
+      "line": 134,
       "method": "PUT",
       "path": "/payout-providers/{t.code}",
       "expression": "`/payout-providers/${t.code}`",
@@ -3970,7 +4018,7 @@
     },
     {
       "module": "PayoutProviders-D9Kgf-te.js",
-      "line": 327,
+      "line": 375,
       "method": "POST",
       "path": "/payout-providers/{t.code}/test",
       "expression": "`/payout-providers/${t.code}/test`",
@@ -4666,7 +4714,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 450,
+      "line": 457,
       "method": "PUT",
       "path": "/workbench-monitoring/sources/{encodeURIComponent(a.id)}",
       "expression": "`/workbench-monitoring/sources/${encodeURIComponent(a.id)}`",
@@ -4674,7 +4722,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 450,
+      "line": 457,
       "method": "POST",
       "path": "/workbench-monitoring/sources",
       "expression": "`/workbench-monitoring/sources`",
@@ -4682,7 +4730,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 466,
+      "line": 473,
       "method": "GET",
       "path": "/resource-targets/{encodeURIComponent(n)}/sync-settings",
       "expression": "`/resource-targets/${encodeURIComponent(n)}/sync-settings`",
@@ -4690,7 +4738,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 500,
+      "line": 507,
       "method": "PUT",
       "path": "/resource-targets/{encodeURIComponent(n)}/sync-settings",
       "expression": "`/resource-targets/${encodeURIComponent(n)}/sync-settings`",
@@ -4698,7 +4746,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 620,
+      "line": 627,
       "method": "GET",
       "path": null,
       "expression": "`resource.config.read`",
@@ -4706,7 +4754,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 620,
+      "line": 627,
       "method": "GET",
       "path": null,
       "expression": "`workbench.monitoring.configure`",
@@ -4714,7 +4762,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 620,
+      "line": 627,
       "method": "GET",
       "path": null,
       "expression": "s ? `/resource-targets` : null",
@@ -4722,7 +4770,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 629,
+      "line": 636,
       "method": "POST",
       "path": "/resource-targets/{encodeURIComponent(x.id)}/test",
       "expression": "`/resource-targets/${encodeURIComponent(x.id)}/test`",
@@ -4730,7 +4778,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 642,
+      "line": 649,
       "method": "POST",
       "path": "/resource-targets/{encodeURIComponent(x.id)}/oauth/link",
       "expression": "`/resource-targets/${encodeURIComponent(x.id)}/oauth/link`",
@@ -4738,7 +4786,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 661,
+      "line": 668,
       "method": "POST",
       "path": "/resource-targets/{encodeURIComponent(x.id)}/oauth/complete",
       "expression": "`/resource-targets/${encodeURIComponent(x.id)}/oauth/complete`",
@@ -4746,7 +4794,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 677,
+      "line": 684,
       "method": "GET",
       "path": null,
       "expression": "`resource.config.write`",
@@ -4754,7 +4802,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 697,
+      "line": 704,
       "method": "GET",
       "path": null,
       "expression": "`resource.config.write`",
@@ -4762,7 +4810,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 720,
+      "line": 727,
       "method": "GET",
       "path": null,
       "expression": "`resource.config.write`",
@@ -4770,7 +4818,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 729,
+      "line": 737,
       "method": "GET",
       "path": null,
       "expression": "`resource.dispatch`",
@@ -4778,7 +4826,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 797,
+      "line": 805,
       "method": "GET",
       "path": null,
       "expression": "`resource.config.test`",
@@ -4786,7 +4834,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 801,
+      "line": 809,
       "method": "GET",
       "path": null,
       "expression": "`resource.config.write`",
@@ -4794,7 +4842,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 858,
+      "line": 876,
       "method": "POST",
       "path": "/resource-targets",
       "expression": "`/resource-targets`",
@@ -4802,7 +4850,7 @@
     },
     {
       "module": "ResourceTargets-DskGxaTi.js",
-      "line": 858,
+      "line": 876,
       "method": "PUT",
       "path": "/resource-targets/{encodeURIComponent(e.id)}",
       "expression": "`/resource-targets/${encodeURIComponent(e.id)}`",

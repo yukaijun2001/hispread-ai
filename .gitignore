@@ -11,6 +11,9 @@
 *.pfx
 *.jks
 *.keystore
+# Public localhost TLS fixtures used only by proxy integration tests.
+!/backend/src/test/resources/proxy/localhost-cert.pem
+!/backend/src/test/resources/proxy/localhost-key.pem
 /backend/src/main/resources/application-local*.yml
 /backend/src/main/resources/application-local*.yaml
 /backend/src/main/resources/application-local*.properties

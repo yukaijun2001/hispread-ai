@@ -140,7 +140,7 @@ public class ResourcesController {
   @GetMapping("/resources/submission-capabilities")
   public ObjectNode capabilities(HttpServletRequest req) {
     auth.require(req, "resource.read");
-    boolean configured = gateway.configured();
+    boolean configured = gateway.ccmaxConfigured();
     return b.obj()
         .put("allowCcmax", configured)
         .put("forceStopCcmaxIntake", false)
@@ -309,6 +309,11 @@ public class ResourcesController {
       HttpServletRequest req) {
     String tail = req.getRequestURI().substring(("/api/resources/" + id + "/").length());
     return operations.action(id, tail, "POST", body == null ? b.obj() : body, req);
+  }
+
+  @PostMapping("/resources/{id}/upstream-channel")
+  public ObjectNode bindChannel(@PathVariable String id, @RequestBody ObjectNode body, HttpServletRequest req) {
+    return operations.bindNewApi(id, body, req);
   }
 
   @PutMapping("/resources/{id}/reauthorizations/{op}")

@@ -3,8 +3,10 @@ package com.hispread.ai;
 import static com.hispread.ai.BusinessSupport.*;
 
 import com.fasterxml.jackson.databind.node.*;
+import java.sql.*;
 import java.time.*;
 import java.util.*;
+import java.util.function.Supplier;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -12,23 +14,29 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/** Persisted local job execution. Unsupported remote jobs are explicit unavailable states. */
+/** Persisted execution with a session lock held across durable remote-operation phases. */
 @Service
 public class SystemJobService {
   private final Store s;
   private final FinancialWorkflowService finance;
   private final QuotePricingService pricing;
   private final TransactionTemplate tx;
+  private final BackgroundResourceJobService remote;
+  private final WecomReminderService wecom;
 
   public SystemJobService(
       Store s,
       FinancialWorkflowService finance,
       QuotePricingService pricing,
-      PlatformTransactionManager manager) {
+      PlatformTransactionManager manager,
+      BackgroundResourceJobService remote,
+      WecomReminderService wecom) {
     this.s = s;
     this.finance = finance;
     this.pricing = pricing;
     this.tx = new TransactionTemplate(manager);
+    this.remote = remote;
+    this.wecom = wecom;
   }
 
   private boolean local(ObjectNode task) {
@@ -47,9 +55,19 @@ public class SystemJobService {
         && task.path("renewBeforeDays").asInt() <= 30;
   }
 
+  private boolean ready(ObjectNode task) {
+    return local(task)
+        || switch (text(task, "type")) {
+          case "CCMAX_DAILY_SYNC", "CCMAX_STATUS_SYNC", "CCMAX_PRIORITY_ROTATION" ->
+              remote.configured(task);
+          case "WORKBENCH_WECOM_REMINDER" -> wecom.configured();
+          default -> false;
+        };
+  }
+
   public ObjectNode describe(ObjectNode task) {
     ObjectNode out = task.deepCopy();
-    boolean ready = local(task);
+    boolean ready = ready(task);
     out.put("ready", ready);
     out.put(
         "unavailableReason",
@@ -57,7 +75,9 @@ public class SystemJobService {
             ? ""
             : text(task, "type").equals("QUOTE_AUTO_RENEWAL")
                 ? "报价自动续期的延长期与冲突规则尚未配置"
-                : "此任务需要已配置的外部执行器，当前未接入");
+                : text(task, "type").equals("WORKBENCH_WECOM_REMINDER")
+                    ? "请配置企业微信机器人与服务端加密密钥"
+                    : "请配置已启用的CUSTOM资源上游与有效任务规则");
     return out;
   }
 
@@ -84,8 +104,18 @@ public class SystemJobService {
     }
   }
 
-  @org.springframework.transaction.annotation.Transactional
   public ObjectNode update(String key, ObjectNode body) {
+    return locked(
+        key,
+        () -> {
+          ObjectNode saved = tx.execute(status -> updateConfig(key, body));
+          if (!saved.path("enabled").asBoolean() && eq(saved, "type", "CCMAX_PRIORITY_ROTATION"))
+            remote.restore(key, false);
+          return describe(s.get("scheduled-task", key, null));
+        });
+  }
+
+  private ObjectNode updateConfig(String key, ObjectNode body) {
     ObjectNode task = s.get("scheduled-task", key, null), patch = s.object();
     if (body.has("version")) patch.set("version", body.get("version"));
     if (eq(task, "type", "QUOTE_AUTO_RENEWAL")) {
@@ -125,6 +155,11 @@ public class SystemJobService {
         }
       }
     }
+    if (body.has("targetId")) {
+      if (!body.path("targetId").isNull() && !body.path("targetId").isTextual())
+        throw new ApiException(400, "目标编号须为字符串或null");
+      patch.set("targetId", body.get("targetId"));
+    }
     if (body.has("intervalMinutes")) {
       int interval = body.path("intervalMinutes").asInt();
       if (interval < 1 || interval > 1440) throw new ApiException(400, "运行周期须为1–1440分钟");
@@ -138,7 +173,7 @@ public class SystemJobService {
     if (body.has("enabled")) {
       ObjectNode candidate = task.deepCopy();
       candidate.setAll(patch);
-      if (body.path("enabled").asBoolean() && !local(candidate))
+      if (body.path("enabled").asBoolean() && !ready(candidate))
         throw new ApiException(503, describe(candidate).path("unavailableReason").asText());
       patch.put("enabled", body.path("enabled").asBoolean());
     }
@@ -151,76 +186,153 @@ public class SystemJobService {
                   patch.path("intervalMinutes").asLong(task.path("intervalMinutes").asLong(1)) * 60)
               .toString());
     else patch.putNull("nextRunAt");
-    return describe(s.update("scheduled-task", key, null, patch));
+    return s.update("scheduled-task", key, null, patch);
+  }
+
+  private <T> T locked(String key, Supplier<T> action) {
+    // The session lock survives commits of run/rotation snapshots and releases on crash.
+    String lockKey =
+        eq(s.get("scheduled-task", key, null), "type", "CCMAX_PRIORITY_ROTATION")
+            ? "system-priority-rotation"
+            : "system-job:" + key;
+    try (Connection connection = Objects.requireNonNull(s.jdbc.getDataSource()).getConnection()) {
+      boolean acquired;
+      try (PreparedStatement p =
+          connection.prepareStatement("select pg_try_advisory_lock(hashtextextended(?,0))")) {
+        p.setString(1, lockKey);
+        try (ResultSet result = p.executeQuery()) {
+          result.next();
+          acquired = result.getBoolean(1);
+        }
+      }
+      if (!acquired) throw new ApiException(409, "任务正在执行，请等待本轮完成", "JOB_ALREADY_RUNNING");
+      try {
+        return action.get();
+      } finally {
+        try (PreparedStatement p =
+            connection.prepareStatement("select pg_advisory_unlock(hashtextextended(?,0))")) {
+          p.setString(1, lockKey);
+          p.execute();
+        }
+      }
+    } catch (SQLException error) {
+      throw new ApiException(503, "任务执行锁暂不可用", "JOB_LOCK_UNAVAILABLE");
+    }
+  }
+
+  public ObjectNode retryRestore(String key) {
+    return locked(
+        key,
+        () -> {
+          ObjectNode task = s.get("scheduled-task", key, null);
+          if (!eq(task, "type", "CCMAX_PRIORITY_ROTATION"))
+            throw new ApiException(400, "此任务不支持优先级恢复");
+          return remote.restore(key, true);
+        });
   }
 
   public ObjectNode run(String key, String trigger) {
-    return tx.execute(
-        status -> {
-          s.jdbc.queryForObject(
-              "select pg_advisory_xact_lock(hashtextextended(?,0))",
-              Object.class,
-              "system-job:" + key);
+    return locked(
+        key,
+        () -> {
           ObjectNode task = s.get("scheduled-task", key, null);
-          if (!local(task))
+          if ("SCHEDULE".equals(trigger)) {
+            if (!task.path("enabled").asBoolean())
+              return s.object().put("state", "SKIPPED").put("resultCode", "TASK_DISABLED");
+            try {
+              if (!text(task, "nextRunAt").isBlank()
+                  && Instant.parse(text(task, "nextRunAt")).isAfter(Instant.now()))
+                return s.object().put("state", "SKIPPED").put("resultCode", "TASK_NOT_DUE");
+            } catch (DateTimeException error) {
+              throw new ApiException(409, "任务调度时间无效，请重新保存周期");
+            }
+          }
+          if (!ready(task))
             throw new ApiException(503, describe(task).path("unavailableReason").asText());
           String now = Instant.now().toString();
           ObjectNode run =
-              s.create(
-                  "scheduled-run",
-                  "GLOBAL",
-                  s.object()
-                      .put("taskKey", key)
-                      .put("taskType", text(task, "type"))
-                      .put("triggerKind", trigger)
-                      .put("state", "RUNNING")
-                      .put("startedAt", now));
+              tx.execute(
+                  status -> {
+                    for (ObjectNode stale : s.list("scheduled-run", null))
+                      if (eq(stale, "taskKey", key) && eq(stale, "state", "RUNNING"))
+                        s.update(
+                            "scheduled-run",
+                            text(stale, "id"),
+                            null,
+                            s.object()
+                                .put("state", "TIMED_OUT")
+                                .put("resultCode", "LEASE_LOST")
+                                .put("finishedAt", now));
+                    s.update("scheduled-task", key, null, s.object().put("running", true));
+                    return s.create(
+                        "scheduled-run",
+                        "GLOBAL",
+                        s.object()
+                            .put("taskKey", key)
+                            .put("taskType", text(task, "type"))
+                            .put("triggerKind", trigger)
+                            .put("state", "RUNNING")
+                            .put("startedAt", now));
+                  });
+          ObjectNode result;
+          String state = "SUCCESS";
           try {
-            int count =
-                eq(task, "type", "QUOTE_AUTO_RENEWAL")
-                    ? renewQuotes(task)
-                    : finance.confirmOverdue();
-            ObjectNode done =
-                s.update(
-                    "scheduled-run",
-                    text(run, "id"),
-                    null,
-                    s.object()
-                        .put("state", "SUCCESS")
-                        .put("finishedAt", Instant.now().toString())
-                        .put("processedCount", count)
-                        .put(
-                            "resultCode",
-                            eq(task, "type", "QUOTE_AUTO_RENEWAL")
-                                ? "QUOTE_RENEWAL_PENDING:" + count
-                                : "SETTLEMENT_AUTO_CONFIRMED:" + count));
-            s.update(
-                "scheduled-task",
-                key,
-                null,
-                s.object()
-                    .put("running", false)
-                    .put("lastRunAt", now)
-                    .put("lastState", "SUCCESS")
-                    .put("lastResultCode", done.path("resultCode").asText())
-                    .put(
-                        "nextRunAt",
-                        Instant.now()
-                            .plusSeconds(task.path("intervalMinutes").asLong(1) * 60)
-                            .toString()));
-            return done;
+            if (local(task)) {
+              int count =
+                  tx.execute(
+                      status ->
+                          eq(task, "type", "QUOTE_AUTO_RENEWAL")
+                              ? renewQuotes(task)
+                              : finance.confirmOverdue());
+              result =
+                  s.object()
+                      .put("processedCount", count)
+                      .put(
+                          "resultCode",
+                          (eq(task, "type", "QUOTE_AUTO_RENEWAL")
+                                  ? "QUOTE_RENEWAL_PENDING:"
+                                  : "SETTLEMENT_AUTO_CONFIRMED:")
+                              + count);
+            } else if (eq(task, "type", "WORKBENCH_WECOM_REMINDER")) result = wecom.send(task);
+            else if (eq(task, "type", "CCMAX_PRIORITY_ROTATION"))
+              result = remote.rotate(task, text(run, "id"));
+            else result = remote.sync(task, text(run, "id"));
           } catch (RuntimeException error) {
-            s.update(
-                "scheduled-run",
-                text(run, "id"),
-                null,
+            state = "FAILED";
+            result =
                 s.object()
-                    .put("state", "FAILED")
-                    .put("finishedAt", Instant.now().toString())
-                    .put("resultCode", "LOCAL_JOB_FAILED")
-                    .put("message", error.getMessage()));
-            return s.get("scheduled-run", text(run, "id"), null);
+                    .put("processedCount", 0)
+                    .put(
+                        "resultCode",
+                        error instanceof ApiException a
+                            ? Objects.toString(a.code, "JOB_FAILED")
+                            : "JOB_FAILED")
+                    .put(
+                        "message",
+                        error instanceof ApiException ? error.getMessage() : "任务执行异常，请检查服务端日志");
           }
+          ObjectNode patch =
+              result.deepCopy().put("state", state).put("finishedAt", Instant.now().toString());
+          return tx.execute(
+              status -> {
+                ObjectNode done = s.update("scheduled-run", text(run, "id"), null, patch);
+                ObjectNode current = s.get("scheduled-task", key, null);
+                ObjectNode taskPatch =
+                    s.object()
+                        .put("running", false)
+                        .put("lastRunAt", now)
+                        .put("lastState", text(done, "state"))
+                        .put("lastResultCode", text(done, "resultCode"));
+                if (current.path("enabled").asBoolean())
+                  taskPatch.put(
+                      "nextRunAt",
+                      Instant.now()
+                          .plusSeconds(current.path("intervalMinutes").asLong(1) * 60)
+                          .toString());
+                else taskPatch.putNull("nextRunAt");
+                s.update("scheduled-task", key, null, taskPatch);
+                return done;
+              });
         });
   }
 
@@ -346,7 +458,7 @@ public class SystemJobService {
   @Scheduled(fixedDelayString = "${app.jobs.poll-ms:15000}")
   public void tick() {
     for (ObjectNode task : s.list("scheduled-task", null)) {
-      if (!task.path("enabled").asBoolean() || !local(task)) continue;
+      if (!task.path("enabled").asBoolean() || !ready(task)) continue;
       String next = text(task, "nextRunAt");
       try {
         if (next.isBlank() || !Instant.parse(next).isAfter(Instant.now()))

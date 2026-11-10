@@ -1,0 +1,63 @@
+# Resource and proxy implementation — 2026-11-09
+
+The recovered frontend proves the local API shape, not the original CCMAX administrator protocol. Source evidence is recorded in `docs/evidence-domain.md` (resource form, OAuth session, lifecycle, proxy replacement) and the read-only recovered `frontend/src/recovered` modules. No original private CCMAX server, production key, or private API specification was supplied. This implementation therefore offers explicit `CUSTOM` and `NEWAPI` protocols and never labels the custom contract as the original private implementation.
+
+## Proxy verification
+
+`POST /api/outbound-proxies/{id}/test` now reads the saved credential URL on the server and executes an actual proxy transaction:
+
+1. Resolve/check the proxy and the server-configured HTTPS probe destination. Connect to a validated proxy IP. Private, loopback, link-local, multicast, unspecified, carrier-grade NAT (`100.64.0.0/10`), benchmarking (`198.18.0.0/15`), and unique-local IPv6 addresses are rejected outside tests. A `production` profile always disables the test allowance.
+2. For `HTTP`, send HTTP/1.1 CONNECT to the validated destination IP and optional Basic `Proxy-Authorization`. For `HTTPS`, first authenticate the proxy TLS certificate and hostname, then issue CONNECT inside TLS. CONNECT credentials never reach the destination service.
+3. For `SOCKS5`, negotiate only no-auth or username/password as appropriate; perform RFC 1929 subnegotiation when credentials are present; send RFC 1928 CONNECT using the validated IPv4/IPv6 destination. A server selecting an unoffered authentication method fails.
+4. Perform target TLS with certificate/hostname verification, then HTTPS GET to the configured fixed probe URL. Host/SNI use the actual hostname while the tunnel uses the checked IP, so proxy-side DNS cannot change the destination.
+5. Require HTTP 200, bounded JSON, and an IP literal with a public address. Return `VERIFIED`, `exitIp`, latency and the authentication flag only after these checks. An opened TCP port alone fails. Authentication, protocol, TLS, timeout and egress failures return distinct states without raw proxy credentials or remote diagnostics.
+
+Default probe URL: `https://api.ipify.org?format=json`. Configure server environment `INTEGRATION_PROXY_PROBE_URL` / Spring `app.integrations.proxy-probe-url` for another administrator-owned HTTPS JSON endpoint returning `{"ip":"<public-IP>"}`; `app.integrations.proxy-probe-timeout-ms` defaults to 10000 and clamps to 1000–30000. The budget covers socket connection, handshake, reads and TLS; DNS resolution uses the JVM resolver. Response headers/body are capped at 16 KiB, including chunked bodies. The returned public IP is an authenticated HTTPS observer's report; it is not proof the proxy differs from the server's direct public IP. A proxy may transparently share that IP.
+
+Primary standards consulted:
+
+- IETF [RFC 9110 §9.3.6, CONNECT](https://www.rfc-editor.org/rfc/rfc9110.html#section-9.3.6): a successful 2xx establishes a tunnel; authority form identifies host/port.
+- IETF [RFC 1928, SOCKS Protocol Version 5](https://www.rfc-editor.org/rfc/rfc1928): greeting, method selection, address types, CONNECT reply.
+- IETF [RFC 1929, Username/Password Authentication for SOCKS V5](https://www.rfc-editor.org/rfc/rfc1929): version 1 authentication and length-prefixed credential fields.
+- IETF [RFC 7617, Basic authentication](https://www.rfc-editor.org/rfc/rfc7617): Base64 user/password credentials. Plain HTTP proxies expose this authentication to the network; use TLS proxies where needed.
+- [ipify API documentation](https://www.ipify.org/) documents the JSON `ip` observer response.
+
+## Explicit target configuration
+
+Only ADMIN with `resource.config.write` can save a target. API and the existing target modal support `protocol: CUSTOM|NEWAPI`, `baseUrl`, `apiKey`, `enabled`, `newApiUserId`, `defaultTarget`, `upstreamPathPrefix` and `timeoutMs` (1000–120000). Empty secrets preserve saved values, clearApiKey removes them, and GET responses exclude keys. Multiple enabled targets need an explicit `targetId` or exactly one default. Resources persist target affinity and reject switching an existing resource or mixing targets in a maintenance batch.
+
+`CUSTOM` remains the compatibility default for existing installations. It implements the documented local adapter contract in `docs/resource-upstream-adapter.md`: the operator must deploy a real compatible service. All remote HTTP calls have explicit methods, no automatic redirects, response byte limits, credential redaction and stable failure codes. Error bodies are not reflected to browsers.
+
+A missing target returns 503 before creating a submission/OAuth draft. Unsupported NEWAPI CCMAX creation/OAuth also returns 503 before creating a draft. Invalid application response states, malformed JSON, invalid OAuth links, wrong job resource IDs or invalid usage amounts fail closed. An uncertain remote result persists UNKNOWN; request-key replay returns the existing operation and never repeats the remote mutation. Explicit user-facing version conflicts remain 409. OAuth authorization request-key replay retains a single local resource and opaque local session ID.
+
+The local state projection now installs returned credentials into the server-only secret record, applies confirmed lifecycle results to resource operational/lane state, and applies confirmed proxy replacements to the local proxy binding. `DONE` requires `bindingApplied:true`; `NEEDS_REVIEW`/UNKNOWN do not change binding. Reconcile reads update the same local state without another create. Usage and say-hi results cannot create a delivered resource or override dispatch state.
+
+## Actual New API compatibility
+
+Official New API documentation was read on 2026-11-09:
+
+- [Official channel management API](https://doc.newapi.pro/en/api/fei-channel-management/) documents the channel list, single channel GET, test GET, PUT updates, DELETE, administrator Bearer token and mandatory `New-Api-User` header.
+- [New API source repository](https://github.com/QuantumNous/new-api) is the upstream implementation reference.
+
+`NEWAPI` uses the real `/api/channel` administrator API, fixed prefix `/api`, Bearer API key, and numeric `New-Api-User`. The provider's `success` field must be an actual boolean true; HTTP 200 with `success:false` is rejected with a redacted application error.
+
+| Local operation | Published New API operation | Local interpretation |
+| --- | --- | --- |
+| Target test | GET `/api/channel/?p=1&page_size=1` | Read-only administrator authentication check |
+| Bind channel | GET `/api/channel/{channelId}` | Verify numeric ID and status before saving mapping |
+| Resource usage | GET `/api/channel/{channelId}` | Preserve used_quota/balance and status; quota units remain `NEWAPI_QUOTA` |
+| Resource say-hi | GET `/api/channel/test/{channelId}` | Real model connectivity check; provider may incur model usage |
+| Channel priority | PUT `/api/channel/` `{id,priority}` | Confirm explicit provider success |
+| Lifecycle PAUSE / RESUME | PUT `/api/channel/` `{id,status:2|1}` | PAUSED / RESUMED |
+| Lifecycle REMOVE | DELETE `/api/channel/{channelId}` | GONE only on explicit provider success |
+| Lifecycle reconcile | GET `/api/channel/{channelId}` only | Confirm status; unresolved/deletion ambiguity remains UNKNOWN |
+
+An ADMIN associates an existing local resource with a real channel through `POST /api/resources/{localResourceId}/upstream-channel` with `{ "targetId":"saved-target-id", "channelId":42, "version":<current-version> }`. The call verifies the remote channel before saving `upstreamChannelId`, `laneId`, target and operational status. A pre-existing target association cannot be silently changed. Mapping does not claim new channel creation or monetary delivery success. The returned New API quota counter is not converted into USD or financial ledger records because per-deployment pricing and quota conversion were not supplied.
+
+New API's published API-key channel creation is not CCMAX refresh-token/session-key intake, OAuth or credential refresh. Those functions deliberately return `RESOURCE_OPERATION_UNSUPPORTED` for NEWAPI. NewAPI intake material remains local until an explicit remote-creation workflow is specified; it is not silently uploaded. New API does not document this project's private CCMAX background jobs, so background CCMAX readiness must use CUSTOM targets. Original private OAuth/resource endpoints and production compatibility remain unverified until the real service specification and an authorized test environment are supplied.
+
+## Verification
+
+Focused command: `mvn -q -Dtest=ProxyProbeServiceTest,NewApiResourceAdapterTest,ResourceIntegrationTest test` from `backend/`.
+
+The fixtures use only local sockets, a dedicated self-signed localhost test certificate trusted by the fixture client, a local HTTP server and transactionally rolled-back PostgreSQL rows. They verify HTTP and HTTPS proxy CONNECT, encoded Basic credentials, SOCKS5 RFC 1929 auth, real nested TLS/hostname verification, fixed HTTPS request without leaked proxy headers, chunked egress JSON, rejection of auth failures/plain HTTP servers/private targets, official New API paths and response semantics, dual authentication headers, read-verified mapping, no USD conversion, scoped operation/target state, malformed-success UNKNOWN handling, replay after target disable/version change, OAuth draft deduplication, rotated credential storage and confirmed proxy/lifecycle projection. No real provider credentials or business network writes are used. The PEM private key is a public local fixture key, never a deployment key.

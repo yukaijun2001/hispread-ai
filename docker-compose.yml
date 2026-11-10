@@ -34,6 +34,9 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD (at least 16 characters)}
       PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8088}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      PAYMENT_SANDBOX_ENABLED: ${PAYMENT_SANDBOX_ENABLED:-false}
+      MONITORING_SCHEDULING_ENABLED: ${MONITORING_SCHEDULING_ENABLED:-true}
+      WECOM_ENCRYPTION_KEY: ${WECOM_ENCRYPTION_KEY:-}
       UPLOAD_DIRECTORY: /app/data/uploads
       JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0 -Duser.timezone=Asia/Shanghai"
       TZ: Asia/Shanghai

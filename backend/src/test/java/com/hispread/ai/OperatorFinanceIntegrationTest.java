@@ -12,6 +12,7 @@ import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,7 @@ class OperatorFinanceIntegrationTest {
   @Autowired Store store;
   @Autowired AuthService auth;
   @Autowired ObjectMapper json;
+  @MockBean ResourceIntegrationGateway resourceGateway;
 
   record Client(MockHttpSession session, String csrf, String owner, String id) {}
 
@@ -73,6 +75,8 @@ class OperatorFinanceIntegrationTest {
 
   @Test
   void monitoringSourcesUseTheRecoveredAlternativePermissionGates() throws Exception {
+    org.mockito.Mockito.when(resourceGateway.refreshMonitoring(org.mockito.ArgumentMatchers.any()))
+        .thenThrow(new ApiException(502, "Fixture monitoring upstream unavailable"));
     Client restrictedOperator = client("OPERATOR", null);
     mvc.perform(get("/api/workbench-monitoring/sources").session(restrictedOperator.session))
         .andExpect(status().isForbidden());
@@ -88,7 +92,7 @@ class OperatorFinanceIntegrationTest {
             store
                 .object()
                 .put("name", "Local monitoring source")
-                .put("endpoint", "http://127.0.0.1/monitoring")
+                .put("endpoint", "https://example.com/monitoring")
                 .put("rpmPath", "rpm"),
             operator,
             200);
@@ -106,7 +110,7 @@ class OperatorFinanceIntegrationTest {
         "/api/workbench-monitoring/sources/" + id + "/refresh",
         store.object(),
         operator,
-        400);
+        502);
     write(
         "POST",
         "/api/workbench-monitoring/sources/" + id + "/refresh",
@@ -126,14 +130,16 @@ class OperatorFinanceIntegrationTest {
         store
             .object()
             .put("name", "Configure-only source")
-            .put("endpoint", "http://127.0.0.1/monitoring")
+            .put("endpoint", "https://example.com/monitoring")
             .put("rpmPath", "rpm"),
         operator,
         200);
     write(
         "PUT",
         "/api/workbench-monitoring/sources/" + id,
-        store.object().put("version", 1),
+        store
+            .object()
+            .put("version", store.get("monitoring-source", id, null).path("version").asLong()),
         operator,
         200);
     write(
@@ -141,7 +147,7 @@ class OperatorFinanceIntegrationTest {
         "/api/workbench-monitoring/sources/" + id + "/refresh",
         store.object(),
         operator,
-        400);
+        502);
   }
 
   @Test

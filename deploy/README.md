@@ -112,9 +112,11 @@ docker compose -p hispread-demo --env-file .env.demo -f docker-compose.yml -f do
 
 ## 7. 外部服务
 
+最新接口与配置请优先阅读 [接口补齐与验证](../docs/interface-completion-2026-11-09.md)。`deploy.sh`会生成并保留企业微信Webhook加密密钥`WECOM_ENCRYPTION_KEY`；`PAYMENT_SANDBOX_ENABLED`默认false，开启后也只操作独立模拟记录。监控默认启动定时采集，只处理管理员已启用的配置。
+
 资源/CCMAX功能通过管理员维护的resource-target适配器接入。目标需HTTPS（HTTP需显式允许）、真实API凭据和本项目约定的上游操作协议；未配置返回503，网络失败/上游拒绝/未知结果会保存可查状态。接口适配测试使用本地fixture，不代表已经连接原站私有服务。
 
-支付通道只读认证测试支持文档所列Airwallex/OKX/Binance；缺少真实账户凭据时返回503。资金执行另通过显式 `HISPREAD_PAYOUT_V1` 支付中台协议提供受控适配入口：管理员配置公网HTTPS地址和中台密钥后，已有独立审核的付款才可预检、执行和查询原操作。默认未配置时不执行；官方钱包原生转账/提币没有直接实现，实际出款由你对接的支付中台负责。测试使用本地HTTP fixture，未进行真实资金划转。相关边界详见 `docs/payment-provider-protocols.md` 与最终接口对账报告。
+支付支持Airwallex/OKX/Binance官方只读测试和显式选择的官方原生付款协议，也保留`HISPREAD_PAYOUT_V1`支付中台。管理员配置真实凭据、审核账户版本映射与执行协议后，独立审核的付款才可预检、执行和查询原操作。未配置时不执行。测试使用本地fixture，未进行真实资金划转。配置和限制见`docs/native-payment-implementation.md`。
 
 ## 8. 发布跨架构镜像
 

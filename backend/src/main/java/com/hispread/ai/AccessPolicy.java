@@ -219,6 +219,8 @@ public class AccessPolicy {
   public ObjectNode publicRecord(String kind, ObjectNode row, HttpServletRequest req) {
     ObjectNode out = row.deepCopy();
     redact(out);
+    if (kind.equals("payout-call"))
+      out.remove(List.of("adapterBinding", "executionContext", "requestFingerprint"));
     if (kind.equals("proxy")) out.remove("url");
     if (kind.equals("supplier")) {
       if (!admin(req) && auth.platform(req)) out.remove("linkedUsers");

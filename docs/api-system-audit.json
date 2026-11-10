@@ -916,17 +916,16 @@
     "intake policy validation/inheritance/rotation config/count review persistence"
   ],
   "limitations": [
-    "Static matching is not runtime proof. Dynamic templates are manually resolved where listed; shadowed bindings are excluded from HTTP coverage.",
-    "QUOTE_AUTO_RENEWAL now supports explicit administrator opt-in rules and creates future PENDING applications, never auto-approval. Unconfigured rules and external executor-only tasks remain unavailable.",
-    "External adapters require administrator configuration; unsupported/unconfigured methods return503.",
-    "Session online status uses persisted spring_session.principal_name/expiry_time; test MockHttpSession does not create persistent session rows.",
-    "QUOTE_AUTO_RENEWAL is now an explicit local opt-in policy that generates PENDING applications; without explicit administrator rules it remains notready503. It is not claimed as recovered production policy."
+    "Route presence does not prove live external-service success.",
+    "Original private CCMAX API unavailable; documented CUSTOM contract is explicit.",
+    "Production provider accounts and webhook not supplied; tests use local protocol fixtures.",
+    "Monitoring uses configured field paths and highest eligible source values, respecting supplier visibility."
   ],
   "tests": [
     "SystemSupplierContractTest",
     "AdminIntegrationTest"
   ],
-  "status": "frozen; 24 system regressions plus latest12 explicit rule/adapter config tests passed",
+  "status": "Background executors, monitoring display/collector, WeCom and priority restoration implemented; see interface-completion-2026-11-09.md",
   "manualRouteCorrections": [
     {
       "frontend": "Projects-BlZGF-3J.js:55",
@@ -953,7 +952,8 @@
     "provider": "PayoutProviderGatewayTest validates official read-only request construction; missing server configuration503"
   },
   "knownUnavailableActions": [
-    "CCMAX/priority/WeCom scheduled jobs: remote executor unavailable until configured; ready=false, not fabricated successful runs"
+    "Private CCMAX operations require a compatible CUSTOM upstream; NEWAPI does not claim that private protocol.",
+    "Live WeCom delivery requires encrypted webhook configuration; no live robot invoked."
   ],
   "verification": {
     "tests": 24,

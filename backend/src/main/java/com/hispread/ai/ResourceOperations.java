@@ -69,6 +69,7 @@ public class ResourceOperations {
 
   public ObjectNode safe(ObjectNode body, HttpServletRequest req) {
     ObjectNode safe = b.publicRecord("resource", body, req);
+    redactOperationSecrets(safe);
     safe.remove(
         List.of(
             "request",
@@ -79,6 +80,14 @@ public class ResourceOperations {
             "adminApiKey",
             "authHeaderValue"));
     return safe;
+  }
+
+  private void redactOperationSecrets(JsonNode node) {
+    if (node.isObject()) {
+      ObjectNode object = (ObjectNode) node;
+      object.remove(List.of("proxyUrl", "socks5", "authorization", "Authorization", "adminApiKey", "authHeaderValue", "token", "access_token", "refresh_token", "session_key", "clientSecret", "proxyPassword"));
+      object.fields().forEachRemaining(entry -> redactOperationSecrets(entry.getValue()));
+    } else if (node.isArray()) for (JsonNode child : node) redactOperationSecrets(child);
   }
 
   public ObjectNode getOperation(String id, HttpServletRequest req) {
@@ -206,7 +215,6 @@ public class ResourceOperations {
       String key,
       String targetId,
       HttpServletRequest req) {
-    ObjectNode config = gateway.requireConfigured(targetId);
     if (key == null || key.isBlank()) key = UUID.randomUUID().toString();
     store.jdbc.queryForObject(
         "select pg_advisory_xact_lock(hashtext(?),hashtext(?))", (r, n) -> true, owner, key);
@@ -217,6 +225,10 @@ public class ResourceOperations {
         throw new ApiException(409, "提交编号已用于不同内容", "IDEMPOTENCY_CONFLICT");
       return result(prior, req);
     }
+    if (resourceId != null && !resourceId.isBlank() && payload.has("version")
+        && payload.path("version").asLong() != b.resource(resourceId, req).path("version").asLong())
+      throw new ApiException(409, "资源版本已变化");
+    ObjectNode config = gateway.requireConfigured(targetId);
     ObjectNode op =
         b.obj()
             .put("type", type)
@@ -236,21 +248,10 @@ public class ResourceOperations {
     op.put("total", payload.path("items").isArray() ? payload.path("items").size() : 1);
     op = store.create("resource-operation", owner, op);
     try {
-      ObjectNode response = gateway.exchange(config, method, path, payload, key);
-      if (type.equals("USAGE") && response.has("amount"))
-        response.put("state", response.path("state").asText("UPDATED"));
-      String status = text(response, "state");
-      if (status.isBlank()) status = text(response, "status");
-      if (status.isBlank()
-          && type.equals("OAUTH_AUTHORIZE")
-          && response.hasNonNull("sessionId")
-          && response.hasNonNull("authUrl")) status = "READY";
-      if (status.isBlank() && type.equals("USAGE") && response.hasNonNull("amount"))
-        status = "UPDATED";
-      if (status.isBlank() && type.equals("SAY-HI") && response.has("ok"))
-        status = response.path("ok").asBoolean() ? "SUCCESS" : "FAILED";
-      if (status.isBlank())
-        throw new ApiException(502, "上游未返回操作状态", "RESOURCE_UPSTREAM_INVALID_RESPONSE");
+      ObjectNode wire = upstreamRequest(payload, resourceId, owner, req);
+      ObjectNode response = gateway.exchange(config, method, path, wire, key);
+      validateIdentity(resourceId, owner, response);
+      String status = ResourceResponseValidator.validate(type, response, payload);
       ObjectNode patch =
           b.obj()
               .put("state", status)
@@ -263,20 +264,26 @@ public class ResourceOperations {
       if (!remote.isBlank()) patch.put("upstreamId", remote);
       op = store.update("resource-operation", text(op, "id"), owner, patch);
       ObjectNode resourceResponse = response.deepCopy();
-      if (!Set.of("SUBMIT", "DISPATCH", "OAUTH_COMPLETE").contains(type))
-        resourceResponse.remove("state");
       if (type.equals("USAGE") && response.has("amount"))
         resourceResponse.set("usage", b.pick(response, "amount", "currency", "queriedAt", "state"));
       applyResource(resourceId, owner, resourceResponse, type, req);
+      applyJob(op, response, req);
+      if (resourceId != null && !resourceId.isBlank()) {
+        ObjectNode resource = store.get("resource", resourceId, owner);
+        if (!eq(resource, "targetId", text(config, "id")))
+          store.update("resource", resourceId, owner, b.obj().put("targetId", text(config, "id")));
+      }
       return result(op, req);
     } catch (ApiException e) {
-      boolean unknown = e.status >= 500 || e.status == 408;
+      boolean unknown = (e.status >= 500 || e.status == 408)
+          && !Set.of("RESOURCE_OPERATION_UNSUPPORTED", "RESOURCE_UPSTREAM_NOT_CONFIGURED").contains(e.code == null ? "" : e.code);
       ObjectNode patch =
           b.obj()
               .put("state", unknown ? "UNKNOWN" : "FAILED")
               .put("status", unknown ? "UNKNOWN" : "FAILED")
               .put("errorCode", e.code == null ? "RESOURCE_UPSTREAM_ERROR" : e.code)
-              .put("error", "上游操作未完成，请查询原操作");
+              .put("error", "上游操作未完成，请查询原操作")
+              .putNull("result");
       store.update("resource-operation", text(op, "id"), owner, patch);
       if (resourceId != null
           && !resourceId.isBlank()
@@ -285,9 +292,40 @@ public class ResourceOperations {
             "resource",
             resourceId,
             owner,
-            b.obj().put("dispatchState", unknown ? "UNKNOWN" : "FAILED"));
+            b.obj().put("dispatchState", unknown ? "UNKNOWN" : "FAILED").put("targetId", text(config, "id")));
       throw e;
     }
+  }
+
+  private void validateIdentity(String id, String owner, ObjectNode response) {
+    if (id == null || id.isBlank()) return;
+    for (JsonNode node : List.of(response, response.path("resource"))) {
+      if (node.has("resourceId") && !node.path("resourceId").asText().equals(id)
+          || node.has("localResourceId") && !node.path("localResourceId").asText().equals(id)
+          || node.has("supplierId") && !node.path("supplierId").asText().equals(owner))
+        throw new ApiException(502, "上游资源身份与请求不一致", "RESOURCE_UPSTREAM_INVALID_RESPONSE");
+    }
+  }
+
+  private ObjectNode upstreamRequest(ObjectNode original, String resourceId, String owner, HttpServletRequest req) {
+    ObjectNode wire = original.deepCopy();
+    if (resourceId != null && !resourceId.isBlank()) wire.put("localResourceId", resourceId);
+    ObjectNode input = wire.path("input").isObject() ? (ObjectNode) wire.path("input") : wire;
+    String proxyId = text(input, "proxyId");
+    if (!proxyId.isBlank()) input.put("proxyUrl", proxySecret(proxyId, owner, req));
+    for (JsonNode item : wire.path("items")) {
+      if (!item.isObject()) continue;
+      String id = text(item, "proxyId");
+      if (!id.isBlank()) ((ObjectNode) item).put("proxyUrl", proxySecret(id, owner, req));
+    }
+    return wire;
+  }
+
+  private String proxySecret(String proxyId, String owner, HttpServletRequest req) {
+    ObjectNode proxy = b.get("proxy", proxyId, req);
+    if (!b.entityOwner("proxy", proxyId, req).equals(owner)) throw new ApiException(409, "代理与资源不属于同一供应商");
+    if (!proxy.path("enabled").asBoolean()) throw new ApiException(409, "所选代理已停用");
+    return text(proxy, "url");
   }
 
   private void applyResource(
@@ -314,12 +352,61 @@ public class ResourceOperations {
     if (deliveryOperation
         && dispatch.isBlank()
         && Set.of("SUCCESS", "PENDING", "UNKNOWN", "FAILED").contains(state)) dispatch = state;
-    if (!dispatch.isBlank()) {
+    if (deliveryOperation && !dispatch.isBlank()) {
       update.put("dispatchState", dispatch);
       if (dispatch.equals("SUCCESS"))
         update.put("state", "DELIVERED").put("submittedAt", Instant.now().toString());
     }
+    if ((Set.of("CREDENTIAL-REFRESH", "REAUTHORIZATIONS", "OAUTH_COMPLETE").contains(operationType) || operationType.startsWith("REAUTHORIZATIONS/"))
+        && Set.of("SUCCESS", "UPDATED", "COMPLETED").contains(text(response, "state"))) {
+      ObjectNode secret = b.pick((ObjectNode) upstream, "accessToken", "refreshToken", "sessionKey");
+      if (upstream.path("credentials").isObject())
+        secret.setAll(b.pick((ObjectNode) upstream.path("credentials"), "accessToken", "refreshToken", "sessionKey"));
+      if (!secret.isEmpty()) { persistCredentials(rid, owner, secret); update.put("credentialConfigured", true); }
+    }
     if (!update.isEmpty()) store.update("resource", rid, owner, update);
+  }
+
+  private void applyJob(ObjectNode op, ObjectNode response, HttpServletRequest req) {
+    String type = text(op, "type");
+    if (!Set.of("LIFECYCLE", "PROXY_REPLACEMENT").contains(type)) return;
+    String owner = text(op, "supplierId");
+    for (JsonNode item : response.path("items")) {
+      String rid = text(item, "resourceId"), state = text(item, "state");
+      b.resource(rid, req);
+      ObjectNode patch = b.obj();
+      if (!b.entityOwner("resource", rid, req).equals(owner)) throw new ApiException(409, "上游资源归属不匹配");
+      if (type.equals("LIFECYCLE")) {
+        String action = op.path("request").path("action").asText();
+        if (state.equals("SUCCESS") || state.equals("COMPLETED"))
+          state = action.equals("PAUSE") ? "PAUSED" : action.equals("RESUME") ? "RESUMED" : "GONE";
+        if (Set.of("PAUSED", "RESUMED", "ACTIVE", "DRAINING", "GONE", "REMOVED").contains(state)) {
+          patch.put("operationalState", state.equals("RESUMED") ? "ACTIVE" : state.equals("REMOVED") ? "GONE" : state);
+          patch.put("laneState", state.equals("RESUMED") ? "ACTIVE" : state);
+        }
+      } else if (Set.of("SUCCESS", "COMPLETED", "DONE").contains(state)) {
+        for (JsonNode requestItem : op.path("request").path("items"))
+          if (rid.equals(text(requestItem, "resourceId"))) {
+            String proxyId = text(requestItem, "proxyId");
+            if (proxyId.isBlank() && requestItem.hasNonNull("proxyUrl")) {
+              String raw = text(requestItem, "proxyUrl");
+              java.net.URI uri = ProxyProbeService.parseProxy(raw);
+              ObjectNode saved = store.list("proxy", owner).stream().filter(p -> eq(p, "url", raw)).findFirst().orElse(null);
+              if (saved == null) saved = store.create("proxy", owner, b.obj().put("name", "已确认更换代理")
+                  .put("url", raw).put("host", uri.getHost()).put("port", uri.getPort())
+                  .put("protocol", uri.getScheme().toUpperCase(Locale.ROOT)).put("endpoint", uri.getHost() + ":" + uri.getPort())
+                  .put("maskedUrl", uri.getScheme() + "://" + (uri.getUserInfo() == null ? "" : "***@") + uri.getHost() + ":" + uri.getPort())
+                  .put("supplierId", owner).put("createdBy", text(op, "createdBy")).put("enabled", true).put("maxResources", 0));
+              proxyId = text(saved, "id");
+            }
+            if (proxyId.isBlank()) continue;
+            ObjectNode proxy = b.get("proxy", proxyId, req);
+            if (!b.entityOwner("proxy", proxyId, req).equals(owner)) throw new ApiException(409, "代理归属已变化");
+            patch.put("proxyId", proxyId).put("proxyName", text(proxy, "name")).put("proxyEndpoint", text(proxy, "endpoint"));
+          }
+      }
+      if (!patch.isEmpty()) store.update("resource", rid, owner, patch);
+    }
   }
 
   private ObjectNode result(ObjectNode op, HttpServletRequest req) {
@@ -332,7 +419,15 @@ public class ResourceOperations {
     if (Set.of("REAUTHORIZATIONS", "CREDENTIAL-REFRESH").contains(text(op, "type")))
       out.put("id", text(op, "id"));
     if (eq(op, "type", "OAUTH_AUTHORIZE")) out.put("sessionId", text(op, "id"));
-    if (!text(op, "resourceId").isBlank()) out.put("resourceId", text(op, "resourceId"));
+    if (!text(op, "resourceId").isBlank()) {
+      out.put("resourceId", text(op, "resourceId"));
+      if (Set.of("SUBMIT", "OAUTH_COMPLETE", "DISPATCH").contains(text(op, "type"))) {
+        ObjectNode resource = b.resource(text(op, "resourceId"), req);
+        for (String field : List.of("dispatchState", "version", "creationFinished", "creationRetrying", "creationAttempts"))
+          if (resource.has(field)) out.set(field, resource.get(field));
+        out.put("id", text(op, "resourceId"));
+      }
+    }
     if (Set.of("REAUTHORIZATIONS", "CREDENTIAL-REFRESH").contains(text(op, "type")))
       out.put("reauthorizationAllowed", gateway.configured());
     ObjectNode safe = safe(out, req);
@@ -350,7 +445,6 @@ public class ResourceOperations {
         auth.platform(req)
             ? b.tenant(req, body.has("supplierId") ? body : input)
             : b.tenant(req, input);
-    gateway.requireConfigured(text(body, "targetId"));
     String key = text(body, "requestKey");
     store.jdbc.queryForObject(
         "select pg_advisory_xact_lock(hashtext(?),hashtext(?))", (r, n) -> true, owner, key);
@@ -360,6 +454,7 @@ public class ResourceOperations {
         throw new ApiException(409, "提交编号已用于不同资料", "IDEMPOTENCY_CONFLICT");
       return result(existing, req);
     }
+    gateway.requireCcmax(gateway.requireConfigured(text(body, "targetId")));
     required(input, "accountName", "credentialMode");
     String mode = text(input, "credentialMode");
     if (!Set.of("REFRESH_TOKEN", "ACCESS_TOKEN", "SESSION_KEY").contains(mode))
@@ -390,7 +485,8 @@ public class ResourceOperations {
     else writable(req);
     ObjectNode resource = b.resource(id, req);
     String owner = b.entityOwner("resource", id, req);
-    if (body.has("version") && body.path("version").asLong() != resource.path("version").asLong())
+    if (body.has("version") && body.path("version").asLong() != resource.path("version").asLong()
+        && text(body, "requestKey").isBlank() && text(body, "requestId").isBlank())
       throw new ApiException(409, "资源版本已变化");
     if (action.equals("oauth/supplier-retry")) {
       if (!Set.of("FAILED", "UNKNOWN", "NOT_SUBMITTED").contains(text(resource, "dispatchState")))
@@ -407,6 +503,10 @@ public class ResourceOperations {
     if (key.isBlank()) key = text(body, "requestId");
     if (key.isBlank()) key = id + ":" + action + ":" + resource.path("version").asLong();
     ObjectNode payload = body.deepCopy();
+    String preliminaryType = (action.equals("oauth/supplier-authorize") || action.equals("oauth/authorize"))
+        ? "OAUTH_AUTHORIZE" : (action.equals("oauth/supplier-submit") || action.equals("oauth/complete"))
+            ? "OAUTH_COMPLETE" : action.toUpperCase(Locale.ROOT);
+    ObjectNode previousOperation = findRequest(owner, key, preliminaryType, req);
     String remoteAction = action;
     if (action.startsWith("reauthorizations/")) {
       String localId = action.substring("reauthorizations/".length());
@@ -419,13 +519,13 @@ public class ResourceOperations {
       if (!eq(prior, "resourceId", id)) throw new ApiException(404, "授权会话不存在");
       payload.put("sessionId", text(prior, "upstreamId"));
     }
-    if (action.equals("submit")) {
+    if (action.equals("submit") || action.equals("dispatch")) {
       b.requireApprovedSupplier(req, owner);
-      payload.set("input", resourceInput(resource));
+      payload.set("input", previousOperation == null ? resourceInput(resource) : previousOperation.path("request").path("input"));
     }
     if (action.equals("usage")) auth.require(req, "resource.usage");
     if (action.equals("oauth/supplier-authorize") || action.equals("oauth/authorize"))
-      payload.set("input", resourceInput(resource));
+      payload.set("input", previousOperation == null ? resourceInput(resource) : previousOperation.path("request").path("input"));
     String type =
         (action.equals("oauth/supplier-authorize") || action.equals("oauth/authorize"))
             ? "OAUTH_AUTHORIZE"
@@ -440,20 +540,33 @@ public class ResourceOperations {
         "/resources/" + encode(id) + "/" + remoteAction,
         payload,
         key,
-        text(body, "targetId"),
+        actionTarget(resource, body),
         req);
+  }
+
+  private String actionTarget(ObjectNode resource, ObjectNode body) {
+    String bound = text(resource, "targetId"), requested = text(body, "targetId");
+    if (!bound.isBlank() && !requested.isBlank() && !bound.equals(requested))
+      throw new ApiException(409, "资源已关联其他上游目标", "RESOURCE_TARGET_CONFLICT");
+    return bound.isBlank() ? requested : bound;
   }
 
   @Transactional(noRollbackFor = ApiException.class)
   public ObjectNode authorize(ObjectNode input, HttpServletRequest req) {
     writable(req);
     String owner = b.tenant(req, input);
-    gateway.requireConfigured(text(input, "targetId"));
-    ObjectNode resource = newResource(input, owner, req);
     String key = text(input, "requestKey");
     if (key.isBlank()) key = UUID.randomUUID().toString();
     ObjectNode request = input.deepCopy();
     if (!request.has("credentialMode")) request.put("credentialMode", "OAUTH");
+    store.jdbc.queryForObject("select pg_advisory_xact_lock(hashtext(?),hashtext(?))", (r, n) -> true, owner, key);
+    ObjectNode previous = findRequest(owner, key, "OAUTH_AUTHORIZE", req);
+    if (previous != null) {
+      if (!eq(previous, "fingerprint", digest(request))) throw new ApiException(409, "提交编号已用于不同资料", "IDEMPOTENCY_CONFLICT");
+      return result(previous, req);
+    }
+    gateway.requireCcmax(gateway.requireConfigured(text(input, "targetId")));
+    ObjectNode resource = newResource(request, owner, req);
     return invoke(
         "OAUTH_AUTHORIZE",
         text(resource, "id"),
@@ -478,14 +591,19 @@ public class ResourceOperations {
               "/resources/oauth/supplier-session/" + encode(text(op, "upstreamId")),
               null,
               text(op, "requestKey"));
-      store.update("resource-operation", id, text(op, "supplierId"), b.obj().set("result", remote));
+      validateIdentity(text(op, "resourceId"), text(op, "supplierId"), remote);
+      ResourceResponseValidator.validate("OAUTH_SESSION", remote, op.path("request"));
+      store.update("resource-operation", id, text(op, "supplierId"),
+          b.obj().put("state", text(remote, "state")).put("status", text(remote, "state")).set("result", remote));
       applyResource(text(op, "resourceId"), text(op, "supplierId"), remote, "OAUTH_COMPLETE", req);
       return result(store.get("resource-operation", id, text(op, "supplierId")), req);
     }
     writable(req);
     ObjectNode payload = body.deepCopy().put("sessionId", text(op, "upstreamId"));
-    if (action.equals("complete"))
-      payload.set("input", resourceInput(b.resource(text(op, "resourceId"), req)));
+    if (action.equals("complete")) {
+      ObjectNode prior = findRequest(text(op, "supplierId"), id + ":" + action, "OAUTH_COMPLETE", req);
+      payload.set("input", prior == null ? resourceInput(b.resource(text(op, "resourceId"), req)) : prior.path("request").path("input"));
+    }
     String path =
         action.equals("cancel")
             ? "/resources/oauth/supplier-session/" + encode(text(op, "upstreamId")) + "/cancel"
@@ -514,19 +632,18 @@ public class ResourceOperations {
     String path = text(op, "upstreamPath");
     String remote = text(op, "upstreamId");
     if (remote.isBlank()) remote = text(op, "requestKey");
-    ObjectNode response =
-        gateway.request(
-            text(op, "targetId"),
-            "GET",
-            path + "/operations/" + encode(remote),
-            null,
-            text(op, "requestKey"));
-    ObjectNode patch =
-        b.obj()
-            .put("state", response.path("state").asText(response.path("status").asText("UNKNOWN")));
+    ObjectNode config = gateway.requireConfigured(text(op, "targetId"));
+    boolean newApiLifecycle = eq(config, "protocol", "NEWAPI") && eq(op, "type", "LIFECYCLE");
+    ObjectNode response = gateway.exchange(config, "GET",
+        newApiLifecycle ? "/resource-lifecycle-jobs/reconcile" : path + "/operations/" + encode(remote),
+        newApiLifecycle ? op.path("request") : null, text(op, "requestKey"));
+    validateIdentity(text(op, "resourceId"), text(op, "supplierId"), response);
+    String state = ResourceResponseValidator.validate(text(op, "type"), response, op.path("request"));
+    ObjectNode patch = b.obj().put("state", state).put("status", state);
     patch.set("result", response);
     ObjectNode updated = store.update("resource-operation", id, text(op, "supplierId"), patch);
     applyResource(text(op, "resourceId"), text(op, "supplierId"), response, text(op, "type"), req);
+    applyJob(updated, response, req);
     return result(updated, req);
   }
 
@@ -547,10 +664,26 @@ public class ResourceOperations {
     if (!body.path("items").isArray()
         || body.path("items").isEmpty()
         || body.path("items").size() > 100) throw new ApiException(400, "每批应包含1至100个资源");
+    String firstId = body.path("items").get(0).path("resourceId").asText();
+    b.resource(firstId, req);
+    String firstOwner = b.entityOwner("resource", firstId, req);
+    store.jdbc.queryForObject("select pg_advisory_xact_lock(hashtext(?),hashtext(?))", (r, n) -> true, firstOwner, text(body, "requestKey"));
+    ObjectNode previous = findRequest(firstOwner, text(body, "requestKey"), type, req);
+    if (previous != null) {
+      if (!eq(previous, "fingerprint", digest(body))) throw new ApiException(409, "提交编号已用于不同资料", "IDEMPOTENCY_CONFLICT");
+      return jobDetail(text(previous, "id"), req);
+    }
+    String selectedTarget = actionTarget(b.resource(firstId, req), body);
     String owner = null;
+    Set<String> ids = new HashSet<>();
     for (JsonNode item : body.path("items")) {
       String rid = text(item, "resourceId");
+      if (!ids.add(rid)) throw new ApiException(400, "资源不能重复");
       ObjectNode resource = b.resource(rid, req);
+      String itemTarget = actionTarget(resource, body);
+      if (!itemTarget.isBlank() && !selectedTarget.isBlank() && !itemTarget.equals(selectedTarget))
+        throw new ApiException(409, "一批操作仅支持同一上游目标");
+      if (selectedTarget.isBlank()) selectedTarget = itemTarget;
       String next = b.entityOwner("resource", rid, req);
       if (owner == null) owner = next;
       else if (!owner.equals(next)) throw new ApiException(400, "一批操作仅支持同一供应商");
@@ -565,17 +698,12 @@ public class ResourceOperations {
       if (type.equals("PROXY_REPLACEMENT") && item.hasNonNull("proxyUrl")) {
         auth.require(req, "proxy.read");
         auth.require(req, "proxy.write");
-        try {
-          java.net.URI proxy = java.net.URI.create(text(item, "proxyUrl"));
-          if (!Set.of("http", "https", "socks5").contains(proxy.getScheme())
-              || proxy.getHost() == null
-              || proxy.getPort() < 1) throw new IllegalArgumentException();
-        } catch (Exception e) {
-          throw new ApiException(400, "代理URL无效");
-        }
+        ProxyProbeService.parseProxy(text(item, "proxyUrl"));
       }
       if (item.hasNonNull("proxyId")) {
-        b.get("proxy", text(item, "proxyId"), req);
+        ObjectNode proxy = b.get("proxy", text(item, "proxyId"), req);
+        if (item.has("proxyVersion") && item.path("proxyVersion").asLong() != proxy.path("version").asLong())
+          throw new ApiException(409, "代理版本已变化");
         if (!b.entityOwner("proxy", text(item, "proxyId"), req).equals(next))
           throw new ApiException(409, "代理与资源不属于同一供应商");
       }
@@ -591,7 +719,7 @@ public class ResourceOperations {
             path,
             body,
             text(body, "requestKey"),
-            text(body, "targetId"),
+            selectedTarget,
             req);
     String id = text(response, "operationId");
     ObjectNode op = getOperation(id, req);
@@ -634,6 +762,22 @@ public class ResourceOperations {
     return b.obj()
         .put("deleted", saved.path("deleted").asBoolean())
         .set("resource", safe(saved, req));
+  }
+
+  @Transactional(noRollbackFor = ApiException.class)
+  public ObjectNode bindNewApi(String id, ObjectNode body, HttpServletRequest req) {
+    if (!auth.admin(req)) throw new ApiException(403, "仅最高管理员可关联外部渠道");
+    auth.require(req, "resource.dispatch");
+    ObjectNode resource = b.resource(id, req);
+    required(body, "targetId", "channelId", "version");
+    if (body.path("version").asLong() != resource.path("version").asLong()) throw new ApiException(409, "资源版本已变化");
+    String targetId = actionTarget(resource, body);
+    ObjectNode config = gateway.requireConfigured(targetId);
+    if (!eq(config, "protocol", "NEWAPI")) throw new ApiException(400, "请选择NEWAPI协议目标");
+    ObjectNode verified = gateway.exchange(config, "GET", "/resources/" + encode(id) + "/channel-bind", body, null);
+    ObjectNode patch = b.pick(verified, "laneId", "upstreamChannelId", "operationalState").put("targetId", targetId);
+    patch.put("version", resource.path("version").asLong());
+    return safe(store.update("resource", id, b.entityOwner("resource", id, req), patch), req);
   }
 
   @Transactional(noRollbackFor = ApiException.class)

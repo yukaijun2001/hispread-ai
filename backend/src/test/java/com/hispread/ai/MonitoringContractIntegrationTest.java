@@ -10,6 +10,7 @@ import com.sun.net.httpserver.HttpServer;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -32,6 +33,7 @@ class MonitoringContractIntegrationTest {
   @Autowired AuthService a;
   @Autowired MockMvc mvc;
   @Autowired ObjectMapper json;
+  @Autowired MonitoringService monitoring;
 
   @Test
   void configuredMonitoringActuallyFetchesNestedFieldsWithoutReturningToken() throws Exception {
@@ -75,6 +77,10 @@ class MonitoringContractIntegrationTest {
               "GLOBAL",
               s.object()
                   .put("name", "Fixture monitoring")
+                  .put("category", "ANTHROPIC")
+                  .put("enabled", true)
+                  .put("includeInTotal", true)
+                  .put("supplierVisible", true)
                   .put("endpoint", "http://127.0.0.1:" + server.getAddress().getPort() + "/metrics")
                   .put("authType", "NONE")
                   .put("rpmPath", "data.rpm")
@@ -100,6 +106,104 @@ class MonitoringContractIntegrationTest {
       assertFalse(result.has("token"));
       assertEquals(
           "321", s.get("monitoring-source", source.path("id").asText(), null).path("rpm").asText());
+      JsonNode displayed =
+          json.readTree(
+              mvc.perform(get("/api/workbench/monitoring").session(session))
+                  .andExpect(status().isOk())
+                  .andReturn()
+                  .getResponse()
+                  .getContentAsString());
+      JsonNode row = null;
+      for (JsonNode entry : displayed)
+        if (entry.path("category").asText().equals("ANTHROPIC")) row = entry;
+      assertNotNull(row);
+      assertEquals("321", row.path("rpm").asText());
+      assertEquals("4500", row.path("tpm").asText());
+      assertFalse(row.has("token"));
+    } finally {
+      server.stop(0);
+    }
+  }
+
+  @Test
+  void aggregationUsesMaximumAndHonorsSupplierVisibilityAndEnabledState() {
+    String category = "metric-" + UUID.randomUUID();
+    for (ObjectNode source :
+        List.of(
+            source(category, "100", "200", true, true),
+            source(category, "400", "150", true, true),
+            source(category, "900", "900", false, true),
+            source(category, "999", "999", true, false)))
+      s.create("monitoring-source", "GLOBAL", source);
+    ObjectNode platform =
+        monitoring.snapshots(false).stream()
+            .filter(x -> x.path("category").asText().equals(category))
+            .findFirst()
+            .orElseThrow();
+    ObjectNode supplier =
+        monitoring.snapshots(true).stream()
+            .filter(x -> x.path("category").asText().equals(category))
+            .findFirst()
+            .orElseThrow();
+    assertEquals("900", platform.path("rpm").asText());
+    assertEquals("400", supplier.path("rpm").asText());
+    assertEquals("200", supplier.path("tpm").asText());
+    assertFalse(supplier.toString().contains("secret"));
+  }
+
+  private ObjectNode source(
+      String category, String rpm, String tpm, boolean visible, boolean enabled) {
+    return s.object()
+        .put("category", category)
+        .put("rpm", rpm)
+        .put("tpm", tpm)
+        .put("supplierVisible", visible)
+        .put("enabled", enabled)
+        .put("includeInTotal", true)
+        .put("token", "secret")
+        .put("state", "READY")
+        .put("intervalSeconds", 60)
+        .put("queriedAt", java.time.Instant.now().toString());
+  }
+
+  @Test
+  void invalidMetricRecordsFailureAndPreservesLastGoodSnapshot() throws Exception {
+    AtomicReference<String> response = new AtomicReference<>("{\"rpm\":123}");
+    HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+    server.createContext(
+        "/metrics",
+        e -> {
+          byte[] bytes = response.get().getBytes(StandardCharsets.UTF_8);
+          e.sendResponseHeaders(200, bytes.length);
+          e.getResponseBody().write(bytes);
+          e.close();
+        });
+    server.start();
+    try {
+      String category = "metric-" + UUID.randomUUID();
+      ObjectNode source =
+          s.create(
+              "monitoring-source",
+              "GLOBAL",
+              source(category, "0", "0", true, true)
+                  .put("endpoint", "http://127.0.0.1:" + server.getAddress().getPort() + "/metrics")
+                  .put("rpmPath", "rpm")
+                  .put("authType", "NONE"));
+      String id = source.path("id").asText();
+      monitoring.refresh(id);
+      response.set("{\"rpm\":-1}");
+      ApiException failure = assertThrows(ApiException.class, () -> monitoring.refresh(id));
+      assertEquals(502, failure.status);
+      ObjectNode saved = s.get("monitoring-source", id, null);
+      assertEquals("ERROR", saved.path("state").asText());
+      assertEquals("123", saved.path("rpm").asText());
+      ObjectNode displayed =
+          monitoring.snapshots(true).stream()
+              .filter(x -> x.path("category").asText().equals(category))
+              .findFirst()
+              .orElseThrow();
+      assertTrue(displayed.path("stale").asBoolean());
+      assertEquals("123", displayed.path("rpm").asText());
     } finally {
       server.stop(0);
     }

@@ -13,6 +13,10 @@ server:
         same-site: lax
         secure: ${COOKIE_SECURE:false}
 spring:
+  task:
+    scheduling:
+      pool:
+        size: 4
   lifecycle:
     timeout-per-shutdown-phase: 30s
   datasource:
@@ -50,6 +54,12 @@ app:
     allow-private-targets: ${INTEGRATION_ALLOW_PRIVATE_TARGETS:false}
     connect-timeout-ms: ${INTEGRATION_CONNECT_TIMEOUT_MS:5000}
     request-timeout-ms: ${INTEGRATION_REQUEST_TIMEOUT_MS:15000}
+    proxy-probe-url: ${INTEGRATION_PROXY_PROBE_URL:https://api.ipify.org?format=json}
+    proxy-probe-timeout-ms: ${INTEGRATION_PROXY_PROBE_TIMEOUT_MS:10000}
+  payments:
+    sandbox-enabled: ${PAYMENT_SANDBOX_ENABLED:false}
+  monitoring:
+    scheduling-enabled: ${MONITORING_SCHEDULING_ENABLED:true}
   operator-username: ${OPERATOR_USERNAME:}
   operator-password: ${OPERATOR_PASSWORD:}
   finance-username: ${FINANCE_USERNAME:}

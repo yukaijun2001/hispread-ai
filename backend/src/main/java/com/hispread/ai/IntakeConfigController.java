@@ -16,12 +16,15 @@ public class IntakeConfigController {
   private final AuthService a;
   private final BusinessSupport b;
   private final AccessPolicy access;
+  private final SystemJobService jobs;
 
-  public IntakeConfigController(Store s, AuthService a, BusinessSupport b, AccessPolicy access) {
+  public IntakeConfigController(
+      Store s, AuthService a, BusinessSupport b, AccessPolicy access, SystemJobService jobs) {
     this.s = s;
     this.a = a;
     this.b = b;
     this.access = access;
+    this.jobs = jobs;
   }
 
   private void guard(HttpServletRequest r, String permission) {
@@ -168,6 +171,7 @@ public class IntakeConfigController {
   public Object rotation(@PathVariable String key, HttpServletRequest r) {
     guard(r, "system.settings");
     ObjectNode task = s.get("scheduled-task", key, null);
+    if (!eq(task, "type", "CCMAX_PRIORITY_ROTATION")) throw new ApiException(400, "此任务不支持扶持配置");
     ObjectNode d = get("rotation-settings", key, s.object());
     ObjectNode out =
         d.deepCopy()
@@ -188,7 +192,23 @@ public class IntakeConfigController {
     out.set(
         "rounds",
         s.json.valueToTree(
-            s.list("priority-round", null).stream().filter(x -> eq(x, "taskKey", key)).toList()));
+            s.list("priority-round", null).stream()
+                .filter(x -> eq(x, "taskKey", key))
+                .sorted(Comparator.comparing((ObjectNode x) -> text(x, "createdAt")).reversed())
+                .limit(10)
+                .map(
+                    x -> {
+                      ObjectNode row = x.deepCopy();
+                      row.remove("items");
+                      return row;
+                    })
+                .toList()));
+    out.put(
+        "restoreFailedCount",
+        s.list("priority-round", null).stream()
+            .filter(x -> eq(x, "taskKey", key) && eq(x, "state", "RESTORE_FAILED"))
+            .count());
+    out.put("ready", jobs.describe(task).path("ready").asBoolean());
     ArrayNode selected = out.putArray("suppliers");
     for (var supplierId : out.path("settings").path("supplierIds"))
       try {
@@ -242,21 +262,14 @@ public class IntakeConfigController {
   @PostMapping("/system/scheduled-tasks/{key}/rotation-settings/retry-restore")
   public Object retry(@PathVariable String key, HttpServletRequest r) {
     guard(r, "system.settings");
-    throw b.external();
+    return jobs.retryRestore(key);
   }
 
   private void validateRotation(ObjectNode body) {
     var settings = body.path("settings");
-    if (!Set.of("ROTATION", "SUPPLIER_IDLE").contains(settings.path("mode").asText())
-        || !Set.of("SELECTED", "TIERS", "ALL").contains(settings.path("scope").asText()))
-      throw new ApiException(400, "无效扶持范围或类型");
-    if (settings.path("basisPoints").asInt() < 1
-        || settings.path("basisPoints").asInt() > 10000
-        || settings.path("priority").asInt(-1) < 0
-        || settings.path("priority").asInt() > 1000
-        || settings.path("maxAccounts").asInt() < 1
-        || settings.path("maxAccounts").asInt() > 50000)
-      throw new ApiException(400, "扶持比例、优先级或账号数量超出范围");
+    BackgroundResourceJobService.validateSettings(settings);
+    if (text(body, "name").isBlank() || text(body, "name").length() > 160)
+      throw new ApiException(400, "任务名称须为1至160字");
     if (body.path("intervalMinutes").asInt() < 1 || body.path("intervalMinutes").asInt() > 1440)
       throw new ApiException(400, "周期须为1–1440分钟");
     for (var id : settings.path("supplierIds")) s.get("supplier", id.asText(), null);

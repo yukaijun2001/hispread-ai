@@ -152,6 +152,8 @@ public class PaymentExecutionService {
         adapter = gateway.requireAdapter(config),
         account = account(payment);
     ObjectNode request = payload(payment, account, code);
+    request.put("protocol", text(adapter, "protocol"));
+    gateway.validatePayment(adapter, request);
     ObjectNode upstream =
         gateway.exchange(adapter, id, "preview", request, text(payment, "requestKey"));
     if (!upstream.path("executable").asBoolean(false))
@@ -173,7 +175,9 @@ public class PaymentExecutionService {
             .put("transferMethod", account.path("transferMethod").asText("LOCAL"))
             .put("transferType", account.path("transferType").asText())
             .put("network", account.path("network").asText())
-            .put("protocol", "HISPREAD_PAYOUT_V1");
+            .put("protocol", text(adapter, "protocol"));
+    for (String field : List.of("feeVerification", "feeEstimateOnly", "providerFinality", "lateReturnMonitoringRequired"))
+      if (upstream.has(field)) out.set(field, upstream.get(field));
     if (upstream.hasNonNull("availableBalance"))
       out.put("availableBalance", upstream.path("availableBalance").asText());
     return out;
@@ -198,6 +202,20 @@ public class PaymentExecutionService {
               String code = text(body, "provider");
               ObjectNode adapter = gateway.requireAdapter(provider(code));
               ObjectNode request = payload(payment, account(payment), code);
+              request.put("protocol", text(adapter, "protocol"));
+              gateway.validatePayment(adapter, request);
+              ObjectNode context = gateway.executionContext(adapter, request);
+              if (gateway.nativeProtocol(adapter)) request.set("executionContext", context);
+              if (gateway.nativeProtocol(adapter) && !text(adapter, "dailyLimit").isBlank()) {
+                lock("provider-daily:" + code);
+                BigDecimal used = s.list("payout-call", null).stream()
+                    .filter(call -> eq(call, "providerCode", code)
+                        && !eq(call, "state", "FAILED")
+                        && text(call, "createdAt").startsWith(java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString()))
+                    .map(call -> amount(call, "amount")).reduce(BigDecimal.ZERO, BigDecimal::add);
+                if (used.add(amount(payment, "payoutAmount")).compareTo(new BigDecimal(text(adapter, "dailyLimit"))) > 0)
+                  throw new ApiException(409, "超过通道当日累计付款限额");
+              }
               ObjectNode operation =
                   s.object()
                       .put("id", id)
@@ -205,8 +223,9 @@ public class PaymentExecutionService {
                       .put("supplierId", text(payment, "supplierId"))
                       .put("supplierName", text(payment, "supplierName"))
                       .put("providerCode", code)
-                      .put("protocol", "HISPREAD_PAYOUT_V1")
+                      .put("protocol", text(adapter, "protocol"))
                       .put("adapterBaseUrl", text(adapter, "baseUrl"))
+                      .put("adapterBinding", gateway.binding(adapter))
                       .put("requestKey", text(payment, "requestKey"))
                       .put("requestFingerprint", digest(request))
                       .put("amount", text(payment, "payoutAmount"))
@@ -215,6 +234,7 @@ public class PaymentExecutionService {
                       .put("paidApplied", false)
                       .put("reservationReleased", false)
                       .put("executionActor", auth.userId(req));
+              if (gateway.nativeProtocol(adapter)) operation.set("executionContext", context);
               s.create("payout-call", text(payment, "supplierId"), operation);
               s.update(
                   "payment",
@@ -224,7 +244,7 @@ public class PaymentExecutionService {
                       .put("version", payment.path("version").asLong())
                       .put("state", "PROCESSING")
                       .put("provider", code)
-                      .put("executionProtocol", "HISPREAD_PAYOUT_V1")
+                      .put("executionProtocol", text(adapter, "protocol"))
                       .put("executionStartedAt", Instant.now().toString())
                       .put("statusUpdatedAt", Instant.now().toString()));
               return new Intent(operation, adapter, request, true);
@@ -244,20 +264,29 @@ public class PaymentExecutionService {
     permitted(req, "payout.reconcile");
     ObjectNode payment = access.get("payment", id, req), operation = existing(id);
     if (operation == null) throw new ApiException(409, "没有可查询的原支付执行操作");
-    if (Set.of("SUCCEEDED", "FAILED").contains(text(operation, "state")))
+    boolean provisionalSuccess = eq(operation, "protocol", "NATIVE_AIRWALLEX")
+        && eq(operation, "state", "SUCCEEDED");
+    if (Set.of("SUCCEEDED", "FAILED").contains(text(operation, "state")) && !provisionalSuccess)
       return publicPayment(payment, req);
     version(payment, body);
-    if (!Set.of("PROCESSING", "UNKNOWN").contains(text(payment, "state")))
+    if (!Set.of("PROCESSING", "UNKNOWN").contains(text(payment, "state")) && !provisionalSuccess)
       throw new ApiException(409, "原支付操作状态不可查询");
     ObjectNode adapter = gateway.requireAdapter(provider(text(operation, "providerCode")));
     if (!eq(adapter, "baseUrl", text(operation, "adapterBaseUrl")))
       throw new ApiException(409, "支付中台地址已变化，请恢复原操作目标后查询");
+    if (!text(operation, "protocol").equals(text(adapter, "protocol"))
+        || operation.hasNonNull("adapterBinding")
+            && !text(operation, "adapterBinding").equals(gateway.binding(adapter)))
+      throw new ApiException(409, "原支付协议或付款方身份已变化，请恢复原操作配置后查询");
     ObjectNode request =
         s.object()
-            .put("protocol", "HISPREAD_PAYOUT_V1")
+            .put("protocol", text(operation, "protocol"))
             .put("localPaymentId", id)
             .put("requestKey", text(operation, "requestKey"))
-            .put("operationId", text(operation, "operationId"));
+            .put("operationId", text(operation, "operationId"))
+            .put("amount", text(operation, "amount"))
+            .put("currency", text(operation, "currency"));
+    if (operation.has("executionContext")) request.set("executionContext", operation.get("executionContext"));
     try {
       return apply(
           id,
@@ -265,7 +294,8 @@ public class PaymentExecutionService {
           null,
           req);
     } catch (ApiException e) {
-      return apply(id, null, e.code == null ? "PAYMENT_ADAPTER_UNKNOWN" : e.code, req);
+      return apply(id, null, e.code == null || "PAYMENT_ADAPTER_REJECTED".equals(e.code)
+          ? "PAYMENT_ADAPTER_UNKNOWN" : e.code, req);
     }
   }
 
@@ -289,7 +319,8 @@ public class PaymentExecutionService {
           lock("payment-state:" + id);
           ObjectNode operation = s.get("payout-call", id, null),
               payment = access.get("payment", id, req);
-          if (Set.of("SUCCEEDED", "FAILED").contains(text(operation, "state")))
+          boolean provisional = eq(operation, "protocol", "NATIVE_AIRWALLEX") && eq(operation, "state", "SUCCEEDED");
+          if (Set.of("SUCCEEDED", "FAILED").contains(text(operation, "state")) && !provisional)
             return publicPayment(payment, req);
           String state = "PAYMENT_ADAPTER_REJECTED".equals(error) ? "FAILED" : "UNKNOWN";
           if (response != null) {
@@ -310,6 +341,9 @@ public class PaymentExecutionService {
               error = e.code;
             }
           }
+          // A failed query never downgrades a recorded Airwallex PAID result. Only an
+          // identity-checked provider FAILED/CANCELLED result can reverse its ledger entry.
+          if (provisional && !Set.of("SUCCEEDED", "FAILED").contains(state)) state = "SUCCEEDED";
           ObjectNode opPatch =
               s.object()
                   .put("version", operation.path("version").asLong())
@@ -320,8 +354,10 @@ public class PaymentExecutionService {
                   .put("version", payment.path("version").asLong())
                   .put("state", state)
                   .put("statusUpdatedAt", Instant.now().toString())
-                  .put("verificationMode", "EXTERNAL_BRIDGE");
+                  .put("verificationMode", text(operation, "protocol").startsWith("NATIVE_") ? "NATIVE_PROVIDER" : "EXTERNAL_BRIDGE");
           if (response != null && error == null) {
+            for (String field : List.of("providerState", "providerFinality", "lateReturnMonitoringRequired", "providerFeeAmount", "providerFeeCurrency", "providerFeeVariance"))
+              if (response.has(field)) { opPatch.set(field, response.get(field)); payPatch.set(field, response.get(field)); }
             if (!text(response, "operationId").isBlank()) {
               opPatch.put("operationId", text(response, "operationId"));
               payPatch.put("operationId", text(response, "operationId"));
@@ -334,6 +370,9 @@ public class PaymentExecutionService {
           if (error != null) {
             opPatch.put("lastErrorCode", error);
             payPatch.put("lastExecutionError", "支付中台结果尚未核实，请查询原操作");
+          } else {
+            opPatch.putNull("lastErrorCode");
+            payPatch.putNull("lastExecutionError");
           }
           if (state.equals("SUCCEEDED") && !operation.path("paidApplied").asBoolean()) {
             lock("payment:" + text(payment, "settlementId"));
@@ -354,18 +393,32 @@ public class PaymentExecutionService {
           if (state.equals("FAILED") && !operation.path("reservationReleased").asBoolean()) {
             lock("payment:" + text(payment, "settlementId"));
             ObjectNode settlement = access.get("settlement", text(payment, "settlementId"), req);
+            ObjectNode settlementPatch =
+                s.object()
+                    .put("version", settlement.path("version").asLong())
+                    .put("reservedAmount", amount(settlement, "reservedAmount")
+                        .subtract(amount(payment, "obligationAmount")).max(BigDecimal.ZERO).toPlainString());
+            if (provisional && operation.path("paidApplied").asBoolean() && !operation.path("paidReversed").asBoolean()) {
+              BigDecimal reversed = amount(settlement, "paidAmount").subtract(amount(payment, "obligationAmount"));
+              if (reversed.signum() < 0) throw new ApiException(409, "退回付款与当前已付账目不符，需要财务核对");
+              settlementPatch.put("paidAmount", reversed.toPlainString());
+              opPatch.put("paidReversed", true).put("returnedAt", Instant.now().toString());
+              payPatch.put("lateReturn", true).put("returnedAt", Instant.now().toString())
+                  .put("receiptState", "DISPUTED").put("receiptNote", "官方通道确认晚退回，请财务核对");
+              String settlementId = text(payment, "settlementId");
+              BigDecimal received = s.list("payment", text(payment, "supplierId")).stream()
+                  .filter(row -> !eq(row, "id", id) && eq(row, "settlementId", settlementId)
+                      && eq(row, "state", "SUCCEEDED") && eq(row, "receiptState", "CONFIRMED"))
+                  .map(row -> amount(row, "obligationAmount")).reduce(BigDecimal.ZERO, BigDecimal::add);
+              settlementPatch.put("receivedAmount", received.toPlainString())
+                  .put("paymentProgress", received.signum() == 0 ? "UNPAID"
+                      : received.compareTo(amount(settlement, "total")) >= 0 ? "PAID" : "PARTIAL");
+            }
             s.update(
                 "settlement",
                 text(settlement, "id"),
                 text(payment, "supplierId"),
-                s.object()
-                    .put("version", settlement.path("version").asLong())
-                    .put(
-                        "reservedAmount",
-                        amount(settlement, "reservedAmount")
-                            .subtract(amount(payment, "obligationAmount"))
-                            .max(BigDecimal.ZERO)
-                            .toPlainString()));
+                settlementPatch);
             opPatch.put("reservationReleased", true);
           }
           s.update("payout-call", id, text(payment, "supplierId"), opPatch);
