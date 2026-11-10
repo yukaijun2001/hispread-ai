@@ -227,7 +227,13 @@ function Ie(e, t) {
 }
 
 function Le(e) {
-  return !e.readOnly && e.resourceType === `CCMAX` && e.state === `DELIVERED` && e.dispatchState === `SUCCESS` && !!e.laneId && ![`GONE`, `DRAINING`].includes(e.laneState || ``)
+  if (e.readOnly) return false;
+  if (isNewApi(e)) return !!e.upstreamChannelId && ![`GONE`, `DRAINING`].includes(e.operationalState || ``);
+  return e.resourceType === `CCMAX` && e.state === `DELIVERED` && e.dispatchState === `SUCCESS` && !!e.laneId && ![`GONE`, `DRAINING`].includes(e.laneState || ``)
+}
+
+function pausedResource(e) {
+  return F(e) || e.operationalState === `PAUSED` || e.laneState === `PAUSED`
 }
 var Re = (0, R.lazy)(() => x(() => import(`./ResourceLifecycleDialog-C3CIVivi.js`), __vite__mapDeps([0, 1, 2])));
 
@@ -274,9 +280,9 @@ function ze(e, t, n, i) {
         className: `resource-action-link`,
         disabled: _,
         onClick: t => {
-          t.stopPropagation(), S(F(e) ? `RESUME` : `PAUSE`, [e])
+          t.stopPropagation(), S(pausedResource(e) ? `RESUME` : `PAUSE`, [e])
         },
-        children: F(e) ? T(`恢复`) : T(`停用`)
+        children: pausedResource(e) ? T(`恢复`) : T(`停用`)
       }), u && (0, z.jsx)(`button`, {
         type: `button`,
         className: `resource-action-link`,
@@ -292,7 +298,7 @@ function ze(e, t, n, i) {
     toolbar: e => {
       if (!s) return null;
       let t = e.filter(Le),
-        n = t.filter(F).length,
+        n = t.filter(pausedResource).length,
         r = n > 0 && n < t.length,
         i = t.length > 0 && n === t.length;
       return (0, z.jsxs)(z.Fragment, {
@@ -2760,6 +2766,7 @@ function St({
             children: T(`批量调整优先级`)
           }), H && (0, z.jsxs)(A, {
             disabled: !S.size || [...S.values()].some(isNewApi),
+            title: [...S.values()].some(isNewApi) ? T(`New API 渠道不支持替换代理`) : void 0,
             onClick: () => D([...S.values()]),
             children: [T(`批量替换代理`), S.size ? T(`（{0}）`, [S.size]) : ``]
           }), (0, z.jsx)(A, {

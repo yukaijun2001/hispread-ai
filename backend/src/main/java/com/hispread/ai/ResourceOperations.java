@@ -115,10 +115,10 @@ public class ResourceOperations {
       if (eq(op, "type", type))
         try {
           getOperation(text(op, "id"), req);
-          ObjectNode row = eq(op, "type", "PRIORITY") && eq(op, "protocol", "NEWAPI") ? newApiPriority.view(op) : safe(op, req);
-          row.remove(
-              List.of(
-                  "request", "result", "fingerprint", "targetId", "upstreamPath", "upstreamId"));
+          ObjectNode row =
+              eq(op, "type", "PRIORITY") && eq(op, "protocol", "NEWAPI")
+                  ? newApiPriority.view(op)
+                  : publishOperation(op, req);
           out.add(row);
         } catch (ApiException denied) {
         }
@@ -726,29 +726,50 @@ public class ResourceOperations {
             req);
     String id = text(response, "operationId");
     ObjectNode op = getOperation(id, req);
-    ObjectNode publicOp = safe(op, req);
-    publicOp.set(
-        "items",
-        op.path("result").path("items").isArray()
-            ? op.path("result").path("items")
-            : op.path("items"));
-    publicOp.put("id", id);
-    publicOp.remove(
-        List.of("request", "result", "fingerprint", "upstreamPath", "targetId", "upstreamId"));
-    return safe(publicOp, req);
+    return publishOperation(op, req);
   }
 
   public ObjectNode jobDetail(String id, HttpServletRequest req) {
-    ObjectNode op = getOperation(id, req), out = safe(op, req);
+    ObjectNode op = getOperation(id, req);
     if (eq(op, "type", "PRIORITY") && eq(op, "protocol", "NEWAPI")) return newApiPriority.view(op);
-    out.remove(List.of("request", "fingerprint", "upstreamPath", "targetId", "upstreamId"));
-    if (op.path("result").isObject()) {
-      JsonNode result = op.path("result");
-      for (String field :
-          List.of(
-              "state", "items", "completedCount", "failedCount", "successCount", "unknownCount"))
-        if (result.has(field)) out.set(field, result.path(field));
+    return publishOperation(op, req);
+  }
+
+  private ObjectNode publishOperation(ObjectNode op, HttpServletRequest req) {
+    ObjectNode out = safe(op, req);
+    String action = text(op.path("request"), "action");
+    if (!action.isBlank()) out.put("action", action);
+    JsonNode source =
+        op.path("result").path("items").isArray() ? op.path("result").path("items") : op.path("items");
+    if (source.isArray()) {
+      ArrayNode items = store.json.createArrayNode();
+      for (JsonNode item : source) {
+        ObjectNode row = item.isObject() ? ((ObjectNode) item).deepCopy() : store.object();
+        if (text(row, "resourceName").isBlank() && !text(row, "resourceId").isBlank()) {
+          try {
+            ObjectNode resource = store.get("resource", text(row, "resourceId"), null);
+            row.put("resourceName", text(resource, "name"));
+            if (text(row, "targetName").isBlank() && !text(resource, "targetId").isBlank()) {
+              try {
+                row.put(
+                    "targetName",
+                    text(store.get("resource-target", text(resource, "targetId"), "GLOBAL"), "name"));
+              } catch (ApiException ignored) {
+              }
+            }
+          } catch (ApiException ignored) {
+          }
+        }
+        items.add(row);
+      }
+      out.set("items", items);
     }
+    if (op.path("result").isObject()) {
+      for (String field :
+          List.of("state", "completedCount", "failedCount", "successCount", "unknownCount"))
+        if (op.path("result").has(field)) out.set(field, op.path("result").path(field));
+    }
+    out.remove(List.of("request", "result", "fingerprint", "upstreamPath", "targetId", "upstreamId"));
     return safe(out, req);
   }
 
@@ -788,7 +809,15 @@ public class ResourceOperations {
     ObjectNode verified = gateway.exchange(config, "GET", "/resources/" + encode(id) + "/channel-bind", body, null);
     ObjectNode patch = b.pick(verified, "laneId", "upstreamChannelId", "operationalState", "upstreamProtocol", "upstreamPriority").put("targetId", targetId);
     patch.put("version", resource.path("version").asLong());
-    return safe(store.update("resource", id, b.entityOwner("resource", id, req), patch), req);
+    ObjectNode saved = store.update("resource", id, b.entityOwner("resource", id, req), patch);
+    if (!text(saved, "supplierId").isBlank()) {
+      try {
+        ObjectNode supplier = store.get("supplier", text(saved, "supplierId"), null);
+        saved.put("supplierName", text(supplier, "name")).put("supplierCode", text(supplier, "code"));
+      } catch (ApiException ignored) {
+      }
+    }
+    return safe(saved, req);
   }
 
   @Transactional(noRollbackFor = ApiException.class)

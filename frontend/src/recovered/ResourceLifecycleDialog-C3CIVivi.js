@@ -29,7 +29,11 @@ var h = m(i(), 1),
     GONE: u(`已移除`),
     FAILED: u(`失败`)
   },
-  y = e => u(e === `PAUSE` ? `停用` : e === `RESUME` ? `恢复` : `移除`);
+  y = (e, t) => {
+    let n = e || (t || []).map(e => e.state).find(Boolean);
+    return u(n === `PAUSE` || n === `PAUSED` ? `停用` : n === `RESUME` || n === `RESUMED` ? `恢复` : n === `REMOVE` || n === `GONE` || n === `DRAINING` ? `移除` : `操作`)
+  },
+  actionText = e => e === `RUNNING` ? u(`处理中`) : e === `NEEDS_REVIEW` || e === `UNKNOWN` ? u(`需要人工核对`) : e === `FAILED` ? u(`失败`) : e === `PARTIAL` || e === `PARTIAL_FAILED` ? u(`部分失败`) : e === `COMPLETED` ? u(`已完成`) : u(`处理结束`);
 
 function b(e) {
   return e.state.mode === `progress` ? (0, g.jsx)(x, {
@@ -73,9 +77,9 @@ function x({
       })]
     }) : w.loading ? (0, g.jsx)(l, {}) : w.data ? (0, g.jsxs)(g.Fragment, {
       children: [(0, g.jsxs)(`p`, {
-        children: [y(w.data.action), ` · `, u(`共 {0} 个资源`, [w.data.total]), ` ·`, ` `, w.data.state === `RUNNING` ? u(`处理中`) : w.data.state === `NEEDS_REVIEW` ? u(`需要人工核对`) : u(`处理结束`)]
+        children: [y(w.data.action, w.data.items), ` · `, u(`共 {0} 个资源`, [w.data.total]), ` · `, actionText(w.data.state)]
       }), (0, g.jsx)(c, {
-        children: u(`已受理移除后继续核对至已移除；结果不明时只查询状态，不自动重复提交。关闭窗口后可从操作记录继续查看。`)
+        children: u(w.data.action === `PAUSE` ? `已受理停用。结果不明时只查询状态，不自动重复提交。` : w.data.action === `RESUME` ? `已受理恢复。结果不明时只查询状态，不自动重复提交。` : `已受理移除后继续核对至已移除；结果不明时只查询状态，不自动重复提交。关闭窗口后可从操作记录继续查看。`)
       }), (0, g.jsx)(o, {
         data: w.data.items.map(e => ({
           ...e,
@@ -139,13 +143,13 @@ function S({
         data: b.data.items,
         columns: [{
           label: u(`操作`),
-          render: e => y(e.action)
+          render: e => y(e.action, e.items)
         }, {
           label: u(`资源数量`),
           render: e => e.total
         }, {
           label: u(`状态`),
-          render: e => e.state === `RUNNING` ? u(`处理中`) : e.state === `NEEDS_REVIEW` ? u(`需要人工核对`) : u(`处理结束`)
+          render: e => actionText(e.state)
         }, {
           label: u(`创建时间`),
           render: e => t(e.createdAt)

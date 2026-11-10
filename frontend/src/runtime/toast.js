@@ -38,7 +38,7 @@ export function Toast({ message, error, children }) {
     role: 'status',
     className: `toast ${error ? 'toast-error' : ''}`,
     popover: supportsPopover ? 'manual' : undefined,
-    style: { margin: 0, inset: 'auto auto 25px 50%', width: 'max-content', overflow: 'visible' },
+    style: { margin: 0, inset: 'auto auto 25px 50%', width: 'max-content', overflow: 'visible', pointerEvents: 'none' },
     children,
   }), host);
 }
