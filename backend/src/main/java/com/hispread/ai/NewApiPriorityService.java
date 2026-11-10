@@ -88,6 +88,8 @@ public class NewApiPriorityService {
     ArrayNode items = store.json.createArrayNode();
     for (JsonNode item : request.path("items")) {
       ObjectNode resource = business.resource(text(item, "resourceId"), req);
+      if (eq(resource, "operationalState", "GONE"))
+        throw new ApiException(409, "渠道已移除，不可再操作", "RESOURCE_CHANNEL_REMOVED");
       if (!eq(resource, "targetId", text(config, "id")) || !eq(resource, "upstreamChannelId", text(item, "laneId")))
         throw new ApiException(409, "渠道关联已变化，请重新建立任务");
       if (action.equals("start") && item.path("resourceVersion").asLong() != resource.path("version").asLong()) throw new ApiException(409, "资源版本已变化，请重新建立任务");

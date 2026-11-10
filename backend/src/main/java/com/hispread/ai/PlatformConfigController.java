@@ -751,20 +751,12 @@ public class PlatformConfigController {
   @GetMapping("/resource-targets/{id}/sync-settings")
   public Object sync(@PathVariable String id, HttpServletRequest r) {
     guard(r, "resource.config.read");
-    ObjectNode target = s.get("resource-target", id, null);
-    ObjectNode out =
-        target.path("syncSettings").isObject()
-            ? (ObjectNode) target.path("syncSettings").deepCopy()
-            : s.object().put("perTargetConcurrency", 1).put("globalConcurrency", 4);
-    out.put("targetVersion", target.path("version").asLong());
-    return out;
+    return resources.syncSettings(id);
   }
 
   @PutMapping("/resource-targets/{id}/sync-settings")
   public Object sync(@PathVariable String id, @RequestBody ObjectNode body, HttpServletRequest r) {
     guard(r, "resource.config.write");
-    ObjectNode patch = s.object().put("version", body.path("targetVersion").asLong());
-    patch.set("syncSettings", body);
-    return s.update("resource-target", id, null, patch);
+    return resources.saveSyncSettings(id, body);
   }
 }

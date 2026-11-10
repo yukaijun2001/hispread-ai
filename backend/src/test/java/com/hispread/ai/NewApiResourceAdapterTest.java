@@ -132,6 +132,44 @@ class NewApiResourceAdapterTest {
     when(store.get("resource", "local", null)).thenReturn(obj().put("laneId", "unmapped-private-id"));
     assertEquals("RESOURCE_CHANNEL_NOT_MAPPED", assertThrows(ApiException.class, () -> adapter.exchange(config(),"POST","/resources/local/usage",obj(),"key")).code);
   }
+  @Test void removalReconciliationWithoutProofStaysUnknownAndNeverDeletesAgain() {
+    Store store = mock(Store.class); when(store.object()).thenAnswer(call -> obj());
+    when(store.get("resource", "local", null)).thenReturn(obj().put("upstreamChannelId", "148"));
+    List<String> calls = new ArrayList<>();
+    NewApiResourceAdapter adapter = new NewApiResourceAdapter(store, (config, method, path, body, key) -> {
+      calls.add(method + " " + path);
+      return obj().put("success", false).put("message", "PRIVATE missing-channel diagnostic");
+    });
+    ObjectNode request = obj().put("action", "REMOVE");
+    request.putArray("items").add(obj().put("resourceId", "local"));
+    ObjectNode result = adapter.exchange(config(), "GET", "/resource-lifecycle-jobs/reconcile", request, "original");
+    assertEquals("UNKNOWN", result.path("state").asText());
+    assertEquals("UNKNOWN", result.path("items").get(0).path("state").asText());
+    assertEquals(List.of("GET /channel/148"), calls);
+    assertFalse(result.toString().contains("PRIVATE"));
+  }
+
+  @Test void partialRemovalPreservesPreviouslyConfirmedItemsDuringReadOnlyReconcile() {
+    Store store = mock(Store.class); when(store.object()).thenAnswer(call -> obj());
+    when(store.get("resource", "confirmed", null)).thenReturn(obj().put("upstreamChannelId", "148"));
+    when(store.get("resource", "uncertain", null)).thenReturn(obj().put("upstreamChannelId", "149"));
+    List<String> paths = new ArrayList<>();
+    NewApiResourceAdapter adapter = new NewApiResourceAdapter(store, (config, method, path, body, key) -> {
+      paths.add(method + " " + path);
+      return obj().put("success", false);
+    });
+    ObjectNode request = obj().put("action", "REMOVE");
+    request.putArray("items").add(obj().put("resourceId", "confirmed"))
+        .add(obj().put("resourceId", "uncertain"));
+    request.putArray("confirmedItems").add(obj().put("resourceId", "confirmed").put("state", "GONE"));
+    ObjectNode result = adapter.exchange(config(), "GET", "/resource-lifecycle-jobs/reconcile", request, "key");
+    assertEquals("UNKNOWN", result.path("state").asText());
+    assertEquals(1, result.path("completedCount").asInt());
+    assertEquals(1, result.path("unknownCount").asInt());
+    assertEquals("GONE", result.path("items").get(0).path("state").asText());
+    assertEquals(List.of("GET /channel/149"), paths);
+  }
+
   @Test void validatorRejectsBogusStateCrossResourceJobsAndInsecureOauth() {
     assertThrows(ApiException.class, () -> ResourceResponseValidator.validate("SUBMIT",obj().put("state","DELIVERED"),obj()));
     assertThrows(ApiException.class, () -> ResourceResponseValidator.validate("SUBMIT",obj().put("state","SUCCESS").put("success",false),obj()));

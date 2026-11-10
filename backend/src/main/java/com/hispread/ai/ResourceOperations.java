@@ -239,6 +239,7 @@ public class ResourceOperations {
             .put("requestKey", key)
             .put("fingerprint", fingerprint)
             .put("targetId", text(config, "id"))
+            .put("protocol", config.path("protocol").asText("CUSTOM"))
             .put("upstreamPath", path)
             .put("method", method)
             .put("state", "SUBMITTING")
@@ -510,6 +511,9 @@ public class ResourceOperations {
         ? "OAUTH_AUTHORIZE" : (action.equals("oauth/supplier-submit") || action.equals("oauth/complete"))
             ? "OAUTH_COMPLETE" : action.toUpperCase(Locale.ROOT);
     ObjectNode previousOperation = findRequest(owner, key, preliminaryType, req);
+    if (previousOperation == null && !text(resource, "upstreamChannelId").isBlank()
+        && eq(resource, "operationalState", "GONE"))
+      throw new ApiException(409, "渠道已移除，不可再操作", "RESOURCE_CHANNEL_REMOVED");
     String remoteAction = action;
     if (action.startsWith("reauthorizations/")) {
       String localId = action.substring("reauthorizations/".length());
@@ -631,15 +635,21 @@ public class ResourceOperations {
   @Transactional(noRollbackFor = ApiException.class)
   public ObjectNode reconcile(String id, HttpServletRequest req) {
     writable(req);
+    store.jdbc.queryForObject(
+        "select pg_advisory_xact_lock(hashtext(?),hashtext(?))", (row, index) -> true,
+        "resource-operation-reconcile", id);
     ObjectNode op = getOperation(id, req);
+    if (confirmedRemoval(op)) return result(op, req);
     String path = text(op, "upstreamPath");
     String remote = text(op, "upstreamId");
     if (remote.isBlank()) remote = text(op, "requestKey");
     ObjectNode config = gateway.requireConfigured(text(op, "targetId"));
     boolean newApiLifecycle = eq(config, "protocol", "NEWAPI") && eq(op, "type", "LIFECYCLE");
+    ObjectNode request = op.path("request").deepCopy();
+    if (newApiLifecycle) request.set("confirmedItems", op.path("result").path("items"));
     ObjectNode response = gateway.exchange(config, "GET",
         newApiLifecycle ? "/resource-lifecycle-jobs/reconcile" : path + "/operations/" + encode(remote),
-        newApiLifecycle ? op.path("request") : null, text(op, "requestKey"));
+        newApiLifecycle ? request : null, text(op, "requestKey"));
     validateIdentity(text(op, "resourceId"), text(op, "supplierId"), response);
     String state = ResourceResponseValidator.validate(text(op, "type"), response, op.path("request"));
     ObjectNode patch = b.obj().put("state", state).put("status", state);
@@ -648,6 +658,18 @@ public class ResourceOperations {
     applyResource(text(op, "resourceId"), text(op, "supplierId"), response, text(op, "type"), req);
     applyJob(updated, response, req);
     return result(updated, req);
+  }
+
+  private boolean confirmedRemoval(ObjectNode operation) {
+    if (!eq(operation, "type", "LIFECYCLE") || !eq(operation.path("request"), "action", "REMOVE")
+        || !eq(operation, "state", "COMPLETED")) return false;
+    Set<String> expected = new HashSet<>(), confirmed = new HashSet<>();
+    for (JsonNode item : operation.path("request").path("items")) expected.add(text(item, "resourceId"));
+    for (JsonNode item : operation.path("result").path("items")) {
+      if (!eq(item, "state", "GONE")) return false;
+      confirmed.add(text(item, "resourceId"));
+    }
+    return !expected.isEmpty() && expected.equals(confirmed);
   }
 
   public ObjectNode current(String rid, String type, HttpServletRequest req) {
@@ -683,6 +705,8 @@ public class ResourceOperations {
       String rid = text(item, "resourceId");
       if (!ids.add(rid)) throw new ApiException(400, "资源不能重复");
       ObjectNode resource = b.resource(rid, req);
+      if (!text(resource, "upstreamChannelId").isBlank() && eq(resource, "operationalState", "GONE"))
+        throw new ApiException(409, "渠道已移除，不可再操作", "RESOURCE_CHANNEL_REMOVED");
       String itemTarget = actionTarget(resource, body);
       if (!itemTarget.isBlank() && !selectedTarget.isBlank() && !itemTarget.equals(selectedTarget))
         throw new ApiException(409, "一批操作仅支持同一上游目标");

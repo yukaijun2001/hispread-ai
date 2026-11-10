@@ -501,4 +501,54 @@ class ResourceIntegrationTest {
     bind.put("version", 0); write("/api/resources/" + other.path("id").asText() + "/upstream-channel", bind, admin, 409);
   }
 
+  @Test
+  void confirmedNewApiRemovalIsStableAndRemovedChannelsCannotBeOperated() throws Exception {
+    Client supplier = supplier(), admin = administrator();
+    String targetId = target.path("id").asText();
+    store.update("resource-target", targetId, "GLOBAL",
+        store.object().put("protocol", "NEWAPI").put("newApiUserId", "2"));
+    ObjectNode resource = store.create("resource", supplier.owner, store.object()
+        .put("supplierId", supplier.owner).put("targetId", targetId).put("name", "Removal fixture")
+        .put("upstreamChannelId", "148").put("resourceType", "CCMAX")
+        .put("state", "DRAFT").put("dispatchState", "NOT_SUBMITTED").put("operationalState", "ACTIVE"));
+    String resourceId = resource.path("id").asText();
+    ObjectNode priorityInput = store.object().put("priority", 0).put("requestKey", UUID.randomUUID().toString());
+    priorityInput.putArray("resourceIds").add(resourceId);
+    ObjectNode pendingPriority = write("/api/cc-intake/admin/priority/jobs", priorityInput, admin, 200);
+    AtomicInteger deletes = new AtomicInteger();
+    responder.set((request, body) -> {
+      if (request.equals("DELETE /api/channel/148")) {
+        deletes.incrementAndGet();
+        return "{\"success\":true}";
+      }
+      return "{\"success\":false,\"message\":\"channel not found\"}";
+    });
+    ObjectNode removal = store.object().put("action", "REMOVE")
+        .put("requestKey", UUID.randomUUID().toString());
+    removal.putArray("items").add(store.object().put("resourceId", resourceId).put("version", 0));
+    ObjectNode receipt = write("/api/resource-lifecycle-jobs", removal, admin, 200);
+    String jobPath = "/api/resource-lifecycle-jobs/" + receipt.path("id").asText();
+    assertEquals("COMPLETED", receipt.path("state").asText());
+    int callsAfterDelete = calls.get();
+    ObjectNode checked = write(jobPath + "/reconcile", store.object(), admin, 200);
+    assertEquals("COMPLETED", checked.path("state").asText());
+    assertEquals("GONE", checked.path("items").get(0).path("state").asText());
+    assertEquals(callsAfterDelete, calls.get());
+    write("/api/resource-lifecycle-jobs", removal, admin, 200);
+    assertEquals(1, deletes.get());
+    for (String action : List.of("usage", "say-hi")) {
+      ObjectNode error = write("/api/resources/" + resourceId + "/" + action,
+          store.object().put("requestKey", UUID.randomUUID().toString()), admin, 409);
+      assertEquals("RESOURCE_CHANNEL_REMOVED", error.path("code").asText());
+    }
+    ObjectNode repeat = removal.deepCopy().put("requestKey", UUID.randomUUID().toString());
+    ((ObjectNode) repeat.path("items").get(0)).put("version",
+        store.get("resource", resourceId, supplier.owner).path("version").asLong());
+    write("/api/resource-lifecycle-jobs", repeat, admin, 409);
+    write("/api/cc-intake/admin/priority/jobs/" + pendingPriority.path("id").asText() + "/start",
+        store.object(), admin, 409);
+    assertEquals(callsAfterDelete, calls.get());
+    assertEquals("GONE", store.get("resource", resourceId, supplier.owner).path("operationalState").asText());
+  }
+
 }
