@@ -1,4 +1,5 @@
 // origin: assets/Resources-CXo1DF00.js
+import { ChannelUsage, NewApiChannelDialog, NewApiLinkDialog, channelLabel, isNewApi } from '../runtime/newapi-channel.js';
 const __vite__mapDeps = (i, m = __vite__mapDeps, d = (m.f || (m.f = ["assets/ResourceLifecycleDialog-C3CIVivi.js", "assets/index-Dnr0i-H9.js", "assets/index-Co8Tabyn.css", "assets/IntakeReviewDialog-C9xZ8Ftb.js", "assets/intake-D282aV6G.css", "assets/PriorityBatchDialog-DWPDEDJI.js", "assets/labels-DaPzz6Ie.js", "assets/CcmaxResourceOverview-BpVmtOxH.js", "assets/ResourceForm-CV4-f1sb.js", "assets/useDeliveryProxies-DGHL4QCT.js", "assets/resourceHelpers-DoyalwRL.js", "assets/ResourceDetail-PGeCmPlL.js", "assets/CcmaxBatchDelivery-BSCydCTL.js", "assets/NewDelivery-CYrGthQl.js", "assets/NewDelivery-BY50kDnq.css"]))) => i.map(i => d[i]);
 import {
   $ as e,
@@ -546,7 +547,7 @@ var Ue = {
   We = new Set([`COMPLETED`, `PARTIAL_FAILED`, `FAILED`, `NEEDS_REVIEW`]);
 
 function Ge(e) {
-  return !e.readOnly && e.resourceType === `CCMAX` && e.state === `DELIVERED` && e.dispatchState === `SUCCESS` && !!e.laneId
+  return !e.readOnly && (isNewApi(e) && e.operationalState !== `GONE` || e.resourceType === `CCMAX` && e.state === `DELIVERED` && e.dispatchState === `SUCCESS` && !!e.laneId)
 }
 
 function B(e) {
@@ -951,6 +952,7 @@ function et(e) {
 function tt({
   resource: e
 }) {
+  if (isNewApi(e)) return z.jsx(ChannelUsage, { resource: e });
   let t = e.resourceData,
     n = t && H(t.usage);
   return e.resourceType === `CCMAX` ? n ? (0, z.jsxs)(`div`, {
@@ -1277,7 +1279,7 @@ function at({
             className: `resource-identity-meta`,
             children: [(0, z.jsx)(`span`, {
               className: `resource-type-label`,
-              children: I(e) ? e.projectCategoryName || e.projectCategory || T(`未分配`) : e.resourceType || T(`未知类型`)
+              children: isNewApi(e) ? `New API 渠道` : I(e) ? e.projectCategoryName || e.projectCategory || T(`未分配`) : e.resourceType || T(`未知类型`)
             }), n && !I(e) && (0, z.jsx)(`span`, {
               children: e.accountName || T(`待填写`)
             }), n && !I(e) && (0, z.jsx)(`span`, {
@@ -1355,6 +1357,7 @@ function at({
 }
 
 function ot(e, t) {
+  if (isNewApi(e)) return `—（配额原值）`;
   return I(e) ? `—` : t && e.settlementMethod === `ACCOUNT_BUYOUT` ? e.buyoutAmount == null ? T(`未交付`) : (0, z.jsx)(ce, {
     value: e.buyoutAmount,
     currency: e.buyoutCurrency || ``
@@ -1521,6 +1524,7 @@ function st({
 }
 
 function ct(e) {
+  if (isNewApi(e)) return z.jsx(E, { state: `SUCCESS`, label: `已有渠道已关联` });
   return I(e) ? (0, z.jsx)(E, {
     state: Te(e.deliveryState),
     label: Oe[e.deliveryState] || T(`待推送`)
@@ -1535,6 +1539,7 @@ function ct(e) {
 }
 
 function lt(e) {
+  if (isNewApi(e)) return z.jsx(E, { state: e.operationalState === `ACTIVE` ? `SUCCESS` : `COOLING`, label: channelLabel(e) });
   if (I(e)) return (0, z.jsx)(E, {
     state: Te(e.onboardingState),
     label: he[e.onboardingState] || T(`待上号`)
@@ -1687,6 +1692,9 @@ function dt({
     }, {
       value: `CCMAX`,
       label: `CCMAX`
+    }, {
+      value: `NEWAPI_CHANNEL`,
+      label: `New API 渠道`
     }, ...(n.data || []).filter(e => e.code !== `CCMAX`).map(e => ({
       value: e.code,
       label: e.name
@@ -2242,6 +2250,7 @@ function St({
   pendingOnly: c,
   onApiDelivery: l
 }) {
+  const [linkChannel, setLinkChannel] = R.useState(false);
   let [d, p] = (0, R.useState)(!1), [h, _] = (0, R.useState)(!1), [v, x] = (0, R.useState)(!1), [S, C] = (0, R.useState)(new Map), [E, D] = (0, R.useState)(null), [ee, ne] = (0, R.useState)(!1), [ce, le] = (0, R.useState)(null), {
     has: N,
     notify: P,
@@ -2263,7 +2272,7 @@ function St({
     [Ue, We] = (0, R.useState)(``),
     B = c ? `NEWAPI_INTAKE` : Ue,
     Ke = c ? `UNASSIGNED` : `ASSIGNED`,
-    V = !c && (!B || B === `CCMAX`),
+    V = !c && (!B || B === `CCMAX` || B === `NEWAPI_CHANNEL`),
     Xe = !s && !de.supplierId && N(`resource.read`) && N(`resource.dispatch`),
     H = N(`proxy.read`) && N(s ? `resource.write` : `resource.dispatch`),
     [U, W] = (0, R.useState)(``),
@@ -2319,8 +2328,8 @@ function St({
     search: Ee,
     supplierSearch: s ? `` : Ve,
     creatorSearch: He,
-    resourceType: c ? `NEWAPI_INTAKE` : Ue === `CCMAX` ? `CCMAX` : ``,
-    category: c || Ue === `CCMAX` ? `` : Ue,
+    resourceType: c ? `NEWAPI_INTAKE` : [`CCMAX`, `NEWAPI_CHANNEL`].includes(Ue) ? Ue : ``,
+    category: c || [`CCMAX`, `NEWAPI_CHANNEL`].includes(Ue) ? `` : Ue,
     assignment: Ke,
     newApiDeliveryState: U,
     newApiResourceState: G,
@@ -2562,7 +2571,7 @@ function St({
         size: 12
       }), zt.has(e.id) ? T(`同步中…`) : T(`同步`)]
     }),
-    Wn = e => e.readOnly ? I(e) ? null : (0, z.jsx)(`div`, {
+    Wn = e => isNewApi(e) ? z.jsx(A, { onClick: event => { event.stopPropagation(); Y(e); }, children: `渠道详情` }) : e.readOnly ? I(e) ? null : (0, z.jsx)(`div`, {
       className: `resource-row-actions`,
       children: Un(e)
     }) : I(e) ? (0, z.jsxs)(`div`, {
@@ -2654,7 +2663,7 @@ function St({
   return (0, z.jsxs)(z.Fragment, {
     children: [(0, z.jsxs)(w, {
       title: fe(s, c),
-      children: [!s && (0, z.jsx)(A, {
+      children: [!s && de.role === `ADMIN` && N(`resource.dispatch`) && N(`resource.config.read`) && z.jsx(A, { onClick: () => setLinkChannel(true), children: `关联 New API 渠道` }), !s && (0, z.jsx)(A, {
         icon: `refresh`,
         "aria-label": T(c ? `刷新待分配资源` : `刷新资源列表`),
         "aria-busy": Z.loading || Z.refreshing,
@@ -2750,7 +2759,7 @@ function St({
             onClick: () => _(!0),
             children: T(`批量调整优先级`)
           }), H && (0, z.jsxs)(A, {
-            disabled: !S.size,
+            disabled: !S.size || [...S.values()].some(isNewApi),
             onClick: () => D([...S.values()]),
             children: [T(`批量替换代理`), S.size ? T(`（{0}）`, [S.size]) : ``]
           }), (0, z.jsx)(A, {
@@ -3116,7 +3125,7 @@ function St({
           children: T(en ? `标记中…` : `确认删除`)
         })]
       })]
-    }), Ot && (0, z.jsx)(wt, {
+    }), linkChannel && z.jsx(NewApiLinkDialog, { onClose: () => setLinkChannel(false), onLinked: resource => { setLinkChannel(false); P(`渠道关联成功`); F(); Y(resource); } }), Ot && (isNewApi(Ot) ? z.jsx(NewApiChannelDialog, { resource: Ot, onClose: () => Y(null), onChanged: () => { F(); } }, Ot.id) : (0, z.jsx)(wt, {
       resource: Ot,
       supplierSide: s,
       onReauthorize: e => Pt(e, !1, !0),
@@ -3131,7 +3140,7 @@ function St({
       onChanged: () => {
         F(), Y(null)
       }
-    }, Ot.id), kt && (0, z.jsx)(ut, {
+    }, Ot.id)), kt && (0, z.jsx)(ut, {
       resource: kt,
       onClose: Ft,
       onChanged: () => zn(kt.id),

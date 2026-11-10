@@ -40,6 +40,7 @@ class ResourceIntegrationTest {
   AtomicInteger httpStatus;
   AtomicReference<String> seenAuth, seenPath, seenUser, seenBody;
   ObjectNode target;
+  AtomicReference<java.util.function.BiFunction<String, JsonNode, String>> responder;
 
   record Client(MockHttpSession session, String csrf, String owner, String uid) {}
 
@@ -54,6 +55,7 @@ class ResourceIntegrationTest {
     seenPath = new AtomicReference<>();
     seenUser = new AtomicReference<>();
     seenBody = new AtomicReference<>();
+    responder = new AtomicReference<>();
     server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
     server.createContext(
         "/",
@@ -63,7 +65,10 @@ class ResourceIntegrationTest {
           seenUser.set(exchange.getRequestHeaders().getFirst("New-Api-User"));
           seenPath.set(exchange.getRequestURI().getPath());
           seenBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
-          byte[] bytes = response.get().getBytes(StandardCharsets.UTF_8);
+          String output = responder.get() == null ? response.get() : responder.get().apply(
+              exchange.getRequestMethod() + " " + exchange.getRequestURI().getPath(),
+              seenBody.get().isBlank() ? store.object() : store.parse(seenBody.get()));
+          byte[] bytes = output.getBytes(StandardCharsets.UTF_8);
           exchange.getResponseHeaders().set("Content-Type", "application/json");
           exchange.sendResponseHeaders(httpStatus.get(), bytes.length);
           exchange.getResponseBody().write(bytes);
@@ -436,10 +441,64 @@ class ResourceIntegrationTest {
     response.set("{\"success\":true,\"data\":{\"id\":42,\"status\":1,\"used_quota\":250000}}");
     ObjectNode bound = write("/api/resources/"+rid+"/upstream-channel",store.object().put("targetId",target.path("id").asText()).put("channelId",42).put("version",resource.path("version").asLong()),adminClient,200);
     assertEquals("42",bound.path("upstreamChannelId").asText()); assertEquals("/api/channel/42",seenPath.get());
+    assertEquals("NEWAPI_CHANNEL", bound.path("resourceType").asText());
     ObjectNode usage = write("/api/resources/"+rid+"/usage",store.object().put("requestKey",UUID.randomUUID().toString()),c,200);
     assertEquals("NEWAPI_QUOTA",usage.path("usage").path("unit").asText()); assertFalse(usage.has("amount")); assertEquals("Bearer fixture-admin-key",seenAuth.get()); assertEquals("2",seenUser.get());
     assertEquals("NEWAPI_QUOTA",store.get("resource",rid,c.owner).path("usage").path("unit").asText());
     int count = calls.get(); write("/api/resources/oauth/supplier-authorize",(ObjectNode) submission(c).path("input"),c,503); assertEquals(count,calls.get());
+  }
+
+  Client administrator() throws Exception {
+    String uid = UUID.randomUUID().toString();
+    ObjectNode admin = store.object().put("id", uid).put("username", "admin_" + uid).put("role", "ADMIN").put("displayName", "Admin").putNull("supplierId").put("version", 0);
+    admin.set("permissions", auth.allPermissions()); auth.createUser(admin, "FixtureTest@123");
+    MockHttpSession session = new MockHttpSession(); session.setAttribute("uid", uid); session.setAttribute("sv", 0L);
+    String csrf = json.readTree(mvc.perform(get("/api/auth/csrf").session(session)).andReturn().getResponse().getContentAsString()).path("token").asText();
+    return new Client(session, csrf, "GLOBAL", uid);
+  }
+
+  @Test void newApiPriorityUsesPreviewStartReplayAndReadbackWithoutChangingDelivery() throws Exception {
+    Client supplier = supplier(), admin = administrator();
+    ObjectNode input = submission(supplier);
+    ObjectNode draft = store.create("resource", supplier.owner, store.object().put("supplierId", supplier.owner).put("projectId", input.path("input").path("projectId").asText()).put("resourceType", "CCMAX").put("state", "DRAFT").put("dispatchState", "NOT_SUBMITTED").put("name", "New API fixture"));
+    String rid = draft.path("id").asText(), tid = target.path("id").asText();
+    store.update("resource-target", tid, "GLOBAL", store.object().put("protocol", "NEWAPI").put("newApiUserId", "2"));
+    AtomicInteger priority = new AtomicInteger(3), writes = new AtomicInteger(), status = new AtomicInteger(1);
+    responder.set((request, body) -> {
+      if (request.equals("POST /api/channel/148/status")) { status.set(body.path("status").asInt()); return "{\"success\":true,\"data\":true}"; }
+      if (request.equals("PUT /api/channel/")) { priority.set(body.path("priority").asInt()); writes.incrementAndGet(); return "{\"success\":true}"; }
+      return "{\"success\":true,\"data\":{\"id\":148,\"status\":" + status.get() + ",\"priority\":" + priority.get() + ",\"used_quota\":0,\"models\":\"fixture-model\",\"group\":\"default\",\"type\":1}}";
+    });
+    ObjectNode bind = store.object().put("targetId", tid).put("channelId", 148).put("version", 0);
+    ObjectNode bound = write("/api/resources/" + rid + "/upstream-channel", bind, admin, 200);
+    assertEquals("DRAFT", bound.path("state").asText());
+    assertEquals("NOT_SUBMITTED", bound.path("dispatchState").asText());
+    assertEquals("NEWAPI_CHANNEL", bound.path("resourceType").asText());
+    mvc.perform(get("/api/resources/" + rid).session(admin.session)).andExpect(jsonPath("$.resourceType").value("NEWAPI_CHANNEL"));
+    ObjectNode request = store.object().put("priority", 7).put("requestKey", UUID.randomUUID().toString());
+    request.putArray("resourceIds").add(rid);
+    ObjectNode preview = write("/api/cc-intake/admin/priority/jobs", request, admin, 200);
+    assertEquals("PREVIEW", preview.path("state").asText()); assertEquals(0, writes.get());
+    ObjectNode replay = write("/api/cc-intake/admin/priority/jobs", request, admin, 200);
+    assertEquals(preview.path("id"), replay.path("id"));
+    String job = "/api/cc-intake/admin/priority/jobs/" + preview.path("id").asText();
+    ObjectNode started = write(job + "/start", store.object(), admin, 200);
+    assertEquals("COMPLETED", started.path("state").asText()); assertEquals(1, writes.get());
+    assertEquals(7, store.get("resource", rid, supplier.owner).path("upstreamPriority").asInt());
+    write(job + "/start", store.object(), admin, 200); assertEquals(1, writes.get());
+    write(job + "/reconcile", store.object(), admin, 200); assertEquals(1, writes.get());
+    assertEquals("DRAFT", store.get("resource", rid, supplier.owner).path("state").asText());
+    request.put("priority", 8); write("/api/cc-intake/admin/priority/jobs", request, admin, 409);
+    write(job + "/start", store.object(), supplier, 403);
+    ObjectNode pause = store.object().put("action", "PAUSE").put("requestKey", UUID.randomUUID().toString());
+    pause.putArray("items").add(store.object().put("resourceId", rid));
+    assertEquals("COMPLETED", write("/api/resource-lifecycle-jobs", pause, admin, 200).path("state").asText());
+    assertEquals(2, status.get());
+    assertEquals("PAUSED", store.get("resource", rid, supplier.owner).path("operationalState").asText());
+    pause.put("action", "RESUME").put("requestKey", UUID.randomUUID().toString());
+    write("/api/resource-lifecycle-jobs", pause, admin, 200); assertEquals(1, status.get());
+    ObjectNode other = store.create("resource", supplier.owner, draft.deepCopy().put("id", UUID.randomUUID().toString()));
+    bind.put("version", 0); write("/api/resources/" + other.path("id").asText() + "/upstream-channel", bind, admin, 409);
   }
 
 }

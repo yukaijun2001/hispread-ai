@@ -222,6 +222,10 @@ public class AccessPolicy {
     if (kind.equals("payout-call"))
       out.remove(List.of("adapterBinding", "executionContext", "requestFingerprint"));
     if (kind.equals("proxy")) out.remove("url");
+    if (kind.equals("resource") && !row.path("upstreamChannelId").asText().isBlank()) {
+      out.put("upstreamProtocol", "NEWAPI");
+      out.put("resourceType", "NEWAPI_CHANNEL");
+    }
     if (kind.equals("supplier")) {
       if (!admin(req) && auth.platform(req)) out.remove("linkedUsers");
       if (operator(req)) out.remove(List.of("accounts", "bankAccounts", "paymentSettings"));

@@ -13,6 +13,95 @@ class NewApiResourceAdapterTest {
   final ObjectMapper json = new ObjectMapper();
   ObjectNode obj() { return json.createObjectNode(); }
   ObjectNode config() { return obj().put("protocol", "NEWAPI").put("apiKey", "admin-secret").put("newApiUserId", "2"); }
+  @Test void lifecycleUsesDedicatedStatusEndpointAndVerifiesReadback() {
+    Store store = mock(Store.class); when(store.object()).thenAnswer(call -> obj());
+    when(store.get("resource", "local", null)).thenReturn(obj().put("upstreamChannelId", "148"));
+    AtomicInteger status = new AtomicInteger(1);
+    List<String> paths = new ArrayList<>();
+    NewApiResourceAdapter adapter = new NewApiResourceAdapter(store, (config, method, path, body, key) -> {
+      paths.add(method + " " + path);
+      if (method.equals("POST") && path.equals("/channel/148/status")) {
+        status.set(body.path("status").asInt());
+        return obj().put("success", true).put("data", true);
+      }
+      if (method.equals("GET") && path.equals("/channel/148")) {
+        ObjectNode reply = obj().put("success", true);
+        reply.putObject("data").put("id", 148).put("status", status.get());
+        return reply;
+      }
+      return obj().put("success", false);
+    });
+    ObjectNode request = obj().put("action", "PAUSE");
+    request.putArray("items").add(obj().put("resourceId", "local"));
+    ObjectNode paused = adapter.exchange(config(), "POST", "/resource-lifecycle-jobs", request, "pause");
+    assertEquals("COMPLETED", paused.path("state").asText());
+    assertEquals(2, status.get());
+    assertEquals(List.of("POST /channel/148/status", "GET /channel/148"), paths);
+  }
+
+  @Test void batchPriorityUsesMappedChannelsAndReadOnlyReconciliation() {
+    Store store = mock(Store.class); when(store.object()).thenAnswer(call -> obj());
+    when(store.get("resource", "local", null)).thenReturn(obj().put("upstreamChannelId", "148"));
+    AtomicInteger priority = new AtomicInteger(3);
+    AtomicInteger writes = new AtomicInteger();
+    NewApiResourceAdapter adapter = new NewApiResourceAdapter(store, (config, method, path, body, key) -> {
+      if (method.equals("PUT")) {
+        assertEquals("/channel/", path);
+        assertEquals(148, body.path("id").asInt());
+        assertFalse(body.has("status"));
+        priority.set(body.path("priority").asInt()); writes.incrementAndGet();
+        return obj().put("success", true);
+      }
+      ObjectNode reply = obj().put("success", true);
+      reply.putObject("data").put("id", 148).put("status", 1).put("priority", priority.get());
+      return reply;
+    });
+    ObjectNode request = obj().put("priority", 7);
+    request.putArray("items").add(obj().put("resourceId", "local"));
+    assertEquals("COMPLETED", adapter.exchange(config(), "POST", "/priority-batch", request, "priority").path("state").asText());
+    assertEquals(1, writes.get());
+    assertEquals("COMPLETED", adapter.exchange(config(), "GET", "/priority-batch/reconcile", request, "priority").path("state").asText());
+    assertEquals(1, writes.get());
+  }
+  @Test void rejectedStatusDoesNotFallbackAndUnconfirmedWriteStaysUnknown() {
+    Store store = mock(Store.class); when(store.object()).thenAnswer(call -> obj());
+    when(store.get("resource", "local", null)).thenReturn(obj().put("upstreamChannelId", "148"));
+    List<String> writes = new ArrayList<>();
+    NewApiResourceAdapter rejected = new NewApiResourceAdapter(store, (config, method, path, body, key) -> {
+      writes.add(method + " " + path);
+      return obj().put("success", false).put("message", "PRIVATE");
+    });
+    ObjectNode request = obj().put("action", "PAUSE"); request.putArray("items").add(obj().put("resourceId", "local"));
+    ObjectNode result = rejected.exchange(config(), "POST", "/resource-lifecycle-jobs", request, "key");
+    assertEquals("FAILED", result.path("state").asText());
+    assertEquals(List.of("POST /channel/148/status"), writes);
+    assertFalse(result.toString().contains("PRIVATE"));
+    NewApiResourceAdapter uncertain = new NewApiResourceAdapter(store, (config, method, path, body, key) -> {
+      ObjectNode reply = obj().put("success", true);
+      if (method.equals("GET")) reply.putObject("data").put("id",148).put("status",1);
+      return reply;
+    });
+    assertEquals("UNKNOWN", uncertain.exchange(config(), "POST", "/resource-lifecycle-jobs", request, "key").path("state").asText());
+  }
+
+  @Test void legacyStatusFallbackRequiresMissingEndpointAndPreservesChannelRouting() {
+    Store store = mock(Store.class); when(store.object()).thenAnswer(call -> obj());
+    when(store.get("resource", "local", null)).thenReturn(obj().put("upstreamChannelId", "148"));
+    AtomicInteger status = new AtomicInteger(1);
+    NewApiResourceAdapter adapter = new NewApiResourceAdapter(store, (config, method, path, body, key) -> {
+      if (method.equals("POST")) throw new ApiException(404, "Missing endpoint");
+      if (method.equals("PUT")) {
+        assertEquals("default", body.path("group").asText()); assertEquals("fixture", body.path("models").asText());
+        assertFalse(body.has("key")); status.set(body.path("status").asInt());
+        return obj().put("success", true);
+      }
+      ObjectNode reply = obj().put("success", true);
+      reply.putObject("data").put("id",148).put("status",status.get()).put("models","fixture").put("group","default");
+      return reply;
+    });
+    ObjectNode request = obj().put("action", "PAUSE"); request.putArray("items").add(obj().put("resourceId", "local"));
+    assertEquals("COMPLETED", adapter.exchange(config(), "POST", "/resource-lifecycle-jobs", request, "key").path("state").asText());
+  }
   @Test void officialPathsStatusMappingAndQuotaUnitsArePreserved() {
     Store store = mock(Store.class); when(store.object()).thenAnswer(call -> obj());
     when(store.get("resource", "local", null)).thenReturn(obj().put("laneId", "42"));
@@ -23,8 +112,9 @@ class NewApiResourceAdapterTest {
     adapter.exchange(config(), "POST", "/resources/local/priority", obj().put("priority", 123), "stable");
     assertEquals("PUT", method.get()); assertEquals("/channel/", path.get()); assertEquals(42, sent.get().path("id").asLong()); assertEquals(123, sent.get().path("priority").asInt());
     ObjectNode request = obj().put("action", "PAUSE"); request.putArray("items").add(obj().put("resourceId", "local"));
+    reply.set(obj().put("success", true)); reply.get().putObject("data").put("id",42).put("status",2);
     ObjectNode result = adapter.exchange(config(), "POST", "/resource-lifecycle-jobs", request, "stable");
-    assertEquals(2, sent.get().path("status").asInt()); assertEquals("PAUSED", result.path("items").get(0).path("state").asText());
+    assertEquals("GET", method.get()); assertEquals("/channel/42", path.get()); assertEquals("PAUSED", result.path("items").get(0).path("state").asText());
     reply.set(obj().put("success", true)); reply.get().putObject("data").put("id",42).put("status",1).put("used_quota",500000).put("balance",12.5);
     ObjectNode usage = adapter.exchange(config(), "POST", "/resources/local/usage", obj(), "stable");
     assertEquals("/channel/42", path.get()); assertEquals("GET", method.get()); assertEquals("NEWAPI_QUOTA", usage.path("usage").path("unit").asText()); assertFalse(usage.has("amount"));

@@ -25,6 +25,8 @@ final class NewApiResourceAdapter {
     }
     if (path.equals("/resource-lifecycle-jobs")) return lifecycle(target, body, key, false);
     if (path.equals("/resource-lifecycle-jobs/reconcile")) return lifecycle(target, body, key, true);
+    if (path.equals("/priority-batch")) return priorityBatch(target, body, key, false);
+    if (path.equals("/priority-batch/reconcile")) return priorityBatch(target, body, key, true);
     String[] pieces = path.split("/");
     if (pieces.length != 4 || !pieces[1].equals("resources")) throw unsupported();
     String action = pieces[3];
@@ -34,8 +36,11 @@ final class NewApiResourceAdapter {
       if (!id.matches("[1-9][0-9]{0,17}")) throw new ApiException(400, "New API渠道ID无效");
       ObjectNode reply = send(target, "GET", "/channel/" + id, null, key);
       if (reply.path("data").path("id").asLong() != Long.parseLong(id) || !validStatus(reply.path("data").path("status"))) throw invalid();
-      return store.object().put("state", "UPDATED").put("laneId", id).put("upstreamChannelId", id)
+      ObjectNode mapped = store.object().put("state", "UPDATED").put("laneId", id).put("upstreamChannelId", id)
+          .put("upstreamProtocol", "NEWAPI")
           .put("operationalState", reply.path("data").path("status").asInt() == 1 ? "ACTIVE" : "PAUSED");
+      if (reply.path("data").path("priority").isIntegralNumber()) mapped.set("upstreamPriority", reply.path("data").get("priority"));
+      return mapped;
     }
     ObjectNode resource = store.get("resource", pieces[2], null);
     long channel = channel(resource);
@@ -54,6 +59,7 @@ final class NewApiResourceAdapter {
           usage.set(field, data.get(field));
         }
       result.put("operationalState", data.path("status").asInt() == 1 ? "ACTIVE" : "PAUSED");
+      if (data.path("priority").isIntegralNumber()) result.set("upstreamPriority", data.get("priority"));
       return result;
     }
     if (action.equals("say-hi")) {
@@ -80,7 +86,8 @@ final class NewApiResourceAdapter {
     Map<String, Long> channels = new LinkedHashMap<>();
     for (JsonNode item : body.path("items")) {
       String id = item.path("resourceId").asText();
-      if (channels.putIfAbsent(id, channel(store.get("resource", id, null))) != null)
+      long channel = channel(store.get("resource", id, null));
+      if (channels.containsValue(channel) || channels.putIfAbsent(id, channel) != null)
         throw new ApiException(400, "资源不能重复");
     }
     ObjectNode result = store.object();
@@ -99,7 +106,22 @@ final class NewApiResourceAdapter {
               : action.equals("RESUME") && data.path("status").asInt() == 1;
           if (!confirmed) { unknown++; item.put("state", "UNKNOWN"); continue; }
         } else if (action.equals("REMOVE")) send(config, "DELETE", "/channel/" + id, null, key);
-        else send(config, "PUT", "/channel/", store.object().put("id", id).put("status", action.equals("PAUSE") ? 2 : 1), key);
+        else {
+          int desired = action.equals("PAUSE") ? 2 : 1;
+          try {
+            send(config, "POST", "/channel/" + id + "/status", store.object().put("status", desired), key);
+          } catch (ApiException e) {
+            if (e.status != 404 && e.status != 405) throw e;
+            JsonNode before = send(config, "GET", "/channel/" + id, null, key).path("data");
+            if (before.path("id").asLong() != id || !validStatus(before.path("status"))) throw invalid();
+            ObjectNode update = store.object().put("id", id).put("status", desired);
+            preserveRouting(before, update);
+            send(config, "PUT", "/channel/", update, key);
+          }
+          JsonNode observed = send(config, "GET", "/channel/" + id, null, key).path("data");
+          if (observed.path("id").asLong() != id || !validStatus(observed.path("status"))) throw invalid();
+          if (observed.path("status").asInt() != desired) { unknown++; item.put("state", "UNKNOWN"); continue; }
+        }
         item.put("state", action.equals("PAUSE") ? "PAUSED" : action.equals("RESUME") ? "RESUMED" : "GONE");
       } catch (ApiException e) {
         boolean uncertain = e.status >= 500 || e.status == 408;
@@ -109,6 +131,50 @@ final class NewApiResourceAdapter {
     }
     return result.put("state", unknown > 0 ? "UNKNOWN" : failed == channels.size() ? "FAILED" : failed > 0 ? "PARTIAL" : "COMPLETED")
         .put("completedCount", channels.size() - failed - unknown).put("failedCount", failed).put("unknownCount", unknown);
+  }
+
+  private ObjectNode priorityBatch(ObjectNode config, JsonNode body, String key, boolean readOnly) {
+    if (body == null || !body.path("priority").isIntegralNumber() || body.path("priority").asInt(-1) < 0
+        || body.path("priority").asLong() > 1000 || !body.path("items").isArray()
+        || body.path("items").isEmpty() || body.path("items").size() > 100)
+      throw new ApiException(400, "New API优先级请求无效");
+    Map<String, Long> channels = new LinkedHashMap<>();
+    for (JsonNode item : body.path("items")) {
+      String rid = item.path("resourceId").asText();
+      long id = channel(store.get("resource", rid, null));
+      if (channels.containsValue(id) || channels.putIfAbsent(rid, id) != null) throw new ApiException(400, "渠道不能重复");
+    }
+    int failed = 0, unknown = 0, desired = body.path("priority").asInt();
+    ObjectNode result = store.object();
+    ArrayNode items = result.putArray("items");
+    for (var entry : channels.entrySet()) {
+      ObjectNode item = items.addObject().put("resourceId", entry.getKey()).put("laneId", entry.getValue().toString()).put("priority", desired);
+      try {
+        if (!readOnly) {
+          JsonNode before = send(config, "GET", "/channel/" + entry.getValue(), null, key).path("data");
+          if (before.path("id").asLong() != entry.getValue() || !validStatus(before.path("status"))) throw invalid();
+          ObjectNode update = store.object().put("id", entry.getValue()).put("priority", desired);
+          preserveRouting(before, update);
+          send(config, "PUT", "/channel/", update, key);
+        }
+        JsonNode observed = send(config, "GET", "/channel/" + entry.getValue(), null, key).path("data");
+        if (observed.path("id").asLong() != entry.getValue() || !observed.path("priority").isIntegralNumber()) throw invalid();
+        if (observed.path("priority").asInt() == desired) item.put("state", "SUCCESS");
+        else { unknown++; item.put("state", "UNKNOWN"); }
+      } catch (ApiException e) {
+        boolean uncertain = e.status >= 500 || e.status == 408;
+        if (uncertain) unknown++; else failed++;
+        item.put("state", uncertain ? "UNKNOWN" : "FAILED").put("errorCode", e.code);
+      }
+    }
+    ObjectNode counts = result.putObject("counts");
+    counts.put("SUCCESS", channels.size() - failed - unknown).put("FAILED", failed).put("UNKNOWN", unknown);
+    return result.put("total", channels.size()).put("state", unknown > 0 ? "UNKNOWN" : failed == channels.size() ? "FAILED" : failed > 0 ? "PARTIAL_FAILED" : "COMPLETED");
+  }
+
+  private void preserveRouting(JsonNode before, ObjectNode update) {
+    for (String field : List.of("models", "group", "name"))
+      if (before.has(field)) update.set(field, before.get(field));
   }
 
   private long channel(ObjectNode resource) {

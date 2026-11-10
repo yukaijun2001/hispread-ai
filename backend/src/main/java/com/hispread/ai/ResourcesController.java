@@ -82,7 +82,10 @@ public class ResourcesController {
             .filter(
                 r ->
                     b.contains(r, q.get("search"), "name", "accountName", "laneId")
-                        && b.match(r, q, "resourceType", "resourceType")
+                        && (q.getOrDefault("resourceType", "").equals("NEWAPI_CHANNEL")
+                            ? !text(r, "upstreamChannelId").isBlank()
+                            : q.getOrDefault("resourceType", "").equals("CCMAX") && !text(r, "upstreamChannelId").isBlank()
+                                ? false : b.match(r, q, "resourceType", "resourceType"))
                         && b.match(r, q, "supplierId", "supplierId")
                         && b.match(r, q, "supplierSearch", "supplierId")
                         && b.match(r, q, "category", "projectCategory")
@@ -95,7 +98,7 @@ public class ResourcesController {
                         && b.match(r, q, "operationalStatus", "operationalState")
                         && b.dates(r, q, "createdFrom", "createdTo", "createdAt", "createdAt"))
             .toList();
-    return b.page(rows.stream().map(x -> b.publicRecord("resource", x, req)).toList(), q);
+    return b.page(rows.stream().map(x -> resourceView(x, req)).toList(), q);
   }
 
   @GetMapping("/deliveries/filter-options")
@@ -154,7 +157,18 @@ public class ResourcesController {
   @GetMapping("/resources/{id}")
   public ObjectNode detail(@PathVariable String id, HttpServletRequest req) {
     auth.require(req, "resource.read");
-    return b.publicRecord("resource", b.resource(id, req), req);
+    return resourceView(b.resource(id, req), req);
+  }
+
+  private ObjectNode resourceView(ObjectNode row, HttpServletRequest req) {
+    ObjectNode out = b.publicRecord("resource", row, req);
+    if (!text(out, "supplierId").isBlank()) {
+      try {
+        ObjectNode supplier = store.get("supplier", text(out, "supplierId"), null);
+        out.put("supplierName", text(supplier, "name")).put("supplierCode", text(supplier, "code"));
+      } catch (ApiException ignored) {}
+    }
+    return out;
   }
 
   @PostMapping("/resources/drafts")

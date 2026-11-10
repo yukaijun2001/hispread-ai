@@ -19,13 +19,15 @@ public class ResourceOperations {
   private final AuthService auth;
   private final BusinessSupport b;
   private final ResourceIntegrationGateway gateway;
+  private final NewApiPriorityService newApiPriority;
 
   public ResourceOperations(
-      Store store, AuthService auth, BusinessSupport b, ResourceIntegrationGateway gateway) {
+      Store store, AuthService auth, BusinessSupport b, ResourceIntegrationGateway gateway, NewApiPriorityService newApiPriority) {
     this.store = store;
     this.auth = auth;
     this.b = b;
     this.gateway = gateway;
+    this.newApiPriority = newApiPriority;
   }
 
   private JsonNode canonical(JsonNode value) {
@@ -113,7 +115,7 @@ public class ResourceOperations {
       if (eq(op, "type", type))
         try {
           getOperation(text(op, "id"), req);
-          ObjectNode row = safe(op, req);
+          ObjectNode row = eq(op, "type", "PRIORITY") && eq(op, "protocol", "NEWAPI") ? newApiPriority.view(op) : safe(op, req);
           row.remove(
               List.of(
                   "request", "result", "fingerprint", "targetId", "upstreamPath", "upstreamId"));
@@ -338,6 +340,7 @@ public class ResourceOperations {
             "laneId",
             "laneState",
             "operationalState",
+            "upstreamPriority",
             "usage",
             "resourceData",
             "credentialConfigured",
@@ -737,6 +740,7 @@ public class ResourceOperations {
 
   public ObjectNode jobDetail(String id, HttpServletRequest req) {
     ObjectNode op = getOperation(id, req), out = safe(op, req);
+    if (eq(op, "type", "PRIORITY") && eq(op, "protocol", "NEWAPI")) return newApiPriority.view(op);
     out.remove(List.of("request", "fingerprint", "upstreamPath", "targetId", "upstreamId"));
     if (op.path("result").isObject()) {
       JsonNode result = op.path("result");
@@ -774,8 +778,15 @@ public class ResourceOperations {
     String targetId = actionTarget(resource, body);
     ObjectNode config = gateway.requireConfigured(targetId);
     if (!eq(config, "protocol", "NEWAPI")) throw new ApiException(400, "请选择NEWAPI协议目标");
+    String previousChannel = text(resource, "upstreamChannelId");
+    if (!previousChannel.isBlank() && !previousChannel.equals(text(body, "channelId")))
+      throw new ApiException(409, "资源已关联其他New API渠道，不能覆盖关联");
+    store.jdbc.queryForObject("select pg_advisory_xact_lock(hashtext(?),hashtext(?))", (row, index) -> true, targetId, text(body, "channelId"));
+    for (ObjectNode other : store.list("resource", null))
+      if (!other.path("deleted").asBoolean() && !eq(other, "id", id) && eq(other, "targetId", targetId) && eq(other, "upstreamChannelId", text(body, "channelId")))
+        throw new ApiException(409, "该New API渠道已经关联其他本地资源");
     ObjectNode verified = gateway.exchange(config, "GET", "/resources/" + encode(id) + "/channel-bind", body, null);
-    ObjectNode patch = b.pick(verified, "laneId", "upstreamChannelId", "operationalState").put("targetId", targetId);
+    ObjectNode patch = b.pick(verified, "laneId", "upstreamChannelId", "operationalState", "upstreamProtocol", "upstreamPriority").put("targetId", targetId);
     patch.put("version", resource.path("version").asLong());
     return safe(store.update("resource", id, b.entityOwner("resource", id, req), patch), req);
   }
@@ -784,8 +795,10 @@ public class ResourceOperations {
   public ObjectNode priority(ObjectNode body, HttpServletRequest req) {
     if (!auth.admin(req)) throw new ApiException(403, "仅最高管理员可调整批量优先级");
     auth.require(req, "resource.dispatch");
-    if (body.path("priority").asInt(-1) < 0 || body.path("priority").asInt() > 1000)
+    if (!body.path("priority").isIntegralNumber() || !body.path("priority").canConvertToInt() || body.path("priority").asInt(-1) < 0 || body.path("priority").asInt() > 1000)
       throw new ApiException(400, "优先级须在0至1000之间");
+    ObjectNode newApiJob = newApiPriority.preview(body, req);
+    if (newApiJob != null) return newApiJob;
     ObjectNode payload = body.deepCopy();
     String key = text(body, "requestKey");
     if (key.isBlank()) key = UUID.randomUUID().toString();
@@ -804,7 +817,9 @@ public class ResourceOperations {
   @Transactional(noRollbackFor = ApiException.class)
   public ObjectNode priorityAction(String id, String action, HttpServletRequest req) {
     if (!auth.admin(req)) throw new ApiException(403, "仅最高管理员可调整批量优先级");
+    auth.require(req, "resource.dispatch");
     ObjectNode op = store.get("resource-operation", id, "GLOBAL");
+    if (eq(op, "protocol", "NEWAPI") && eq(op, "type", "PRIORITY")) return newApiPriority.action(op, action, req);
     return invoke(
         "PRIORITY_" + action,
         null,

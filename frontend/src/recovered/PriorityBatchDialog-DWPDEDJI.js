@@ -49,6 +49,7 @@ function y({
     [W, G] = (0, h.useState)(!1),
     [K, q] = (0, h.useState)(``),
     J = (0, h.useRef)(!1),
+    requestKey = (0, h.useRef)(crypto.randomUUID()),
     Y = I?.state === `RUNNING` || I?.state === `PREPARING` || I?.items.some(e => e.state === `UNKNOWN` || e.state === `VERIFYING`),
     X = r(S && R && !W ? `${_}/${encodeURIComponent(R)}` : null, Y ? 3e3 : 0),
     Z = r(S && B ? _ : null);
@@ -87,6 +88,7 @@ function y({
             } : {
               filters: n
             },
+            requestKey: requestKey.current,
             priority: Number(T),
             operationalStatus: D
           } : {});
@@ -101,7 +103,7 @@ function y({
       }
     }
   }
-  let $ = e => l(e === `PREPARING` ? `整理账号范围中` : e === `PREVIEW` ? `待执行` : e === `RUNNING` ? `处理中` : `已完成`);
+  let $ = e => l(({ PREPARING: `整理账号范围中`, PREVIEW: `待执行`, RUNNING: `处理中`, FAILED: `执行失败`, UNKNOWN: `待核对`, PARTIAL_FAILED: `部分失败`, COMPLETED: `已完成` })[e] || e);
   return (0, g.jsx)(t, {
     title: l(`批量调整优先级`),
     wide: !0,
@@ -118,7 +120,7 @@ function y({
           type: `button`,
           disabled: W,
           onClick: () => {
-            L(null), z(``), q(``)
+            L(null), z(``), q(``), requestKey.current = crypto.randomUUID()
           },
           children: l(`新建调整`)
         })]
@@ -187,7 +189,7 @@ function y({
             render: e => e.priority
           }, {
             label: l(`状态`),
-            render: e => m[e.state]
+            render: e => e.state === `SUCCESS` ? l(`已更新`) : m[e.state] || e.state
           }, {
             label: l(`说明`),
             render: e => e.errorMessage ? (0, g.jsx)(`span`, {
@@ -226,6 +228,8 @@ function y({
             disabled: W || !I.total || I.counts.SKIPPED === I.total,
             onClick: () => void Q(`start`),
             children: l(W ? `提交中…` : `确认执行调整`)
+          }), I.protocol === `NEWAPI` && I.state === `UNKNOWN` && (0, g.jsx)(d, {
+            disabled: W, onClick: () => void Q(`reconcile`), children: l(`核对原操作（不重新提交）`)
           }), I.state !== `PREVIEW` && !!I.counts.FAILED && (0, g.jsx)(d, {
             type: `button`,
             variant: `primary`,
