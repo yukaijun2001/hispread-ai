@@ -338,6 +338,11 @@ function O({
     placeholder: a?.tokenConfigured ? h(`已配置，留空表示保留`) : h(`输入只读监控令牌`),
     hint: h(`仅在服务端加密保存，保存后不回显。`)
   }, {
+    name: `newApiUserId`,
+    label: `NewAPI 用户 ID`,
+    required: !1,
+    hint: `仅 NewAPI 监控接口需要，与 Bearer Token 一起发送。`
+  }, {
     name: `rpmPath`,
     label: h(`RPM 字段路径`),
     required: !1,
@@ -400,6 +405,7 @@ function O({
       endpoint: a?.endpoint || ``,
       authType: a?.authType || `NONE`,
       authHeader: a?.authHeader || ``,
+      newApiUserId: String(a?.newApiUserId ?? ``),
       token: ``,
       rpmPath: a ? a.rpmPath || `` : `rpm`,
       tpmPath: a?.tpmPath || ``,
@@ -431,6 +437,7 @@ function O({
         endpoint: e.endpoint.trim(),
         authType: e.authType,
         authHeader: e.authType === `HEADER` ? e.authHeader.trim() : null,
+        newApiUserId: e.newApiUserId.trim() || null,
         ...e.authType !== `NONE` && e.token.trim() ? {
           token: e.token.trim()
         } : {},
@@ -720,13 +727,14 @@ function A() {
         items: [...e(`resource.config.write`) ? [
             [h(`服务地址`), x.baseUrl],
             [h(`HTTP 地址`), x.allowHttp ? h(`已明确允许`) : h(`未单独允许`)],
-            [h(`管理密钥`), x.apiKeyConfigured ? h(`已配置`) : h(`未配置`)]
+            [h(`管理密钥`), x.apiKeyConfigured ? h(`已配置`) : h(`未配置`)],
+            [h(`上游协议`), x.protocol === `NEWAPI` ? `New API` : h(`CCMAX 兼容适配器`) ]
           ] : [],
           [h(`状态`), x.enabled ? h(`已启用`) : h(`已停用`)]
         ]
       }), (0, C.jsx)(k, {
         targetId: x.id
-      }, x.id), e(`resource.dispatch`) && x.enabled && (0, C.jsxs)(`section`, {
+      }, x.id), e(`resource.dispatch`) && x.enabled && x.protocol !== `NEWAPI` && (0, C.jsxs)(`section`, {
         className: `resource-target-oauth`,
         children: [(0, C.jsx)(`h3`, {
           children: h(`OAuth 授权链接`)
@@ -830,7 +838,12 @@ function j({
     [p, m] = (0, S.useState)(!i && !!e.allowHttp),
     [g, _] = (0, S.useState)(!i && e.enabled),
     [v, x] = (0, S.useState)(!1),
-    [w, T] = (0, S.useState)(``);
+    [w, T] = (0, S.useState)(``),
+    [protocol, setProtocol] = (0, S.useState)(i ? `CUSTOM` : e.protocol || `CUSTOM`),
+    [newApiUserId, setNewApiUserId] = (0, S.useState)(i ? `` : String(e.newApiUserId ?? ``)),
+    [defaultTarget, setDefaultTarget] = (0, S.useState)(!i && !!e.defaultTarget),
+    [pathPrefix, setPathPrefix] = (0, S.useState)(i ? `/api` : e.upstreamPathPrefix ?? `/api`),
+    [timeoutMs, setTimeoutMs] = (0, S.useState)(i ? `15000` : String(e.timeoutMs || 15000));
   async function E(n) {
     if (n.preventDefault(), !v) {
       if (T(``), !a.trim() || !s.trim()) {
@@ -848,6 +861,11 @@ function j({
           baseUrl: s.trim(),
           allowHttp: p && s.trim().toLowerCase().startsWith(`http://`),
           enabled: g,
+          protocol,
+          newApiUserId: protocol === `NEWAPI` ? newApiUserId.trim() : ``,
+          defaultTarget,
+          upstreamPathPrefix: pathPrefix.trim(),
+          timeoutMs: Number(timeoutMs),
           ...l.trim() ? {
             apiKey: l.trim()
           } : {},
@@ -864,7 +882,7 @@ function j({
     }
   }
   return (0, C.jsx)(n, {
-    title: h(i ? `新增 CCMAX 目标` : `编辑 CCMAX 目标`),
+    title: h(i ? `新增资源目标` : `编辑资源目标`),
     onClose: () => {
       v || t()
     },
@@ -897,6 +915,26 @@ function j({
               c(e.target.value), m(!1)
             }
           })]
+        }), (0, C.jsxs)(`label`, {
+          className: `field full`,
+          children: [(0, C.jsx)(`span`, { children: h(`上游协议`) }), (0, C.jsxs)(`select`, {
+            value: protocol, onChange: e => setProtocol(e.target.value),
+            children: [(0, C.jsx)(`option`, { value: `CUSTOM`, children: h(`CCMAX 兼容适配器`) }),
+              (0, C.jsx)(`option`, { value: `NEWAPI`, children: h(`New API 官方渠道接口`) })]
+          }), (0, C.jsx)(`small`, { children: h(protocol === `NEWAPI` ? `支持已关联渠道的状态、用量、测试和启停；CCMAX OAuth 与凭据交付需兼容适配器。` : `服务端需实现资源交付、OAuth、用量和维护接口。`) })]
+        }), protocol === `NEWAPI` && (0, C.jsxs)(`label`, {
+          className: `field full`, children: [(0, C.jsx)(`span`, { children: h(`New API 管理员用户 ID`) }),
+            (0, C.jsx)(`input`, { required: !0, inputMode: `numeric`, pattern: `[1-9][0-9]{0,18}`, value: newApiUserId, onChange: e => setNewApiUserId(e.target.value) })]
+        }), protocol === `CUSTOM` && (0, C.jsxs)(`label`, {
+          className: `field`, children: [(0, C.jsx)(`span`, { children: h(`接口路径前缀`) }),
+            (0, C.jsx)(`input`, { value: pathPrefix, placeholder: `/api`, onChange: e => setPathPrefix(e.target.value) })]
+        }), (0, C.jsxs)(`label`, {
+          className: `field`, children: [(0, C.jsx)(`span`, { children: h(`请求超时（毫秒）`) }),
+            (0, C.jsx)(`input`, { required: !0, type: `number`, min: 1000, max: 120000, value: timeoutMs, onChange: e => setTimeoutMs(e.target.value) })]
+        }), (0, C.jsxs)(`label`, {
+          className: `field full`, children: [(0, C.jsx)(`span`, { children: h(`默认目标`) }),
+            (0, C.jsx)(`input`, { type: `checkbox`, checked: defaultTarget, onChange: e => setDefaultTarget(e.target.checked) }),
+            (0, C.jsx)(`small`, { children: h(`多个启用目标时，应只选择一个默认目标。`) })]
         }), s.trim().toLowerCase().startsWith(`http://`) && (0, C.jsxs)(`label`, {
           className: `settings-switch full target-config-switch`,
           children: [(0, C.jsxs)(`span`, {
@@ -932,7 +970,7 @@ function j({
             children: [(0, C.jsx)(`strong`, {
               children: h(`启用目标`)
             }), (0, C.jsx)(`small`, {
-              children: h(`启用后，供应商可在 CCMAX 交付中选择此目标。`)
+              children: h(`启用后，可执行该协议支持的资源操作。`)
             })]
           }), (0, C.jsx)(`input`, {
             type: `checkbox`,

@@ -22,6 +22,7 @@ public class FinanceController {
   private final AccessPolicy access;
   private final PaymentExecutionGateway executionGateway;
   private final PaymentExecutionService execution;
+  private final PaymentSandboxService sandbox;
 
   public FinanceController(
       Store store,
@@ -29,13 +30,15 @@ public class FinanceController {
       BusinessSupport b,
       AccessPolicy access,
       PaymentExecutionGateway executionGateway,
-      PaymentExecutionService execution) {
+      PaymentExecutionService execution,
+      PaymentSandboxService sandbox) {
     this.store = store;
     this.auth = auth;
     this.b = b;
     this.access = access;
     this.executionGateway = executionGateway;
     this.execution = execution;
+    this.sandbox = sandbox;
   }
 
   private void financial(HttpServletRequest req) {
@@ -314,7 +317,7 @@ public class FinanceController {
                   "unavailableReason",
                   executionGateway.executable(raw)
                       ? ""
-                      : !enabled ? "通道未启用" : "未配置可执行HISPREAD_PAYOUT_V1支付中台；官方连接测试独立且只读"));
+                      : !enabled ? "通道未启用" : "未配置可执行的官方支付适配器或支付中台；连接测试独立且只读"));
     }
     return result;
   }
@@ -338,9 +341,23 @@ public class FinanceController {
   }
 
   @PostMapping("/payments/sandbox/events")
-  public ObjectNode externalSandbox(HttpServletRequest req) {
-    if (!access.admin(req)) throw new ApiException(403, "仅管理员可访问");
-    throw new ApiException(503, "不接受伪造支付事件；请配置真实支付中台测试环境");
+  public ObjectNode externalSandbox(@RequestBody ObjectNode body, HttpServletRequest req) {
+    return sandbox.event(body, req);
+  }
+
+  @GetMapping("/payments/sandbox-capabilities")
+  public ObjectNode sandboxCapabilities(HttpServletRequest req) {
+    return sandbox.capabilities(req);
+  }
+
+  @PostMapping("/payments/sandbox")
+  public ObjectNode createSandbox(@RequestBody ObjectNode body, HttpServletRequest req) {
+    return sandbox.create(body, req);
+  }
+
+  @GetMapping("/payments/sandbox/{id}")
+  public ObjectNode sandboxPayment(@PathVariable String id, HttpServletRequest req) {
+    return sandbox.get(id, req);
   }
 
   @GetMapping("/exchange-rates/current")

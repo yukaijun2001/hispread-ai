@@ -2,7 +2,7 @@
 
 官方支付通道只读连接测试与实际出款中台是两项独立能力。未配置执行中台时`/payments/providers`不返回可执行通道，前端禁用线上付款；不会因为官方余额接口可读就声称能出款。
 
-本地新增的执行协议为`HISPREAD_PAYOUT_V1`，由用户自行实现或部署自有支付中台。它不是官方Airwallex/OKX/Binance transfer协议的复刻。管理员使用已有provider配置接口保存服务端配置：
+本页说明 `HISPREAD_PAYOUT_V1` 自有支付中台配置。另已实现官方 `NATIVE_AIRWALLEX`、`NATIVE_OKX`、`NATIVE_BINANCE`，所需网络与版本绑定收款人配置见 [原生支付实现](native-payment-implementation.md)。管理员使用已有 provider 配置接口保存服务端中台配置：
 
 ```json
 {

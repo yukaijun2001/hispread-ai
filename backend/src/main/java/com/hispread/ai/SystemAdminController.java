@@ -17,14 +17,21 @@ public class SystemAdminController {
   private final BusinessSupport b;
   private final RolePolicy rolePolicy;
   private final SystemJobService jobs;
+  private final WecomReminderService wecom;
 
   public SystemAdminController(
-      Store s, AuthService a, BusinessSupport b, RolePolicy rolePolicy, SystemJobService jobs) {
+      Store s,
+      AuthService a,
+      BusinessSupport b,
+      RolePolicy rolePolicy,
+      SystemJobService jobs,
+      WecomReminderService wecom) {
     this.s = s;
     this.a = a;
     this.b = b;
     this.rolePolicy = rolePolicy;
     this.jobs = jobs;
+    this.wecom = wecom;
   }
 
   private List<ObjectNode> users() {
@@ -460,15 +467,12 @@ public class SystemAdminController {
   @GetMapping("/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings")
   public Object reminder(HttpServletRequest r) {
     guard(r, "system.settings");
-    return singleton(
-        "reminder-settings",
-        s.object().put("webhookUrl", "").put("workbenchUrl", "").put("configured", false));
+    return wecom.settings();
   }
 
   @PutMapping("/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings")
   public Object reminder(@RequestBody ObjectNode body, HttpServletRequest r) {
     guard(r, "system.settings");
-    ObjectNode settings = (ObjectNode) reminder(r);
-    return s.update("reminder-settings", text(settings, "id"), null, body);
+    return wecom.save(body);
   }
 }

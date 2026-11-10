@@ -132,6 +132,8 @@ function N({
     notify: a,
     has: o
   } = r(), c = o(`payment.execute`), l = c || o(`payout.reconcile`), u = s(c && e.paymentMethod !== `OFFLINE` ? `/payments/providers` : null), [d, f] = (0, k.useState)(!1), [p, h] = (0, k.useState)(!1), [g, y] = (0, k.useState)(null), [w, T] = (0, k.useState)(!1), [E, D] = (0, k.useState)(``), O = g?.provider === `AIRWALLEX` ? v(`Airwallex 空中云汇`) : g?.provider === `BINANCE_USDT` ? `Binance USDT` : `OKX USDT`, j = g?.provider === `AIRWALLEX`;
+  let [sandboxPayment, setSandboxPayment] = (0, k.useState)(null),
+    sandboxCapabilities = s(c ? `/payments/sandbox-capabilities` : null);
   async function M() {
     T(!0), D(``);
     try {
@@ -147,6 +149,23 @@ function N({
     children: [e.verificationMode === `SIMULATED` && (0, A.jsx)(m, {
       tone: `amber`,
       children: v(`这是一笔本地模拟付款，没有发生真实款项支出。`)
+    }), c && sandboxCapabilities.data?.enabled && e.state === `APPROVED` && (0, A.jsx)(C, {
+      disabled: w,
+      onClick: async () => {
+        T(!0), D(``);
+        try {
+          let simulated = await S(`/payments/sandbox`, {paymentId: e.id, requestKey: crypto.randomUUID()});
+          setSandboxPayment(simulated), h(!0)
+        } catch (error) {D(error.message)} finally {T(!1)}
+      },
+      children: v(`创建隔离付款模拟`)
+    }), sandboxPayment && (0, A.jsx)(m, {
+      tone: `amber`,
+      children: `隔离模拟状态：${sandboxPayment.state}；真实付款和结算余额未改变。`
+    }), e.lateReturn && (0, A.jsx)(m, {
+      tone: `red`, children: v(`通道付款已退回，已付金额已冲回，请财务核对后重新申请。`)
+    }), l && e.lateReturnMonitoringRequired && e.state === `SUCCEEDED` && (0, A.jsx)(C, {
+      disabled: w, onClick: M, children: v(`核对后续退回状态`)
     }), c && u.error && (0, A.jsx)(m, {
       tone: `red`,
       children: u.error
@@ -235,6 +254,8 @@ function N({
             [v(`当前可用余额`), `${g.data.currency} ${t(g.data.availableBalance,g.data.currency)}`]
           ]
         ]
+      }), g.data.feeEstimateOnly && (0, A.jsx)(m, {
+        tone: `amber`, children: v(`本次预检仅验证付款请求；手续费为本地估计，实际费用以通道结果为准。`)
       }), (0, A.jsxs)(m, {
         tone: `amber`,
         children: [v(`确认后将发起真实 `), O, ` `, v(j ? `转账` : `提币`), v(`；受理不等于到账，结果不明时只能查单。 `)]
@@ -263,7 +284,7 @@ function N({
           children: v(w ? `执行中…` : `确认执行本笔付款`)
         })]
       })]
-    }), p && (0, A.jsx)(x, {
+    }), p && sandboxPayment && (0, A.jsx)(x, {
       title: v(`模拟支付返回（仅本地）`),
       fields: [{
         name: `status`,
@@ -291,13 +312,13 @@ function N({
       onClose: () => h(!1),
       submitLabel: v(`提交模拟事件`),
       onSubmit: async t => {
-        n(await S(`/payments/sandbox/events`, {
-          paymentId: e.id,
+        setSandboxPayment(await S(`/payments/sandbox/events`, {
+          paymentId: sandboxPayment.id,
           eventId: t.eventId,
-          providerReference: e.externalRef,
+          providerReference: sandboxPayment.externalRef,
           status: t.status,
-          amount: e.payoutAmount,
-          currency: e.payoutCurrency
+          amount: sandboxPayment.payoutAmount,
+          currency: sandboxPayment.payoutCurrency
         })), a(v(`模拟事件已处理，未发生实际出款`))
       }
     })]

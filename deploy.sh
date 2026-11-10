@@ -187,7 +187,7 @@ PY
 
   # Treat dotenv as data, never shell code. Never rotate an existing database/admin password.
   python3 - "$env_file" "$origin" "$revision" <<'PY'
-import os, re, secrets, sys, tempfile, urllib.parse
+import base64, os, re, secrets, sys, tempfile, urllib.parse
 filename, origin, revision = sys.argv[1:]
 if os.path.islink(filename): raise SystemExit('Environment file must not be a symbolic link')
 try:
@@ -237,6 +237,9 @@ if os.path.exists(filename):
 values.setdefault('DATABASE_PASSWORD', secrets.token_hex(32))
 values.setdefault('ADMIN_USERNAME', 'admin')
 values.setdefault('ADMIN_PASSWORD', 'Aa1!' + secrets.token_hex(24))
+values.setdefault('WECOM_ENCRYPTION_KEY', base64.b64encode(secrets.token_bytes(32)).decode())
+values.setdefault('PAYMENT_SANDBOX_ENABLED', 'false')
+values.setdefault('MONITORING_SCHEDULING_ENABLED', 'true')
 if len(values['DATABASE_PASSWORD']) < 20 or len(values['ADMIN_PASSWORD']) < 16:
     raise SystemExit('Existing database/admin password is too short. Correct the environment explicitly; deployment will not silently rotate it.')
 values.update(PUBLIC_ORIGIN=origin, COOKIE_SECURE='true' if u.scheme == 'https' else 'false',
@@ -276,6 +279,7 @@ YAML
   DEPLOY_PRIVATE_CSRF="$destination/.run/deploy/csrf.private.json"
   # The production file is the source of truth, even from a shell used for local development.
   unset DATABASE_PASSWORD ADMIN_USERNAME ADMIN_PASSWORD
+  unset WECOM_ENCRYPTION_KEY PAYMENT_SANDBOX_ENABLED MONITORING_SCHEDULING_ENABLED
   # Shell environment wins over dotenv in Compose: force these values as a second guard.
   export HTTP_BIND=0.0.0.0 HTTP_PORT=10001 IMAGE_TAG="git-$revision" PUBLIC_ORIGIN="$origin"
   export COOKIE_SECURE

@@ -17,6 +17,8 @@ public class ResourceIntegrationGateway {
   private final Store store;
   private final Environment environment;
   private final HttpClient client;
+  private final ProxyProbeService proxyProbe;
+  private final NewApiResourceAdapter newApi;
 
   @Value("${app.integrations.allow-private-targets:false}")
   boolean allowPrivateTargets;
@@ -24,9 +26,11 @@ public class ResourceIntegrationGateway {
   @Value("${app.integrations.request-timeout-ms:15000}")
   int timeoutMs;
 
-  public ResourceIntegrationGateway(Store store, Environment environment) {
+  public ResourceIntegrationGateway(Store store, Environment environment, ProxyProbeService proxyProbe) {
     this.store = store;
     this.environment = environment;
+    this.proxyProbe = proxyProbe;
+    this.newApi = new NewApiResourceAdapter(store, this::transport);
     client =
         HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
@@ -43,6 +47,21 @@ public class ResourceIntegrationGateway {
     } catch (ApiException | IllegalArgumentException e) {
       return false;
     }
+  }
+
+  public boolean ccmaxConfigured() {
+    return store.list("resource-target", null).stream().anyMatch(target -> {
+      if (!target.path("enabled").asBoolean() || !target.path("protocol").asText("CUSTOM").equals("CUSTOM")) return false;
+      try {
+        validateEndpoint(URI.create(target.path("baseUrl").asText()), target.path("allowHttp").asBoolean());
+        return true;
+      } catch (RuntimeException e) { return false; }
+    });
+  }
+
+  public void requireCcmax(ObjectNode config) {
+    if (!config.path("protocol").asText("CUSTOM").equals("CUSTOM"))
+      throw new ApiException(503, "此资源目标不支持CCMAX交付或OAuth，请选择CCMAX兼容适配器", "RESOURCE_OPERATION_UNSUPPORTED");
   }
 
   public ObjectNode requireConfigured(String id) {
@@ -69,7 +88,8 @@ public class ResourceIntegrationGateway {
   private boolean testPrivate() {
     return allowPrivateTargets
         && Arrays.stream(environment.getActiveProfiles())
-            .anyMatch(p -> Set.of("test", "integration-test").contains(p));
+            .anyMatch(p -> Set.of("test", "integration-test").contains(p))
+        && Arrays.stream(environment.getActiveProfiles()).noneMatch("production"::equals);
   }
 
   public void validateEndpoint(URI uri, boolean allowHttp) {
@@ -80,24 +100,19 @@ public class ResourceIntegrationGateway {
       throw new ApiException(400, "资源目标地址无效", "INVALID_RESOURCE_TARGET");
     if (uri.getScheme().equals("http") && !allowHttp && !testPrivate())
       throw new ApiException(400, "资源目标必须使用HTTPS，HTTP需管理员明确允许", "INVALID_RESOURCE_TARGET");
-    try {
-      for (InetAddress ip : InetAddress.getAllByName(uri.getHost()))
-        if (!testPrivate()
-            && (ip.isAnyLocalAddress()
-                || ip.isLoopbackAddress()
-                || ip.isLinkLocalAddress()
-                || ip.isSiteLocalAddress()
-                || ip.isMulticastAddress()
-                || ip.getHostAddress().startsWith("100.64.")
-                || ip.getHostAddress().startsWith("fc")
-                || ip.getHostAddress().startsWith("fd")))
-          throw new ApiException(400, "禁止连接内网、环回或链路本地目标", "UNSAFE_RESOURCE_TARGET");
-    } catch (UnknownHostException e) {
-      throw new ApiException(502, "上游目标域名无法解析", "RESOURCE_UPSTREAM_DNS_FAILED");
-    }
+    OutboundAddressPolicy.resolve(uri.getHost(), testPrivate());
   }
 
   public ObjectNode exchange(
+      ObjectNode config, String method, String path, JsonNode body, String key) {
+    String protocol = config.path("protocol").asText("CUSTOM");
+    if (protocol.equals("NEWAPI")) return newApi.exchange(config, method, path, body, key);
+    if (!protocol.equals("CUSTOM"))
+      throw new ApiException(400, "资源协议未受支持", "INVALID_RESOURCE_PROTOCOL");
+    return transport(config, method, path, body, key);
+  }
+
+  private ObjectNode transport(
       ObjectNode config, String method, String path, JsonNode body, String key) {
     String base = config.path("baseUrl").asText(config.path("endpoint").asText());
     if (base.isBlank())
@@ -109,6 +124,8 @@ public class ResourceIntegrationGateway {
         || path.contains("\\"))
       throw new ApiException(400, "上游操作路径无效", "INVALID_RESOURCE_OPERATION");
     String prefix = config.path("upstreamPathPrefix").asText("/api");
+    if (!prefix.matches("(?:/[A-Za-z0-9_-]+)*"))
+      throw new ApiException(400, "资源目标前缀无效", "INVALID_RESOURCE_TARGET");
     URI baseUri;
     URI uri;
     try {
@@ -132,6 +149,13 @@ public class ResourceIntegrationGateway {
                     Math.max(1000, Math.min(120000, config.path("timeoutMs").asInt(timeoutMs)))))
             .header("Accept", "application/json");
     String authType = config.path("authType").asText("BEARER");
+    if (!config.path("newApiUserId").asText().isBlank()) {
+      if (!config.path("newApiUserId").asText().matches("[1-9][0-9]{0,18}"))
+        throw new ApiException(400, "New API用户ID无效", "INVALID_RESOURCE_TARGET");
+      request.header("New-Api-User", config.path("newApiUserId").asText());
+    }
+    if (!Set.of("BEARER", "NONE", "HEADER").contains(authType))
+      throw new ApiException(400, "上游认证方式无效", "INVALID_RESOURCE_TARGET");
     if (!apiKey.isBlank() && !authType.equals("NONE")) {
       if (authType.equals("HEADER")) {
         String header = config.path("authHeader").asText();
@@ -153,10 +177,7 @@ public class ResourceIntegrationGateway {
               HttpRequest.BodyPublishers.ofString(
                   body == null ? "{}" : body.toString(), StandardCharsets.UTF_8));
     try {
-      HttpResponse<String> response =
-          client.send(request.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-      if (response.body().length() > 2_000_000)
-        throw new ApiException(502, "上游响应过大", "RESOURCE_UPSTREAM_INVALID_RESPONSE");
+      HttpResponse<byte[]> response = client.send(request.build(), info -> new LimitedBodySubscriber(2_000_000));
       if (response.statusCode() < 200 || response.statusCode() >= 300) {
         int status = response.statusCode();
         throw new ApiException(
@@ -184,30 +205,35 @@ public class ResourceIntegrationGateway {
   }
 
   public ObjectNode probeProxy(String host, int port) {
-    if (port < 1 || port > 65535) throw new ApiException(400, "代理端口无效");
-    URI endpoint =
-        URI.create("https://" + (host.contains(":") ? "[" + host + "]" : host) + ":" + port);
-    validateEndpoint(endpoint, false);
-    long started = System.nanoTime();
-    try (java.net.Socket socket = new java.net.Socket()) {
-      socket.connect(
-          new java.net.InetSocketAddress(host, port), Math.min(5000, Math.max(1000, timeoutMs)));
-      return store
-          .object()
-          .put("ok", true)
-          .put("state", "REACHABLE")
-          .put("latencyMs", (System.nanoTime() - started) / 1000000)
-          .put("checkedAt", java.time.Instant.now().toString())
-          .put("message", "TCP端口可连接；尚未验证代理认证及出口服务");
-    } catch (java.io.IOException e) {
-      return store
-          .object()
-          .put("ok", false)
-          .put("state", "UNREACHABLE")
-          .put("latencyMs", (System.nanoTime() - started) / 1000000)
-          .put("checkedAt", java.time.Instant.now().toString())
-          .put("message", "TCP端口连接失败");
+    return probeProxy("http://" + (host.contains(":") ? "[" + host + "]" : host) + ":" + port);
+  }
+
+  public ObjectNode probeProxy(String proxyUrl) {
+    return proxyProbe.probe(proxyUrl);
+  }
+
+  /** Cancel delivery before an untrusted response can allocate an unbounded body. */
+  private static final class LimitedBodySubscriber implements HttpResponse.BodySubscriber<byte[]> {
+    private final int maximum;
+    private final java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+    private final java.util.concurrent.CompletableFuture<byte[]> body = new java.util.concurrent.CompletableFuture<>();
+    private java.util.concurrent.Flow.Subscription subscription;
+    LimitedBodySubscriber(int maximum) { this.maximum = maximum; }
+    public java.util.concurrent.CompletionStage<byte[]> getBody() { return body; }
+    public void onSubscribe(java.util.concurrent.Flow.Subscription value) { subscription = value; value.request(1); }
+    public void onNext(List<java.nio.ByteBuffer> buffers) {
+      for (java.nio.ByteBuffer buffer : buffers) {
+        if (buffer.remaining() > maximum - bytes.size()) {
+          subscription.cancel();
+          body.completeExceptionally(new java.io.IOException("response limit"));
+          return;
+        }
+        byte[] chunk = new byte[buffer.remaining()]; buffer.get(chunk); bytes.writeBytes(chunk);
+      }
+      subscription.request(1);
     }
+    public void onError(Throwable error) { body.completeExceptionally(error); }
+    public void onComplete() { body.complete(bytes.toByteArray()); }
   }
 
   public ObjectNode request(

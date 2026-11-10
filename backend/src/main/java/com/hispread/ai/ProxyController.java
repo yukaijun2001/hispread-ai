@@ -63,7 +63,7 @@ public class ProxyController {
   private ObjectNode checked(ObjectNode b) {
     String url = b.path("url").asText().trim();
     try {
-      URI u = URI.create(url);
+      URI u = ProxyProbeService.parseProxy(url);
       if (!Set.of("http", "https", "socks5").contains(u.getScheme().toLowerCase())
           || u.getHost() == null
           || u.getPort() < 1) throw new IllegalArgumentException();
@@ -205,12 +205,14 @@ public class ProxyController {
   public Object test(@PathVariable String id, HttpServletRequest r) {
     a.require(r, "proxy.write");
     ObjectNode proxy = access.get("proxy", id, r);
-    ObjectNode result = gateway.probeProxy(proxy.path("host").asText(), proxy.path("port").asInt());
+    ObjectNode result = gateway.probeProxy(proxy.path("url").asText());
     ObjectNode patch =
         s.object()
             .put("lastTestState", result.path("state").asText())
             .put("lastTestAt", result.path("checkedAt").asText())
-            .put("lastLatencyMs", result.path("latencyMs").asLong());
+            .put("lastLatencyMs", result.path("latencyMs").asLong())
+            .put("lastExitIp", result.path("exitIp").asText())
+            .put("lastTestMessage", result.path("message").asText());
     s.update("proxy", id, access.entityOwner("proxy", id, r), patch);
     return result;
   }

@@ -100,7 +100,14 @@ function C({
         singleLimit: String(i.data.singleLimit || `1000`),
         dailyLimit: String(i.data.dailyLimit || `10000`),
         requestTimeoutMs: String(i.data.requestTimeoutMs || 1e4),
-        reconcileIntervalSeconds: String(i.data.reconcileIntervalSeconds || 60)
+        reconcileIntervalSeconds: String(i.data.reconcileIntervalSeconds || 60),
+        executionEnabled: !!i.data.executionAdapter?.enabled,
+        executionProtocol: i.data.executionAdapter?.protocol || (v ? `NATIVE_AIRWALLEX` : x ? `NATIVE_BINANCE` : `NATIVE_OKX`),
+        executionBaseUrl: i.data.executionAdapter?.baseUrl || ``,
+        executionApiKey: ``,
+        networkMappingsText: JSON.stringify(i.data.networkMappings || {}, null, 2),
+        beneficiaryMappingsText: JSON.stringify(i.data.beneficiaryMappings || {}, null, 2),
+        recipientInformationText: ``
       })
     }, [i.data, v]), i.error) return (0, b.jsx)(o, {
     text: d(`{0}：{1}`, [t.title, i.error]),
@@ -116,8 +123,24 @@ function C({
     onSubmit: async e => {
       e.preventDefault(), T(!0), k(``);
       try {
+        let {executionEnabled, executionProtocol, executionBaseUrl, executionApiKey,
+          networkMappingsText, beneficiaryMappingsText, recipientInformationText, ...standard} = S;
+        let objectValue = (value, name) => {
+          let parsed;
+          try { parsed = JSON.parse(value || `{}`) } catch { throw Error(`${name} 需要有效 JSON 对象`) }
+          if (!parsed || Array.isArray(parsed) || typeof parsed !== `object`) throw Error(`${name} 需要 JSON 对象`);
+          return parsed
+        };
         await l(`/payout-providers/${t.code}`, {
-          ...S,
+          ...standard,
+          executionAdapter: {
+            enabled: !!executionEnabled,
+            protocol: executionProtocol,
+            ...(executionProtocol === `HISPREAD_PAYOUT_V1` ? {baseUrl: executionBaseUrl, apiKey: executionApiKey} : {baseUrl: ``})
+          },
+          networkMappings: objectValue(networkMappingsText, `网络映射`),
+          beneficiaryMappings: objectValue(beneficiaryMappingsText, `收款人映射`),
+          ...(recipientInformationText?.trim() ? {recipientInformation: objectValue(recipientInformationText, `收款合规资料`)} : {}),
           secretKey: v ? null : S.secretKey,
           passphrase: v || x ? null : S.passphrase,
           sourceWallet: x ? S.sourceWallet : null,
@@ -155,6 +178,21 @@ function C({
         }), d(`启用 `), t.title, d(` 出款 `)]
       }), (0, b.jsxs)(`div`, {
         className: `field`,
+        children: [(0, b.jsx)(`span`, {children: `付款执行方式`}), (0, b.jsx)(g, {
+          ariaLabel: `付款执行方式`,
+          value: S.executionProtocol || (v ? `NATIVE_AIRWALLEX` : x ? `NATIVE_BINANCE` : `NATIVE_OKX`),
+          onChange: value => A(`executionProtocol`, value),
+          options: [{value: v ? `NATIVE_AIRWALLEX` : x ? `NATIVE_BINANCE` : `NATIVE_OKX`, label: `官方原生接口`},
+            {value: `HISPREAD_PAYOUT_V1`, label: `自有支付中台`}]
+        }), (0, b.jsxs)(`label`, {className: `policy-check`, children: [
+          (0, b.jsx)(`input`, {type: `checkbox`, checked: !!S.executionEnabled, onChange: event => A(`executionEnabled`, event.target.checked)}),
+          `启用此执行方式（仍需独立付款审核）`
+        ]})]
+      }), S.executionProtocol === `HISPREAD_PAYOUT_V1` && [`executionBaseUrl`, `executionApiKey`].map(field => (0, b.jsxs)(`label`, {
+        className: `field`, children: [(0, b.jsx)(`span`, {children: field === `executionBaseUrl` ? `支付中台 HTTPS 地址` : `支付中台密钥（留空保留）`}),
+          (0, b.jsx)(`input`, {type: field === `executionApiKey` ? `password` : `url`, value: S[field] || ``, onChange: event => A(field, event.target.value)})]
+      }, field)), (0, b.jsxs)(`div`, {
+        className: `field`,
         children: [(0, b.jsx)(`span`, {
           children: d(v ? `接口环境` : `账户注册地区`)
         }), (0, b.jsx)(g, {
@@ -174,8 +212,11 @@ function C({
             value: `GLOBAL`,
             label: d(`全球`)
           }, {
-            value: `US_AU`,
-            label: d(`美国 / 澳大利亚`)
+            value: `US`,
+            label: d(`美国`)
+          }, {
+            value: `AU`,
+            label: d(`澳大利亚`)
           }, {
             value: `EEA`,
             label: d(`欧洲经济区`)
@@ -297,9 +338,16 @@ function C({
           value: String(S[e] || ``),
           onChange: t => A(e, t.target.value)
         })]
-      }, e)), (0, b.jsx)(s, {
+      }, e)), [
+        [v ? `beneficiaryMappingsText` : `networkMappingsText`, v ? `审核账户与官方收款人映射（JSON）` : `本地网络与官方网络标识映射（JSON）`],
+        ...!v && !x ? [[`recipientInformationText`, `账户合规资料（JSON，留空保留）`]] : []
+      ].map(([field, label]) => (0, b.jsxs)(`label`, {className: `field full`, children: [
+        (0, b.jsx)(`span`, {children: label}),
+        (0, b.jsx)(`textarea`, {rows: 6, spellCheck: !1, value: S[field] || ``, onChange: event => A(field, event.target.value),
+          placeholder: v ? `{"审核账户ID":{"accountVersion":2,"beneficiaryId":"官方收款人ID"}}` : field === `networkMappingsText` ? (x ? `{"TRC20":"TRX"}` : `{"TRC20":"USDT-TRC20"}`) : `{"审核账户ID":{"accountVersion":2,"rcvrInfo":{"walletType":"private"}}}`})
+      ]}, field)), (0, b.jsx)(s, {
         tone: `amber`,
-        children: d(v ? `Client ID 与 API Key 加密保存，不回显明文。正式凭据请只授予 balance:read、beneficiary:read 和 transfer:write 等必需最小权限。` : `API Key 仅授予读取和提币所需的最小权限，并绑定生产出口 IP。凭据加密保存，不回显明文。`)
+        children: d(v ? `凭据仅保存在服务端且不回显。正式凭据请只授予必需权限；收款人映射必须对应当前已审核账户版本。` : `API Key 仅授予读取和提币所需的最小权限，并绑定生产出口 IP。凭据仅保存在服务端且不回显。`)
       }), v && (0, b.jsx)(s, {
         children: d(`当前基础版仅使用 Airwallex 已保存的 beneficiary ID；动态银行字段待 Sandbox 收款样例确认后补齐。 `)
       }), x && (0, b.jsx)(s, {

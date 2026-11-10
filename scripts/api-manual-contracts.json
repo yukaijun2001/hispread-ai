@@ -2,5 +2,6 @@
   {"method":"DELETE","path":"/projects/category-codes/{code}","source":"Projects-BlZGF-3J.js:55","reason":"Core export $ request receives method DELETE through a computed alias."},
   {"method":"POST","path":"/suppliers/{id}/enabled","source":"SupplierDetail-CJpHR0kK.js:530","reason":"Supports both frontend POST and backward-compatible PUT."},
   {"method":"POST","path":"/auth/login","source":"index-Dnr0i-H9.js:5903","reason":"Request options are passed through local variable n; form-urlencoded login."},
-  {"method":"POST","path":"/settlements/export","source":"index-Dnr0i-H9.js:5926","reason":"Export helper passes POST with selected ids and CSRF."}
+  {"method":"POST","path":"/settlements/export","source":"index-Dnr0i-H9.js:5926","reason":"Export helper passes POST with selected ids and CSRF."},
+  {"method":"POST","path":"/settlement-inputs/{id}/confirm","source":"DailyAccounting-z_8v-GqX.js:586","reason":"Dedicated confirmRequest HTTP helper receives explicit POST; static Babel classifier does not recognize TemplateLiteral method values."}
 ]

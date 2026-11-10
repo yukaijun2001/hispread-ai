@@ -22,6 +22,7 @@ public class PlatformConfigController {
   private final ResourceIntegrationGateway resources;
   private final PayoutProviderGateway payouts;
   private final PaymentExecutionGateway execution;
+  private final MonitoringService monitoring;
 
   public PlatformConfigController(
       Store s,
@@ -31,7 +32,8 @@ public class PlatformConfigController {
       FinancialReportService reports,
       ResourceIntegrationGateway resources,
       PayoutProviderGateway payouts,
-      PaymentExecutionGateway execution) {
+      PaymentExecutionGateway execution,
+      MonitoringService monitoring) {
     this.s = s;
     this.a = a;
     this.b = b;
@@ -40,6 +42,7 @@ public class PlatformConfigController {
     this.resources = resources;
     this.payouts = payouts;
     this.execution = execution;
+    this.monitoring = monitoring;
   }
 
   private void guard(HttpServletRequest r, String permission) {
@@ -345,6 +348,7 @@ public class PlatformConfigController {
                 "endpoint",
                 "authType",
                 "authHeader",
+                "newApiUserId",
                 "rpmPath",
                 "tpmPath",
                 "windowSecondsPath",
@@ -355,8 +359,17 @@ public class PlatformConfigController {
                 "supplierVisible",
                 "includeInTotal",
                 "version")
-            : List.of("name", "baseUrl", "allowHttp", "enabled", "upstreamPathPrefix", "version"))
-      if (body.has(field)) out.set(field, body.get(field));
+            : List.of(
+                "name",
+                "baseUrl",
+                "allowHttp",
+                "enabled",
+                "upstreamPathPrefix",
+                "version",
+                "protocol",
+                "newApiUserId",
+                "defaultTarget",
+                "timeoutMs")) if (body.has(field)) out.set(field, body.get(field));
     String secret = monitoring ? "token" : "apiKey";
     if (body.has(secret) && !text(body, secret).isBlank()) out.put(secret, text(body, secret));
     if (body.path("clearToken").asBoolean() || body.path("clearApiKey").asBoolean())
@@ -369,6 +382,20 @@ public class PlatformConfigController {
       out.put("intervalSeconds", interval);
       if (text(out, "rpmPath").isBlank() && text(out, "tpmPath").isBlank())
         throw new ApiException(400, "请至少配置RPM或TPM字段路径");
+      this.monitoring.validate(out);
+    }
+    if (!monitoring) {
+      String protocol = out.path("protocol").asText("CUSTOM");
+      if (!Set.of("CUSTOM", "NEWAPI").contains(protocol))
+        throw new ApiException(400, "资源协议须为CUSTOM或NEWAPI");
+      out.put("protocol", protocol);
+      if (protocol.equals("NEWAPI") && !text(out, "newApiUserId").matches("[1-9][0-9]{0,18}"))
+        throw new ApiException(400, "New API需要有效管理员用户ID");
+      int timeout = out.path("timeoutMs").asInt(15000);
+      if (timeout < 1000 || timeout > 120000) throw new ApiException(400, "资源超时须为1000至120000毫秒");
+      out.put("timeoutMs", timeout);
+      String prefix = out.path("upstreamPathPrefix").asText("/api");
+      if (!prefix.matches("(?:/[A-Za-z0-9_-]+)*")) throw new ApiException(400, "资源目标前缀无效");
     }
     return out;
   }
@@ -414,25 +441,7 @@ public class PlatformConfigController {
       guardAny(r, "resource.config.test", "workbench.monitoring.configure");
     else guard(r, "resource.config.test");
     if (r.getRequestURI().startsWith("/api/workbench-monitoring/sources/")) {
-      ObjectNode config = s.get("monitoring-source", id, null),
-          data = resources.refreshMonitoring(config),
-          patch =
-              s.object()
-                  .put("lastAttemptAt", Instant.now().toString())
-                  .put("queriedAt", Instant.now().toString())
-                  .put("state", "READY")
-                  .putNull("lastError");
-      for (String field : List.of("rpm", "tpm")) {
-        String path = text(config, field + "Path");
-        if (!path.isBlank()) {
-          com.fasterxml.jackson.databind.JsonNode value = data;
-          for (String part : path.split("\\.")) value = value.path(part);
-          if (value.isMissingNode() || value.isContainerNode())
-            throw new ApiException(502, "监控返回缺少配置字段：" + field);
-          patch.put(field, value.asText());
-        }
-      }
-      return sourceView(s.update("monitoring-source", id, null, patch));
+      return sourceView(monitoring.refresh(id));
     }
     ObjectNode config = s.get("resource-target", id, null);
     if (r.getRequestURI().endsWith("/sync"))
@@ -484,9 +493,12 @@ public class PlatformConfigController {
   }
 
   @PutMapping("/workbench-monitoring/sources/{id}")
+  @Transactional
   public Object source(
       @PathVariable String id, @RequestBody ObjectNode body, HttpServletRequest r) {
     guardAny(r, "resource.config.write", "workbench.monitoring.configure");
+    s.jdbc.queryForObject(
+        "select pg_advisory_xact_lock(hashtextextended(?,0))", Object.class, "monitoring:" + id);
     return sourceView(
         s.update(
             "monitoring-source",
@@ -555,13 +567,27 @@ public class PlatformConfigController {
             && (!text(d, "apiKey").isBlank() || !text(d, "clientId").isBlank()));
     d.put("hasSecretKey", !text(d, "secretKey").isBlank())
         .put("hasPassphrase", !text(d, "passphrase").isBlank());
+    d.put("recipientInformationConfigured", d.path("recipientInformation").size() > 0);
+    ObjectNode recipientSummary = s.object();
+    d.path("recipientInformation")
+        .fields()
+        .forEachRemaining(
+            entry -> {
+              ObjectNode summary =
+                  s.object()
+                      .put("accountVersion", entry.getValue().path("accountVersion").asLong())
+                      .put("configured", true);
+              recipientSummary.set(entry.getKey(), summary);
+            });
+    d.set("recipientInformation", recipientSummary);
     d.remove(List.of("apiKey", "secretKey", "passphrase", "clientId"));
     if (d.path("executionAdapter").isObject()) {
       ObjectNode adapter = (ObjectNode) d.path("executionAdapter");
       adapter
           .put("apiKeyMasked", mask(text(adapter, "apiKey")))
           .put("hasApiKey", !text(adapter, "apiKey").isBlank());
-      adapter.remove("apiKey");
+      adapter.remove(
+          List.of("apiKey", "secretKey", "passphrase", "clientId", "recipientInformation"));
     }
     return d;
   }
@@ -588,9 +614,14 @@ public class PlatformConfigController {
             "dailyLimit",
             "requestTimeoutMs",
             "reconcileIntervalSeconds",
+            "networkMappings",
+            "beneficiaryMappings",
+            "recipientInformation",
             "version")) if (body.has(field)) d.set(field, body.get(field));
     for (String secret : List.of("apiKey", "secretKey", "passphrase", "clientId"))
-      if (body.has(secret) && !text(body, secret).isBlank()) d.put(secret, text(body, secret));
+      if (body.path("clear" + Character.toUpperCase(secret.charAt(0)) + secret.substring(1))
+          .asBoolean()) d.remove(secret);
+      else if (body.has(secret) && !text(body, secret).isBlank()) d.put(secret, text(body, secret));
     if (body.has("executionAdapter")) {
       if (!body.path("executionAdapter").isObject()) throw new ApiException(400, "执行中台配置需为对象");
       ObjectNode adapter =
@@ -603,13 +634,22 @@ public class PlatformConfigController {
       if (submitted.has("apiKey") && !text(submitted, "apiKey").isBlank())
         adapter.put("apiKey", text(submitted, "apiKey"));
       if (submitted.path("clearApiKey").asBoolean()) adapter.remove("apiKey");
-      if (adapter.path("enabled").asBoolean()) execution.validateAdapter(adapter);
-      else if (!text(adapter, "protocol").isBlank()
-          && !eq(adapter, "protocol", "HISPREAD_PAYOUT_V1"))
+      if (!text(adapter, "protocol").isBlank()
+          && !eq(adapter, "protocol", "HISPREAD_PAYOUT_V1")
+          && !NativePaymentGateway.PROTOCOLS.contains(text(adapter, "protocol")))
         throw new ApiException(400, "不支持的执行中台协议");
       d.set("executionAdapter", adapter);
     }
     d.put("code", code);
+    if (d.path("executionAdapter").path("enabled").asBoolean()) {
+      ObjectNode adapter = execution.configuredAdapter(d);
+      execution.validateAdapter(adapter);
+      if (execution.nativeProtocol(adapter)) {
+        ObjectNode storedAdapter = (ObjectNode) d.path("executionAdapter");
+        storedAdapter.put("baseUrl", text(adapter, "baseUrl"));
+        storedAdapter.remove("apiKey");
+      }
+    }
     if (d.path("requestTimeoutMs").asInt(10000) < 100
         || d.path("requestTimeoutMs").asInt(10000) > 120000)
       throw new ApiException(400, "请求超时需为100–120000毫秒");
@@ -667,6 +707,7 @@ public class PlatformConfigController {
                     b.contains(
                             x, q.get("search"), "paymentId", "code", "supplierName", "providerCode")
                         && b.match(x, q, "state", "state"))
+            .map(row -> access.publicRecord("payout-call", row, r))
             .toList(),
         q);
   }

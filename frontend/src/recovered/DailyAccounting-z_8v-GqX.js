@@ -2,6 +2,7 @@
 const __vite__mapDeps = (i, m = __vite__mapDeps, d = (m.f || (m.f = ["assets/DailyExports-q6_gv_XE.js", "assets/index-Dnr0i-H9.js", "assets/index-Co8Tabyn.css", "assets/systemLabels-DqpNuQ-_.js"]))) => i.map(i => d[i]);
 import {
   $ as e,
+  $ as confirmRequest,
   A as t,
   C as n,
   S as r,
@@ -115,6 +116,7 @@ var C = {
   RESOURCE: d(`资源金额`),
   MANUAL: d(`手工款`),
   EXTERNAL: d(`外部金额`),
+  CCMAX_OBSERVATION: d(`CCMAX 待核对采集`),
   CCMAX: d(`CCMAX 模型消耗`)
 };
 
@@ -576,7 +578,21 @@ function w({
                 children: [d(`整单已付 `), e.settlementPaidAmount, ` / `, e.settlementTotal]
               })]
             })
-          }]
+          }, ...a(`usage.import`) ? [{
+            label: d(`操作`),
+            render: row => row.sourceKind === `CCMAX_OBSERVATION` && row.state === `PENDING` ? (0, x.jsx)(p, {
+              onClick: async () => {
+                try {
+                  await confirmRequest(`/settlement-inputs/${encodeURIComponent(row.sourceId || row.id)}/confirm`, {
+                    method: `POST`, headers: {"Content-Type": `application/json`},
+                    body: JSON.stringify({version: row.version})
+                  });
+                  i()
+                } catch (error) {window.alert(error.message)}
+              },
+              children: d(`确认采集金额`)
+            }) : `—`
+          }] : []]
         }), (0, x.jsx)(o, {
           data: U.data,
           page: L,

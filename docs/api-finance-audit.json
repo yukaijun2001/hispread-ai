@@ -1247,9 +1247,10 @@
     "result": "18 targeted tests passed (FinanceContract7, Gateway2, MakerChecker5, PlatformFinance4), zero failures/errors"
   },
   "remainingExternalBoundary": {
-    "fundsExecution": "Configured HISPREAD_PAYOUT_V1 bridge supports preflight/execute/reconcile. No native wallet transfer implementation or live credentials verification; unconfigured returns503.",
-    "realCredentials": "No provider credentials supplied or live provider account success tested. Transport fixtures verify request/signature shape and error handling only.",
-    "quoteAutoRenewal": "Explicit administrator rules supported by SystemJobService; documented local policy generates PENDING applications only. No original production renewal policy is claimed."
+    "fundsExecution": "Implemented explicit NATIVE_AIRWALLEX/NATIVE_OKX/NATIVE_BINANCE and HISPREAD_PAYOUT_V1. Maker/checker, durable send once, original-id query, limits and Airwallex late return ledger reversal tested; no live credentials or funds used.",
+    "realCredentials": "Official production capability remains unverified without configured accounts, whitelists, approved beneficiary/network mappings. Travel Rule questionnaire/MemoTag/FX outside supported native account model fail closed.",
+    "quoteAutoRenewal": "Explicit administrator opt-in rules generate PENDING applications only.",
+    "sandbox": "Isolated sandbox-payment/events implemented; cannot mutate real payment or settlement ledger; disabled by default."
   },
   "providerPrimarySources": [
     "https://www.airwallex.com/docs/api/authentication/api_access_token",
@@ -1289,5 +1290,6 @@
       "explicit success exact-once paid amount",
       "definite failure exact-once reservation release"
     ]
-  }
+  },
+  "latestImplementation": "interface-completion-2026-11-09.md"
 }

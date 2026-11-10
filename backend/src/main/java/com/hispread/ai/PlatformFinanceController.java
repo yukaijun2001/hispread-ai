@@ -210,6 +210,90 @@ public class PlatformFinanceController {
     return b.obj().put("inserted", inserted).put("skipped", skipped);
   }
 
+  @PostMapping("/settlement-inputs/{id}/confirm")
+  @Transactional
+  public ObjectNode confirmObservedInput(
+      @PathVariable String id, @RequestBody ObjectNode body, HttpServletRequest req) {
+    platform(req, "usage.import");
+    if (!body.path("version").isIntegralNumber()) throw new ApiException(400, "请提供当前金额记录版本");
+    lock("input-confirm:" + id);
+    ObjectNode old = access.get("input", id, req);
+    if (!eq(old, "sourceKind", "CCMAX_OBSERVATION")) throw new ApiException(400, "仅支持确认上游采集的待核对日账");
+    if (eq(old, "reviewStatus", "CONFIRMED")
+        && Set.of("AVAILABLE", "ALLOCATED").contains(text(old, "state"))) return old;
+    requireVersion(body, old);
+    if (!eq(old, "state", "PENDING") || !eq(old, "reviewStatus", "PENDING"))
+      throw new ApiException(409, "此日账已不处于待核对状态");
+    String owner = text(old, "supplierId");
+    ObjectNode supplier = access.get("supplier", owner, req);
+    if (!supplier.path("enabled").asBoolean(true)
+        || !eq(supplier, "state", "APPROVED")
+        || !b.project(text(old, "projectId")).path("enabled").asBoolean())
+      throw new ApiException(409, "供应商或项目当前不可结算");
+    List<ObjectNode> matches =
+        store.list("quote", owner).stream()
+            .filter(
+                q ->
+                    eq(q, "state", "APPROVED")
+                        && eq(q, "projectId", text(old, "projectId"))
+                        && eq(q, "currency", text(old, "currency"))
+                        && text(q, "effectiveFrom").compareTo(text(old, "periodStart")) <= 0
+                        && text(q, "effectiveTo").compareTo(text(old, "periodEnd")) >= 0)
+            .toList();
+    if (matches.size() != 1 || !eq(matches.get(0), "id", text(old.path("quoteSnapshot"), "id")))
+      throw new ApiException(409, "采集时的报价已失效或冲突，请重新核对日账", "JOB_QUOTE_CHANGED");
+    ObjectNode current = pricing.at(matches.get(0), LocalDate.parse(text(old, "periodEnd")));
+    JsonNode snapshot = old.path("quoteSnapshot");
+    for (String field : List.of("pricingType", "currency", "multiplier", "unitPrice"))
+      if (!text(current, field).equals(text(snapshot, field)))
+        throw new ApiException(409, "采集报价价格已变化，请重新核对日账", "JOB_QUOTE_CHANGED");
+    BigDecimal expected =
+        eq(snapshot, "pricingType", "FIXED")
+            ? amount(old, "quantity").multiply(amount(snapshot, "unitPrice"))
+            : amount(old, "originalAmount").multiply(amount(snapshot, "multiplier"));
+    if (expected.compareTo(amount(old, "calculatedPayable")) != 0)
+      throw new ApiException(409, "采集金额与报价快照不一致", "JOB_OBSERVATION_CHANGED");
+    List<ObjectNode> bills =
+        store.list("bill", owner).stream()
+            .filter(x -> eq(x, "sourceRef", text(old, "sourceRef")))
+            .toList();
+    if (bills.size() != 1
+        || !eq(bills.get(0), "state", "PENDING")
+        || !eq(bills.get(0), "resourceId", text(old, "resourceId"))
+        || !eq(bills.get(0), "currency", text(old, "currency"))
+        || amount(bills.get(0), "originalAmount").compareTo(amount(old, "originalAmount")) != 0
+        || amount(bills.get(0), "calculatedPayable").compareTo(expected) != 0)
+      throw new ApiException(409, "供应商账单与采集金额不一致", "JOB_OBSERVATION_CHANGED");
+    String at = Instant.now().toString();
+    ObjectNode patch =
+        b.obj()
+            .put("version", old.path("version").asLong())
+            .put("state", "AVAILABLE")
+            .put("reviewStatus", "CONFIRMED")
+            .put("reviewedBy", auth.userId(req))
+            .put("reviewedAt", at);
+    ObjectNode confirmed = store.update("input", id, owner, patch);
+    store.update(
+        "bill",
+        text(bills.get(0), "id"),
+        owner,
+        b.obj()
+            .put("version", bills.get(0).path("version").asLong())
+            .put("state", "CONFIRMED")
+            .put("reviewStatus", "CONFIRMED")
+            .put("reviewedBy", auth.userId(req))
+            .put("reviewedAt", at));
+    store.create(
+        "audit",
+        "GLOBAL",
+        b.obj()
+            .put("action", "CCMAX_OBSERVATION_CONFIRM")
+            .put("actor", auth.userId(req))
+            .put("targetId", id)
+            .put("outcome", "SUCCESS"));
+    return confirmed;
+  }
+
   @PostMapping("/settlement-inputs/{id}/void")
   public ObjectNode voidInput(
       @PathVariable String id, @RequestBody ObjectNode body, HttpServletRequest req) {

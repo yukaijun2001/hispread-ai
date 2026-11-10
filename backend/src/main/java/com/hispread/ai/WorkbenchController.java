@@ -16,11 +16,14 @@ public class WorkbenchController {
   private final Store s;
   private final AuthService a;
   private final AccessPolicy access;
+  private final MonitoringService monitoring;
 
-  public WorkbenchController(Store s, AuthService a, AccessPolicy access) {
+  public WorkbenchController(
+      Store s, AuthService a, AccessPolicy access, MonitoringService monitoring) {
     this.s = s;
     this.a = a;
     this.access = access;
+    this.monitoring = monitoring;
   }
 
   private List<ObjectNode> tasks(HttpServletRequest req) {
@@ -197,7 +200,7 @@ public class WorkbenchController {
   @GetMapping("/workbench/monitoring")
   public Object monitoring(HttpServletRequest req) {
     a.require(req, "workbench.monitoring.read");
-    return s.list("monitoring", null);
+    return monitoring.snapshots(!a.platform(req));
   }
 
   @GetMapping("/notifications/unread-count")

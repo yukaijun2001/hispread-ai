@@ -18,6 +18,6 @@ AIRWALLEX认证会签发短期access token，但本服务只验证格式后丢�
 - [OKX API V5](https://www.okx.com/docs-v5/en/)：REST身份签名、区域主机和Funding Account GET balance协议。
 - [Binance官方Swagger](https://github.com/binance/binance-api-swagger/blob/master/spot_api.yaml)：`/sapi/v1/account/info`的USER_DATA请求、timestamp/recvWindow、ApiKeyAuth定义。开发者wallet页面本次返回202空体，因此采用官方仓库的规范作为可读依据。
 
-实际执行付款可通过新增的HISPREAD_PAYOUT_V1自有支付中台适配器接入，已有可靠幂等身份、独立审核、账户快照、版本锁和UNKNOWN查单流程。未配置中台时execute/reconcile缺省503；没有虚构资金成功结果。原生钱包转账及真实生产凭据验证仍未完成。
+实际付款执行支持显式 `HISPREAD_PAYOUT_V1` 自有支付中台，或官方 `NATIVE_AIRWALLEX`、`NATIVE_OKX`、`NATIVE_BINANCE` 适配器。执行前保留独立审核、账户快照、单笔/每日限额、持久化幂等意图与 UNKNOWN 原单查单。原生协议的配置、官方来源、费用语义、Travel Rule 限制与 Airwallex 晚退回处理见 [原生支付实现](native-payment-implementation.md)。未配置并启用执行适配器时 execute/reconcile 返回503；没有真实生产凭据验证或任何实际转账。
 
-`GET /api/payments/provider-capabilities` 为最高管理员返回三个真实配置状态的脱敏能力记录。`configured`、`enabled` 和 `readOnlyTestAvailable` 反映数据库配置；未配置执行中台时 `executable=false` 并包含明确原因。配置有效 `HISPREAD_PAYOUT_V1` bridge后其执行能力与官方只读测试独立，详见 [支付执行中台契约](payment-execution-bridge.md)。兼容前端原调用的 `/api/payments/providers` 只列可执行的provider，因此当前返回空数组。这是能力筛选结果，不代表已配置通道能自动执行转账。
+`GET /api/payments/provider-capabilities` 为最高管理员返回三个真实配置状态的脱敏能力记录。`configured`、`enabled` 与 `readOnlyTestAvailable` 反映数据库配置；`executable` 还要求已显式配置并验证 bridge 或匹配通道的 native adapter。官方只读连接测试保持独立。兼容接口 `/api/payments/providers` 只列可执行通道；只有认证凭据而未选择执行协议的通道不会自动变成可执行。
