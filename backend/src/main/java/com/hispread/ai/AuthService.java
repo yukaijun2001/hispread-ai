@@ -6,6 +6,7 @@ import java.util.*;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
@@ -133,6 +134,50 @@ public class AuthService {
             "select profile from hub_user where id=?", (r, n) -> store.parse(r.getString(1)), id);
     if (users.isEmpty()) throw new ApiException(404, "账号不存在");
     return users.get(0);
+  }
+
+  public ObjectNode lockUser(String id) {
+    var users =
+        store.jdbc.query(
+            "select profile,enabled from hub_user where id=? for update",
+            (row, index) -> store.parse(row.getString(1)).put("enabled", row.getBoolean(2)),
+            id);
+    if (users.isEmpty()) throw new ApiException(404, "账号不存在");
+    return users.get(0);
+  }
+
+  public boolean enabled(String id) {
+    return store.jdbc
+        .query("select enabled from hub_user where id=?", (row, index) -> row.getBoolean(1), id)
+        .stream()
+        .anyMatch(Boolean.TRUE::equals);
+  }
+
+  @Transactional
+  public void setEnabled(ObjectNode user, boolean enabled) {
+    String id = user.path("id").asText();
+    user.put("enabled", enabled);
+    saveUser(user);
+    int updated =
+        store.jdbc.update(
+            "update hub_user set enabled=?,session_version=session_version+1 where id=?", enabled, id);
+    if (updated == 0) throw new ApiException(404, "账号不存在");
+    if ("SUPPLIER_AGENT".equals(user.path("role").asText())) {
+      ObjectNode agent;
+      String owner = user.path("supplierId").asText();
+      try {
+        agent = store.get("agent", id, owner);
+      } catch (ApiException missing) {
+        if (missing.status != 404) throw missing;
+        return;
+      }
+      if (!agent.path("enabled").isBoolean() || agent.path("enabled").asBoolean() != enabled)
+        store.update(
+            "agent",
+            id,
+            owner,
+            store.object().put("enabled", enabled).put("version", agent.path("version").asLong()));
+    }
   }
 
   public ObjectNode supplierState(String supplierId) {

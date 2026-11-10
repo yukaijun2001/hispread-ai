@@ -76,6 +76,41 @@ class SupplierBusinessIntegrationTest {
     return (ObjectNode) json.readTree(response.getResponse().getContentAsString());
   }
 
+  Client administrator() throws Exception {
+    Client administrator = client();
+    ObjectNode profile = auth.findUser(administrator.uid);
+    profile.put("role", "ADMIN").putNull("supplierId");
+    profile.set("permissions", auth.allPermissions());
+    auth.saveUser(profile);
+    return administrator;
+  }
+
+  JsonNode teamMembers(Client supplier) throws Exception {
+    return json.readTree(
+        mvc.perform(get("/api/supplier-agents").session(supplier.session))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString());
+  }
+
+  ObjectNode changeEnabled(String path, boolean enabled, long version, Client client, int expected)
+      throws Exception {
+    return (ObjectNode)
+        json.readTree(
+            mvc.perform(
+                    put(path)
+                        .session(client.session)
+                        .header("X-CSRF-TOKEN", client.csrf)
+                        .contentType("application/json")
+                        .content(
+                            store.object().put("enabled", enabled).put("version", version).toString()))
+                .andExpect(status().is(expected))
+                .andReturn()
+                .getResponse()
+                .getContentAsString());
+  }
+
   ObjectNode project() {
     ObjectNode p =
         store
@@ -232,6 +267,94 @@ class SupplierBusinessIntegrationTest {
     Client other = client();
     mvc.perform(get("/api/supplier-agents/" + id + "/projects").session(other.session))
         .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void administratorAndSupplierChangesKeepMemberStatusAndVersionsInSync() throws Exception {
+    Client supplier = client(), administrator = administrator(), other = client();
+    ObjectNode member =
+        postJson(
+            "/api/supplier-agents",
+            store.object()
+                .put("username", "status_" + UUID.randomUUID())
+                .put("displayName", "Status member")
+                .put("password", "MemberStatus@123"),
+            supplier,
+            200);
+    String memberId = member.path("id").asText();
+    MockHttpSession memberSession = new MockHttpSession();
+    memberSession.setAttribute("uid", memberId);
+    memberSession.setAttribute("sv", 0L);
+    mvc.perform(get("/api/auth/me").session(memberSession)).andExpect(status().isOk());
+
+    String adminPath = "/api/system/users/" + memberId + "/enabled";
+    ObjectNode disabled = changeEnabled(adminPath, false, 0, administrator, 200);
+    assertFalse(disabled.path("enabled").asBoolean(true));
+    assertFalse(teamMembers(supplier).get(0).path("enabled").asBoolean());
+    assertFalse(store.get("agent", memberId, supplier.owner).path("enabled").asBoolean());
+    assertEquals(1, teamMembers(supplier).get(0).path("version").asLong());
+    mvc.perform(get("/api/auth/me").session(memberSession)).andExpect(status().isUnauthorized());
+
+    String teamPath = "/api/supplier-agents/" + memberId + "/enabled";
+    changeEnabled(teamPath, true, 0, supplier, 409);
+    changeEnabled(teamPath, true, 1, other, 404);
+    ObjectNode enabled = changeEnabled(teamPath, true, 1, supplier, 200);
+    assertTrue(enabled.path("enabled").asBoolean());
+    assertEquals(2, enabled.path("version").asLong());
+    assertEquals(2, auth.findUser(memberId).path("version").asLong());
+    mvc.perform(
+            get("/api/system/users")
+                .param("search", member.path("username").asText())
+                .session(administrator.session))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[0].enabled").value(true));
+
+    changeEnabled(adminPath, false, 1, administrator, 409);
+    changeEnabled("/api/system/users/" + memberId, false, 2, administrator, 200);
+    assertFalse(teamMembers(supplier).get(0).path("enabled").asBoolean());
+    changeEnabled(adminPath, true, 3, administrator, 200);
+    assertTrue(teamMembers(supplier).get(0).path("enabled").asBoolean());
+    assertEquals(4, teamMembers(supplier).get(0).path("version").asLong());
+    changeEnabled(teamPath, false, 4, supplier, 200);
+    mvc.perform(
+            get("/api/system/users")
+                .param("search", member.path("username").asText())
+                .session(administrator.session))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[0].enabled").value(false))
+        .andExpect(jsonPath("$.items[0].version").value(5));
+    assertFalse(teamMembers(supplier).get(0).path("enabled").asBoolean());
+    assertEquals(0, teamMembers(other).size());
+  }
+
+  @Test
+  void teamViewsUseLoginStatusForPreviouslyInconsistentMembers() throws Exception {
+    Client supplier = client();
+    ObjectNode member =
+        postJson(
+            "/api/supplier-agents",
+            store.object()
+                .put("username", "legacy_" + UUID.randomUUID())
+                .put("displayName", "Legacy status member")
+                .put("password", "MemberStatus@123"),
+            supplier,
+            200);
+    String memberId = member.path("id").asText();
+    store.jdbc.update("update hub_user set enabled=false where id=?", memberId);
+    assertTrue(store.get("agent", memberId, supplier.owner).path("enabled").asBoolean());
+    assertFalse(teamMembers(supplier).get(0).path("enabled").asBoolean());
+    mvc.perform(get("/api/cc-intake/allocations").session(supplier.session))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.members[0].enabled").value(false));
+    ObjectNode group = store.list("group", supplier.owner).get(0);
+    ObjectNode assignAdmin = group.deepCopy().put("adminUserId", memberId);
+    mvc.perform(
+            put("/api/supplier-team-groups/" + group.path("id").asText())
+                .session(supplier.session)
+                .header("X-CSRF-TOKEN", supplier.csrf)
+                .contentType("application/json")
+                .content(assignAdmin.toString()))
+        .andExpect(status().isBadRequest());
   }
 
   @Test

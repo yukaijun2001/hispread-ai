@@ -131,12 +131,13 @@ public class TeamController {
     manage(req);
     b.mainSupplier(req);
     member(id, req);
+    if (!body.path("enabled").isBoolean()) throw new ApiException(400, "请提供有效的账号启用状态");
+    if (!body.has("version")) throw new ApiException(400, "请提供当前成员版本");
+    ObjectNode user = auth.lockUser(id);
     ObjectNode patch = b.pick(body, "enabled", "version");
     ObjectNode result = b.update("agent", id, req, patch);
-    store.jdbc.update(
-        "update hub_user set enabled=?,session_version=session_version+1 where id=?",
-        body.path("enabled").asBoolean(),
-        id);
+    user.put("version", user.path("version").asLong() + 1);
+    auth.setEnabled(user, body.path("enabled").asBoolean());
     return result;
   }
 
@@ -276,7 +277,7 @@ public class TeamController {
     String owner = old == null ? b.tenant(req, body) : b.entityOwner("group", text(old, "id"), req);
     for (String id : ids) {
       ObjectNode a = store.get("agent", id, owner);
-      if (id.equals(admin) && !a.path("enabled").asBoolean())
+      if (id.equals(admin) && !auth.enabled(id))
         throw new ApiException(400, "请选择已启用的部门管理员");
     }
     for (ObjectNode other : store.list("group", owner)) {
@@ -372,7 +373,12 @@ public class TeamController {
     List<ObjectNode> existing = b.owned("allocation", req);
     ObjectNode out = existing.isEmpty() ? b.obj().put("version", 0) : existing.get(0).deepCopy();
     out.set("groups", b.arr(b.owned("group", req)));
-    out.set("members", b.arr(b.owned("agent", req)));
+    out.set(
+        "members",
+        b.arr(
+            b.owned("agent", req).stream()
+                .map(member -> b.publicRecord("agent", member, req))
+                .toList()));
     ArrayNode memberships = out.putArray("memberships");
     for (ObjectNode g : b.owned("group", req))
       for (String id : groupMembers(g))
