@@ -20,6 +20,7 @@ class DeploymentCoreIntegrationTest {
   @Autowired MockMvc mvc;
   @Autowired JdbcTemplate jdbc;
   @Autowired SeedData seed;
+  @Autowired AuthService auth;
   @Autowired Store store;
 
   @Test
@@ -66,6 +67,24 @@ class DeploymentCoreIntegrationTest {
               .parse(jdbc.queryForObject("select profile::text from hub_user", String.class))
               .path("role")
               .asText());
+      seed.run();
+      assertEquals(1, jdbc.queryForObject("select count(*) from hub_user", Integer.class));
+      jdbc.update(
+          "update hub_user set id=?, username=?, profile=jsonb_set(profile,'{username}',to_jsonb(cast(? as text)))",
+          "local-admin",
+          "admin",
+          "admin");
+      target.adminUsername = "wutong";
+      target.adminPassword = "wutong@Qq1.";
+      seed.run();
+      assertEquals(
+          "wutong",
+          jdbc.queryForObject("select username from hub_user where id=?", String.class, "local-admin"));
+      assertTrue(
+          auth.passwords().matches(
+              "wutong@Qq1.",
+              jdbc.queryForObject(
+                  "select password_hash from hub_user where id=?", String.class, "local-admin")));
       seed.run();
       assertEquals(1, jdbc.queryForObject("select count(*) from hub_user", Integer.class));
     } finally {

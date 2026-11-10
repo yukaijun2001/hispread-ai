@@ -30,8 +30,8 @@ services:
       DATABASE_URL: jdbc:postgresql://postgres:5432/hispread_ai
       DATABASE_USER: hispread
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD}
-      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD (at least 16 characters)}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-wutong}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD (at least 8 characters)}
       PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8088}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       PAYMENT_SANDBOX_ENABLED: ${PAYMENT_SANDBOX_ENABLED:-false}

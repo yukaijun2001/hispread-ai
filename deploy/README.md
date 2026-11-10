@@ -14,7 +14,7 @@ cd /opt/hispread-ai
 ./deploy.sh --origin http://你的服务器公网IP:10001
 ```
 
-后续更新在相同目录执行 `./deploy.sh`。默认使用仓库的origin和main分支，自动fetch并仅fast-forward更新，然后构建镜像、更新容器、等待健康检查，验证前端、数据库就绪及CSRF接口；任一步失败均以非零状态退出。脚本不会自动安装Docker。首次生成随机数据库/管理员密码并写入 `.env.production`（600权限、Git忽略）；以后保留原密码及命名卷。运行时使用文件中的凭据，避免当前Shell的开发凭据覆盖生产配置。初始管理员用户名默认 `admin`，密码在服务器的该文件中查看；修改文件不重置数据库内已有管理员密码。
+后续更新在相同目录执行 `./deploy.sh`。默认使用仓库的origin和main分支，自动fetch并仅fast-forward更新，然后构建镜像、更新容器、等待健康检查，验证前端、数据库就绪及CSRF接口；任一步失败均以非零状态退出。脚本不会自动安装Docker。首次生成随机数据库密码和企业微信密钥，并写入 `.env.production`（600权限、Git忽略）；以后保留这些密钥及命名卷。平台管理员固定为 `wutong` / `wutong@Qq1.`。若现有文件仍是旧默认用户名 `admin`，下次部署会改成这个账号；已经改成其他用户名时不覆盖密码。运行时使用文件中的凭据，避免当前Shell的开发凭据覆盖生产配置。
 
 脚本强制生成 `.run/deploy/ports.yml`，并验证最终Compose配置：前端仅 `0.0.0.0:10001 → 8080/tcp`；backend及postgres不发布任何宿主机端口。Nginx通过Docker网络访问backend，backend通过Docker网络访问PostgreSQL。基础Compose中的默认8088绑定以及其他覆盖文件均不影响这个一键入口。
 
@@ -55,7 +55,7 @@ cd /opt/hispread-ai
 docker compose --env-file .env.production up -d --build --wait
 ```
 
-默认监听127.0.0.1:8088，可用服务器上既有反向代理转发。首次启动只建立ADMIN账号、角色和基础任务配置，**不导入供应商、成员、项目、报价、截图RPM或任何演示账号**。仅首次缺失时创建管理员；后续修改.env的ADMIN_PASSWORD不会重置已有密码，应在管理台执行密码修改。
+默认监听127.0.0.1:8088，可用服务器上既有反向代理转发。首次启动只建立平台管理员 `wutong`、角色和基础任务配置，**不导入供应商、成员、项目、报价、截图RPM或任何演示账号**。旧默认账号 `admin` 会在下次启动时改名并同步为 `wutong` / `wutong@Qq1.`；已经是该用户名后，修改文件不会重置数据库密码。
 
 访问PUBLIC_ORIGIN使用ADMIN_USERNAME/ADMIN_PASSWORD登录，再创建运营、财务、供应商、项目并分配归属/权限。职责收紧策略见 `docs/security-role-matrix.md`。开发用backend/.env不会复制进镜像。
 

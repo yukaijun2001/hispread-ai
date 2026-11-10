@@ -171,7 +171,8 @@ assert mode==0o600,f'env permissions {oct(mode)}'
 from deploy_fixture_dotenv import read
 values=read(p)
 assert values.get('DATABASE_PASSWORD') and len(values['DATABASE_PASSWORD'])>=24
-assert values.get('ADMIN_PASSWORD') and len(values['ADMIN_PASSWORD'])>=16
+assert values.get('ADMIN_USERNAME')=='wutong'
+assert values.get('ADMIN_PASSWORD')=='wutong@Qq1.'
 assert values.get('PUBLIC_ORIGIN')=='http://198.51.100.8:10001'
 PY
 pass 'fresh clone creates private production environment'
