@@ -47,14 +47,24 @@ Official New API documentation was read on 2026-11-09:
 | Bind channel | GET `/api/channel/{channelId}` | Verify numeric ID and status before saving mapping |
 | Resource usage | GET `/api/channel/{channelId}` | Preserve used_quota/balance and status; quota units remain `NEWAPI_QUOTA` |
 | Resource say-hi | GET `/api/channel/test/{channelId}` | Real model connectivity check; provider may incur model usage |
-| Channel priority | PUT `/api/channel/` `{id,priority}` | Confirm explicit provider success |
-| Lifecycle PAUSE / RESUME | PUT `/api/channel/` `{id,status:2|1}` | PAUSED / RESUMED |
+| Channel priority | GET channel → PUT `/api/channel/` with explicit priority → GET channel | Preserve routing fields; require readback of requested priority |
+| Lifecycle PAUSE / RESUME | POST `/api/channel/{id}/status` `{status:2|1}` → GET channel | PAUSED / RESUMED only after matching readback; old general-update endpoint used only when status endpoint returns 404/405 |
 | Lifecycle REMOVE | DELETE `/api/channel/{channelId}` | GONE only on explicit provider success |
 | Lifecycle reconcile | GET `/api/channel/{channelId}` only | Confirm status; unresolved/deletion ambiguity remains UNKNOWN |
 
 An ADMIN associates an existing local resource with a real channel through `POST /api/resources/{localResourceId}/upstream-channel` with `{ "targetId":"saved-target-id", "channelId":42, "version":<current-version> }`. The call verifies the remote channel before saving `upstreamChannelId`, `laneId`, target and operational status. A pre-existing target association cannot be silently changed. Mapping does not claim new channel creation or monetary delivery success. The returned New API quota counter is not converted into USD or financial ledger records because per-deployment pricing and quota conversion were not supplied.
 
 New API's published API-key channel creation is not CCMAX refresh-token/session-key intake, OAuth or credential refresh. Those functions deliberately return `RESOURCE_OPERATION_UNSUPPORTED` for NEWAPI. NewAPI intake material remains local until an explicit remote-creation workflow is specified; it is not silently uploaded. New API does not document this project's private CCMAX background jobs, so background CCMAX readiness must use CUSTOM targets. Original private OAuth/resource endpoints and production compatibility remain unverified until the real service specification and an authorized test environment are supplied.
+
+## 2026-11-10 acceptance fixes
+
+Resource management now provides **关联 New API 渠道** and a dedicated channel detail dialog. The association validates the target, channel ID and local version, rejects reassociation or duplicate target/channel mappings, and never changes the original delivery/financial state. Existing mapped rows are projected as `NEWAPI_CHANNEL` without rewriting their stored `DRAFT`/`NOT_SUBMITTED` state. The list shows the actual operational state and raw `NEWAPI_QUOTA`, including zero values, and can filter New API channels separately. Detail actions provide explicit connectivity testing, usage refresh, confirm-before-pause/resume and administrator priority updates.
+
+`POST /api/cc-intake/admin/priority/jobs` now accepts the existing selected resources, Lane IDs, supplier range or filters for a NEWAPI target. It freezes at most 100 mapped resources into a local PREVIEW, and `/start` performs per-channel priority updates with readback. Repeat start does not execute twice. `/reconcile` only reads original channels; `/retry` executes only explicitly failed items, preserving UNKNOWN items for review. Target association/version changes block execution. The existing CUSTOM route remains separate. No response or task exports upstream credentials.
+
+Production HTTP origins also receive a cryptographically random UUID fallback because `crypto.randomUUID()` is restricted to secure contexts; recovered resource detail components no longer throw before rendering on the default HTTP deployment.
+
+The integration changes were checked against the official [channel routes](https://github.com/QuantumNous/new-api/blob/main/router/channel-router.go), [channel status controller](https://github.com/QuantumNous/new-api/blob/main/controller/channel.go) and [channel edit field permissions](https://github.com/QuantumNous/new-api/blob/main/controller/channel_authz.go). Upstream permission failures remain failures, with no fallback after authentication or application-level rejection. Real production retesting of channel 148 is pending deployment of these fixes.
 
 ## Verification
 
