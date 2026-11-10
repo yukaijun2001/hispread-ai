@@ -69,9 +69,9 @@ public class SeedData implements CommandLineRunner {
           && (adminUsername.isBlank() || adminPassword.isBlank()))
         throw new IllegalStateException(
             "First production launch requires ADMIN_USERNAME and ADMIN_PASSWORD");
-      if (!adminPassword.isBlank() && adminPassword.length() < 16)
+      if (!adminPassword.isBlank() && adminPassword.length() < 8)
         throw new IllegalStateException(
-            "Production initial administrator password must contain at least 16 characters");
+            "Production initial administrator password must contain at least 8 characters");
       seedAdmin();
       migrateRoleDefaults();
       return;
@@ -140,20 +140,36 @@ public class SeedData implements CommandLineRunner {
         && store.jdbc.queryForObject(
                 "select count(*) from hub_user where username=?", Integer.class, adminUsername)
             == 0) {
-      ObjectNode admin =
-          store
-              .object()
-              .put("id", "local-admin")
-              .put("username", adminUsername)
-              .put("displayName", "平台管理员")
-              .put("role", "ADMIN")
-              .putNull("supplierId")
-              .put("version", 0)
-              .put("mustChangePassword", false)
-              .put("onboardingRequired", false);
-      admin.set("permissions", auth.allPermissions());
-      admin.set("teamAdminGroup", store.object());
-      auth.createUser(admin, adminPassword);
+      Integer legacy =
+          store.jdbc.queryForObject(
+              "select count(*) from hub_user where id=? and username=?",
+              Integer.class,
+              "local-admin",
+              "admin");
+      if (legacy != null && legacy == 1 && !adminUsername.equals("admin")) {
+        AuthService.validatePassword(adminPassword);
+        store.jdbc.update(
+            "update hub_user set username=?, password_hash=?, profile=jsonb_set(profile,'{username}',to_jsonb(cast(? as text))), session_version=session_version+1 where id=?",
+            adminUsername,
+            auth.passwords().encode(adminPassword),
+            adminUsername,
+            "local-admin");
+      } else {
+        ObjectNode admin =
+            store
+                .object()
+                .put("id", "local-admin")
+                .put("username", adminUsername)
+                .put("displayName", "平台管理员")
+                .put("role", "ADMIN")
+                .putNull("supplierId")
+                .put("version", 0)
+                .put("mustChangePassword", false)
+                .put("onboardingRequired", false);
+        admin.set("permissions", auth.allPermissions());
+        admin.set("teamAdminGroup", store.object());
+        auth.createUser(admin, adminPassword);
+      }
     }
     for (String key :
         List.of(

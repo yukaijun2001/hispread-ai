@@ -35,7 +35,7 @@ cd /opt/hispread-ai
 
 服务器需要 Git、Docker Engine、Docker Compose ≥2.24.4、Python3、curl，并在防火墙/安全组放行TCP10001。未指定 `--origin` 时复用已有公网访问地址，首次尝试检测公网IPv4；有域名或NAT时应显式指定用户实际访问的地址。GitHub私有仓库使用SSH部署密钥或Git凭据助手。工作区有未提交修改、本地独有提交或分叉时停止更新。
 
-生产模式仅初始化管理员，不导入演示供应商/项目。初始化密码保存在 `.env.production`，更改该文件不重置数据库中已有管理员密码。参数、日志、备份及手动代理部署方式见 [deploy/README.md](deploy/README.md)。
+生产模式仅初始化平台管理员，不导入演示供应商/项目。用户名是 `wutong`，密码是 `wutong@Qq1.`。已经用旧默认账号 `admin` 初始化的数据库，下次启动会把这个账号改成 `wutong` 并同步该密码。之后在管理台改过的密码不会因重启被覆盖。参数、日志、备份及手动代理部署方式见 [deploy/README.md](deploy/README.md)。
 
 以下演示环境需显式加 `-f docker-compose.demo.yml`，不用于生产数据。
 
