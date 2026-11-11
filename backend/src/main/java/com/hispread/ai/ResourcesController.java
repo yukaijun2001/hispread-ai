@@ -607,7 +607,55 @@ public class ResourcesController {
               .putNull("limit")
               .put("remaining", 0)
               .put("reservedRemaining", 0));
+    Map<String, ObjectNode> resources = new HashMap<>();
+    for (ObjectNode resource : store.list("resource", null)) {
+      if (!eq(resource, "resourceType", "CCMAX")
+          || !text(resource, "upstreamChannelId").isBlank()
+          || !b.access.canSupplier(req, text(resource, "supplierId"))) continue;
+      // This panel reports a member's own intake, including for group administrators.
+      if (b.member(req)
+          && !auth.userId(req).equals(resource.path("createdBy").asText(resource.path("creatorId").asText())))
+        continue;
+      resources.put(text(resource, "id"), resource);
+    }
+    Map<String, Instant> firstSuccess = new HashMap<>();
+    Set<String> processing = new HashSet<>();
+    for (ObjectNode operation : store.list("resource-operation", null)) {
+      String resourceId = text(operation, "resourceId");
+      ObjectNode resource = resources.get(resourceId);
+      if (resource == null
+          || !eq(operation, "supplierId", text(resource, "supplierId"))
+          || !Set.of("SUBMIT", "DISPATCH", "OAUTH_COMPLETE").contains(text(operation, "type"))
+          || operation.path("result").path("existingAccountUpdated").asBoolean()) continue;
+      if (eq(operation, "state", "SUCCESS")) {
+        Instant completed = intakeInstant(text(resource, "submittedAt"));
+        if (completed == null) completed = intakeInstant(text(operation, "finishedAt"));
+        if (completed != null)
+          firstSuccess.merge(resourceId, completed, (a, b) -> a.isBefore(b) ? a : b);
+      } else if (Set.of("SUBMITTING", "PENDING", "UNKNOWN").contains(text(operation, "state"))
+          && Set.of("SUBMITTING", "PENDING", "UNKNOWN").contains(text(resource, "dispatchState"))
+          && intakeToday(intakeInstant(text(operation, "createdAt")))) {
+        processing.add(resourceId);
+      }
+    }
+    processing.removeAll(firstSuccess.keySet());
+    long total = firstSuccess.values().stream().filter(this::intakeToday).count();
+    // Neither the native receipt nor CUSTOM's contract proves a subscription class.
+    out.put("total", total).put("unknown", total).put("processing", processing.size());
     return out;
+  }
+
+  private Instant intakeInstant(String value) {
+    try {
+      return Instant.parse(value);
+    } catch (java.time.format.DateTimeParseException ignored) {
+      return null;
+    }
+  }
+
+  private boolean intakeToday(Instant instant) {
+    return instant != null
+        && instant.atZone(java.time.ZoneId.of("Asia/Shanghai")).toLocalDate().toString().equals(today());
   }
 
   // NewAPI submissions are local durable material records; no external dispatch is implied.

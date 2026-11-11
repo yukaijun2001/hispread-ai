@@ -665,6 +665,126 @@ class ResourceIntegrationTest {
     int before = calls.get();
     write("/api/resources/oauth/supplier-submit", store.object().put("sessionId", sessionId).put("code", "code#fixture-state"), supplier, 200);
     assertEquals(before, calls.get());
+    mvc.perform(get("/api/cc-intake/mine").session(supplier.session))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.total").value(1))
+        .andExpect(jsonPath("$.unknown").value(1))
+        .andExpect(jsonPath("$.pro").value(0))
+        .andExpect(jsonPath("$.nonPro").value(0));
+  }
+
+  ObjectNode intakeResource(Client supplier, String creator, String resourceState, String dispatch) {
+    return store.create("resource", supplier.owner, store.object()
+        .put("supplierId", supplier.owner).put("resourceType", "CCMAX")
+        .put("createdBy", creator).put("state", resourceState).put("dispatchState", dispatch));
+  }
+
+  void intakeReceipt(Client supplier, ObjectNode resource, String state, String time) {
+    store.create("resource-operation", supplier.owner, store.object()
+        .put("supplierId", supplier.owner).put("resourceId", resource.path("id").asText())
+        .put("type", "OAUTH_COMPLETE").put("state", state)
+        .put("createdAt", time).put("finishedAt", time));
+  }
+
+  @Test
+  void intakeCountsUseShanghaiCompletionDayTenantAndDistinctConfirmedResources() throws Exception {
+    Client supplier = supplier(), other = supplier();
+    java.time.Instant boundary = java.time.LocalDate.parse(BusinessSupport.today())
+        .atStartOfDay(java.time.ZoneId.of("Asia/Shanghai")).toInstant();
+    String today = boundary.plusSeconds(1).toString(), yesterday = boundary.minusSeconds(1).toString();
+    ObjectNode first = intakeResource(supplier, supplier.uid, "DELIVERED", "SUCCESS");
+    intakeReceipt(supplier, first, "SUCCESS", today);
+    intakeReceipt(supplier, first, "SUCCESS", today); // distinct operations, one delivery
+    ObjectNode old = intakeResource(supplier, supplier.uid, "DELIVERED", "SUCCESS");
+    intakeReceipt(supplier, old, "SUCCESS", yesterday);
+    intakeReceipt(supplier, old, "SUCCESS", today); // later confirmation cannot re-date intake
+    ObjectNode archived = intakeResource(supplier, supplier.uid, "DELIVERED", "SUCCESS");
+    store.update("resource", archived.path("id").asText(), supplier.owner,
+        store.object().put("operationalState", "GONE").put("deleted", true));
+    intakeReceipt(supplier, archived, "SUCCESS", today); // archival does not erase the day's intake
+    ObjectNode mapped = intakeResource(supplier, supplier.uid, "DRAFT", "NOT_SUBMITTED");
+    store.create("resource-operation", supplier.owner, store.object()
+        .put("supplierId", supplier.owner).put("resourceId", mapped.path("id").asText())
+        .put("type", "REAUTHORIZATIONS/session").put("state", "SUCCESS")
+        .put("finishedAt", today));
+    ObjectNode pending = intakeResource(supplier, supplier.uid, "DRAFT", "UNKNOWN");
+    intakeReceipt(supplier, pending, "UNKNOWN", today);
+    intakeReceipt(supplier, pending, "UNKNOWN", today);
+    ObjectNode failed = intakeResource(supplier, supplier.uid, "DRAFT", "FAILED");
+    intakeReceipt(supplier, failed, "FAILED", today);
+    ObjectNode foreign = intakeResource(other, other.uid, "DELIVERED", "SUCCESS");
+    intakeReceipt(other, foreign, "SUCCESS", today);
+    ObjectNode newApi = intakeResource(supplier, supplier.uid, "DELIVERED", "SUCCESS");
+    store.update("resource", newApi.path("id").asText(), supplier.owner,
+        store.object().put("upstreamChannelId", "148"));
+    intakeReceipt(supplier, newApi, "SUCCESS", today);
+    mvc.perform(get("/api/cc-intake/mine").session(supplier.session)
+            .param("supplierId", other.owner).param("search", "no-match"))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(2))
+        .andExpect(jsonPath("$.unknown").value(2)).andExpect(jsonPath("$.processing").value(1));
+    mvc.perform(get("/api/cc-intake/mine").session(other.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1));
+  }
+
+  @Test
+  void successfulDeliveryReconciliationPreservesOriginalSubmissionDay() throws Exception {
+    Client supplier = supplier();
+    ObjectNode submitted = write("/api/resources/supplier-submit", submission(supplier), supplier, 200);
+    String resourceId = submitted.path("resourceId").asText();
+    String operationId = submitted.path("operationId").asText();
+    String yesterday = java.time.LocalDate.parse(BusinessSupport.today()).minusDays(1)
+        .atStartOfDay(java.time.ZoneId.of("Asia/Shanghai")).toInstant().toString();
+    store.update("resource", resourceId, supplier.owner, store.object().put("submittedAt", yesterday));
+    store.update("resource-operation", operationId, supplier.owner, store.object().put("finishedAt", yesterday));
+    write("/api/resource-lifecycle-jobs/" + operationId + "/reconcile", store.object(), supplier, 200);
+    assertEquals(yesterday, store.get("resource", resourceId, supplier.owner).path("submittedAt").asText());
+    mvc.perform(get("/api/cc-intake/mine").session(supplier.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(0));
+  }
+
+  @Test
+  void pendingDeliveryConfirmedOnLaterDayCountsOnConfirmationDay() throws Exception {
+    Client supplier = supplier();
+    response.set("{\"state\":\"PENDING\"}");
+    ObjectNode submitted = write("/api/resources/supplier-submit", submission(supplier), supplier, 200);
+    String resourceId = submitted.path("resourceId").asText();
+    String operationId = submitted.path("operationId").asText();
+    String yesterday = java.time.LocalDate.parse(BusinessSupport.today()).minusDays(1)
+        .atStartOfDay(java.time.ZoneId.of("Asia/Shanghai")).toInstant().toString();
+    store.update("resource-operation", operationId, supplier.owner, store.object().put("finishedAt", yesterday));
+    response.set("{\"state\":\"SUCCESS\",\"laneId\":\"confirmed-account\"}");
+    write("/api/resource-lifecycle-jobs/" + operationId + "/reconcile", store.object(), supplier, 200);
+    mvc.perform(get("/api/cc-intake/mine").session(supplier.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1));
+  }
+
+  @Test
+  void memberIntakeReportsOwnDeliveriesEvenForGroupAdministrator() throws Exception {
+    Client supplier = supplier();
+    String memberId = UUID.randomUUID().toString(), teammateId = UUID.randomUUID().toString();
+    String projectId = submission(supplier).path("input").path("projectId").asText();
+    ObjectNode member = store.object().put("id", memberId).put("username", "member_" + memberId)
+        .put("role", "SUPPLIER_AGENT").put("supplierId", supplier.owner).put("version", 0);
+    member.set("permissions", auth.rolePermissions("SUPPLIER_AGENT"));
+    member.putArray("projectIds").add(projectId);
+    ObjectNode group = store.create("group", supplier.owner,
+        store.object().put("adminUserId", memberId));
+    group.putArray("memberIds").add(memberId).add(teammateId);
+    store.update("group", group.path("id").asText(), supplier.owner, group);
+    member.set("teamAdminGroup", group);
+    auth.createUser(member, "FixtureTest@123");
+    MockHttpSession session = new MockHttpSession();
+    session.setAttribute("uid", memberId); session.setAttribute("sv", 0L);
+    ObjectNode own = intakeResource(supplier, memberId, "DELIVERED", "SUCCESS");
+    store.update("resource", own.path("id").asText(), supplier.owner, store.object().put("projectId", projectId));
+    intakeReceipt(supplier, own, "SUCCESS", java.time.Instant.now().toString());
+    ObjectNode teammate = intakeResource(supplier, teammateId, "DELIVERED", "SUCCESS");
+    store.update("resource", teammate.path("id").asText(), supplier.owner, store.object().put("projectId", projectId));
+    intakeReceipt(supplier, teammate, "SUCCESS", java.time.Instant.now().toString());
+    mvc.perform(get("/api/cc-intake/mine").session(session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1));
+    mvc.perform(get("/api/cc-intake/mine").session(supplier.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(2));
   }
 
   @Test
