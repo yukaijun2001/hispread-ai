@@ -26,13 +26,15 @@ public class NewApiPriorityService {
       if (!first.isBlank()) targetId = text(business.resource(first, req), "targetId");
     }
     ObjectNode config = gateway.requireConfigured(targetId);
-    if (!eq(config, "protocol", "NEWAPI")) return null;
+    String protocol = text(config, "protocol");
+    if (!Set.of("NEWAPI", "CCMAX_NATIVE").contains(protocol)) return null;
+    String mappingField = protocol.equals("CCMAX_NATIVE") ? "upstreamAccountId" : "upstreamChannelId";
     String key = text(body, "requestKey");
     if (key.isBlank()) key = UUID.randomUUID().toString();
     store.jdbc.queryForObject("select pg_advisory_xact_lock(hashtext(?),hashtext(?))", (rs, row) -> true, "newapi-priority", key);
     ObjectNode fingerprint = body.deepCopy(); fingerprint.remove("requestKey");
     for (ObjectNode prior : store.list("resource-operation", "GLOBAL")) {
-      if (eq(prior, "type", "PRIORITY") && eq(prior, "protocol", "NEWAPI") && eq(prior, "requestKey", key)) {
+      if (eq(prior, "type", "PRIORITY") && eq(prior, "protocol", protocol) && eq(prior, "requestKey", key)) {
         if (!prior.path("priorityInput").equals(fingerprint)) throw new ApiException(409, "提交编号已用于不同资料");
         return view(prior);
       }
@@ -44,29 +46,30 @@ public class NewApiPriorityService {
     List<ObjectNode> selected = new ArrayList<>();
     for (ObjectNode resource : business.scopedResources(req)) {
       if (!ids.isEmpty() && !ids.contains(text(resource, "id"))) continue;
-      if (!lanes.isEmpty() && !lanes.contains(text(resource, "upstreamChannelId"))) continue;
+      if (!lanes.isEmpty() && !lanes.contains(text(resource, mappingField))) continue;
       if (!suppliers.isEmpty() && !suppliers.contains(text(resource, "supplierId"))) continue;
       if (body.path("filters").isObject() && !matches(resource, body.path("filters"))) continue;
       if (ids.isEmpty() && !eq(resource, "targetId", text(config, "id"))) continue;
-      if (ids.isEmpty() && text(resource, "upstreamChannelId").isBlank()) continue;
+      if (ids.isEmpty() && text(resource, mappingField).isBlank()) continue;
       if (!text(body, "operationalStatus").isBlank() && !eq(resource, "operationalState", text(body, "operationalStatus"))) continue;
       if (!eq(resource, "targetId", text(config, "id"))) throw new ApiException(409, "一批操作仅支持同一上游目标");
-      if (!text(resource, "upstreamChannelId").matches("[1-9][0-9]{0,17}") || eq(resource, "operationalState", "GONE"))
-        throw new ApiException(409, "请先关联有效New API渠道");
-      if (selected.stream().anyMatch(other -> eq(other, "upstreamChannelId", text(resource, "upstreamChannelId"))))
+      String mapped = text(resource, mappingField);
+      if (!(protocol.equals("NEWAPI") ? mapped.matches("[1-9][0-9]{0,17}") : mapped.matches("[A-Za-z0-9_-]{1,100}")) || eq(resource, "operationalState", "GONE"))
+        throw new ApiException(409, "请先关联有效上游账号或渠道");
+      if (selected.stream().anyMatch(other -> eq(other, mappingField, mapped)))
         throw new ApiException(409, "同一渠道存在重复关联，请先核对本地记录");
       selected.add(resource);
     }
     if (!ids.isEmpty() && selected.size() != ids.size()) throw new ApiException(409, "选择范围已变化，请刷新后重新选择");
-    if (!lanes.isEmpty() && selected.stream().map(row -> text(row, "upstreamChannelId")).distinct().count() != lanes.size())
+    if (!lanes.isEmpty() && selected.stream().map(row -> text(row, mappingField)).distinct().count() != lanes.size())
       throw new ApiException(409, "部分Lane ID未关联至所选目标");
     if (selected.isEmpty() || selected.size() > 100) throw new ApiException(400, "每批请选择1至100个已关联渠道");
     ObjectNode request = store.object().put("priority", body.path("priority").asInt());
     ArrayNode items = request.putArray("items");
     for (ObjectNode resource : selected) items.addObject().put("resourceId", text(resource, "id"))
-        .put("resourceName", text(resource, "name")).put("laneId", text(resource, "upstreamChannelId"))
+        .put("resourceName", text(resource, "name")).put("laneId", text(resource, mappingField))
         .put("resourceVersion", resource.path("version").asLong()).put("priority", body.path("priority").asInt()).put("state", "PENDING");
-    ObjectNode op = store.object().put("type", "PRIORITY").put("protocol", "NEWAPI").put("supplierId", "GLOBAL")
+    ObjectNode op = store.object().put("type", "PRIORITY").put("protocol", protocol).put("supplierId", "GLOBAL")
         .put("targetId", text(config, "id")).put("requestKey", key).put("state", "PREVIEW").put("total", selected.size());
     op.set("request", request); op.set("priorityInput", fingerprint); op.set("items", items);
     ObjectNode result = request.deepCopy().put("state", "PREVIEW"); result.putObject("counts").put("PENDING", selected.size());
@@ -83,14 +86,15 @@ public class NewApiPriorityService {
     if (action.equals("retry") && eq(op, "state", "PREVIEW")) throw new ApiException(409, "请先确认执行任务");
     if (action.equals("reconcile") && eq(op, "state", "PREVIEW")) return view(op);
     ObjectNode config = gateway.requireConfigured(text(op, "targetId"));
-    if (!eq(config, "protocol", "NEWAPI")) throw new ApiException(409, "目标协议已变化");
+    if (!eq(config, "protocol", text(op, "protocol"))) throw new ApiException(409, "目标协议已变化");
+    String mappingField = eq(config, "protocol", "CCMAX_NATIVE") ? "upstreamAccountId" : "upstreamChannelId";
     ObjectNode request = ((ObjectNode) op.path("request")).deepCopy();
     ArrayNode items = store.json.createArrayNode();
     for (JsonNode item : request.path("items")) {
       ObjectNode resource = business.resource(text(item, "resourceId"), req);
       if (eq(resource, "operationalState", "GONE"))
         throw new ApiException(409, "渠道已移除，不可再操作", "RESOURCE_CHANNEL_REMOVED");
-      if (!eq(resource, "targetId", text(config, "id")) || !eq(resource, "upstreamChannelId", text(item, "laneId")))
+      if (!eq(resource, "targetId", text(config, "id")) || !eq(resource, mappingField, text(item, "laneId")))
         throw new ApiException(409, "渠道关联已变化，请重新建立任务");
       if (action.equals("start") && item.path("resourceVersion").asLong() != resource.path("version").asLong()) throw new ApiException(409, "资源版本已变化，请重新建立任务");
       if (action.equals("retry")) {
@@ -134,7 +138,7 @@ public class NewApiPriorityService {
   }
 
   ObjectNode view(ObjectNode op) {
-    ObjectNode out = store.object().put("id", text(op, "id")).put("state", text(op, "state")).put("protocol", "NEWAPI")
+    ObjectNode out = store.object().put("id", text(op, "id")).put("state", text(op, "state")).put("protocol", text(op, "protocol"))
         .put("total", op.path("total").asInt()).put("createdAt", text(op, "createdAt"));
     out.set("items", op.path("result").path("items")); out.set("counts", op.path("result").path("counts"));
     return out;

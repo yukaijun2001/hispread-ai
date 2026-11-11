@@ -551,4 +551,264 @@ class ResourceIntegrationTest {
     assertEquals("GONE", store.get("resource", resourceId, supplier.owner).path("operationalState").asText());
   }
 
+  void nativeTarget() {
+    target = store.update("resource-target", target.path("id").asText(), "GLOBAL", store.object()
+        .put("protocol", "CCMAX_NATIVE").put("adminUsername", "native-admin")
+        .put("adminPassword", "PRIVATE-NATIVE-PASSWORD").put("defaultTarget", true));
+  }
+
+  ObjectNode nativeResource(Client supplier) {
+    return store.create("resource", supplier.owner, store.object().put("supplierId", supplier.owner)
+        .put("name", "Native fixture").put("resourceType", "CCMAX").put("state", "DRAFT")
+        .put("dispatchState", "NOT_SUBMITTED"));
+  }
+
+  void nativeResponder(AtomicInteger logins, AtomicInteger accountStatus, AtomicInteger weight) {
+    responder.set((request, body) -> {
+      if (request.equals("POST /api/auth/admin-login")) {
+        assertEquals("native-admin", body.path("identifier").asText());
+        assertEquals("PRIVATE-NATIVE-PASSWORD", body.path("password").asText());
+        logins.incrementAndGet();
+        return "{\"access_token\":\"PRIVATE-NATIVE-SESSION\",\"user\":{\"role\":\"admin\"}}";
+      }
+      assertEquals("Bearer PRIVATE-NATIVE-SESSION", seenAuth.get());
+      if (request.equals("GET /api/auth/me")) return "{\"role\":\"admin\"}";
+      if (request.equals("GET /api/admin/oauth-accounts"))
+        return "{\"accounts\":[{\"id\":\"native-148\",\"name\":\"Fixture\",\"status\":\"active\",\"weight\":10}],\"pagination\":{\"total_rows\":1}}";
+      if (request.equals("PATCH /api/admin/oauth-accounts/native-148")) {
+        if (body.has("status")) accountStatus.set(body.path("status").asText().equals("active") ? 1 : 0);
+        if (body.has("weight")) weight.set(body.path("weight").asInt());
+        return "{\"ok\":true}";
+      }
+      if (request.endsWith("/refresh-usage") || request.endsWith("/refresh")) return "{\"ok\":true,\"status\":\"updated\"}";
+      if (request.equals("GET /api/admin/oauth-accounts/native-148"))
+        return "{\"account\":{\"id\":\"native-148\",\"status\":\"" + (accountStatus.get()==1?"active":"disabled")
+            + "\",\"weight\":" + weight.get() + ",\"health_status\":\"healthy\",\"total_cost\":\"12.5\"}}";
+      if (request.equals("POST /api/admin/oauth-accounts/auth-url")) {
+        assertFalse(body.path("overwrite_existing").asBoolean(true));
+        return "{\"url\":\"https://claude.ai/oauth/authorize?state=fixture-state\",\"state\":\"fixture-state\",\"expires_in\":600}";
+      }
+      if (request.equals("POST /api/admin/oauth-accounts/exchange")) {
+        assertFalse(body.path("overwrite_existing").asBoolean(true));
+        return "{\"id\":\"new-account\",\"status\":\"active\",\"overwritten\":false}";
+      }
+      if (request.equals("GET /api/admin/oauth-accounts/new-account"))
+        return "{\"account\":{\"id\":\"new-account\",\"status\":\"active\",\"weight\":10,\"total_cost\":\"0\"}}";
+      throw new AssertionError("Unexpected native path: " + request);
+    });
+  }
+
+  @Test
+  void nativeConfigurationConnectionBindingUsageLifecycleAndPriorityAreSecretSafe() throws Exception {
+    nativeTarget();
+    Client supplier = supplier(), admin = administrator(), other = supplier();
+    AtomicInteger logins = new AtomicInteger(), status = new AtomicInteger(1), weight = new AtomicInteger(10);
+    nativeResponder(logins, status, weight);
+    String targetId = target.path("id").asText();
+    mvc.perform(get("/api/resource-targets/" + targetId).session(admin.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.adminPassword").doesNotExist())
+        .andExpect(jsonPath("$.adminPasswordConfigured").value(true));
+    ObjectNode check = write("/api/resource-targets/" + targetId + "/test", store.object(), admin, 200);
+    assertEquals("READY", check.path("state").asText());
+    ObjectNode local = nativeResource(supplier); String id = local.path("id").asText();
+    ObjectNode binding = store.object().put("targetId", targetId).put("accountId", "native-148").put("version", 0);
+    ObjectNode mapped = write("/api/resources/" + id + "/upstream-account", binding, admin, 200);
+    assertEquals("CCMAX_NATIVE", mapped.path("upstreamProtocol").asText());
+    assertEquals("DRAFT", mapped.path("state").asText());
+    assertEquals("NOT_SUBMITTED", mapped.path("dispatchState").asText());
+    assertEquals("12.5", mapped.path("usage").path("amount").asText());
+    ObjectNode usage = write("/api/resources/" + id + "/usage", store.object().put("requestKey", UUID.randomUUID().toString()), supplier, 200);
+    assertEquals("UPDATED", usage.path("state").asText());
+    assertFalse(usage.toString().contains("PRIVATE"));
+    int before = calls.get();
+    write("/api/resources/" + id + "/usage", store.object(), other, 404);
+    assertEquals(before, calls.get());
+    write("/api/resources/" + id + "/upstream-account", binding, supplier, 403);
+    ObjectNode second = nativeResource(supplier);
+    write("/api/resources/" + second.path("id").asText() + "/upstream-account", binding, admin, 409);
+    ObjectNode action = store.object().put("action", "PAUSE").put("requestKey", UUID.randomUUID().toString());
+    action.putArray("items").add(store.object().put("resourceId", id));
+    ObjectNode paused = write("/api/resource-lifecycle-jobs", action, admin, 200);
+    assertEquals("COMPLETED", paused.path("state").asText());
+    assertEquals(0, status.get());
+    write("/api/resource-lifecycle-jobs/" + paused.path("id").asText() + "/reconcile", store.object(), admin, 200);
+    action.put("action", "RESUME").put("requestKey", UUID.randomUUID().toString());
+    write("/api/resource-lifecycle-jobs", action, admin, 200); assertEquals(1, status.get());
+    ObjectNode priority = store.object().put("priority", 7).put("requestKey", UUID.randomUUID().toString());
+    priority.putArray("resourceIds").add(id);
+    ObjectNode preview = write("/api/cc-intake/admin/priority/jobs", priority, admin, 200);
+    String path = "/api/cc-intake/admin/priority/jobs/" + preview.path("id").asText();
+    assertEquals("CCMAX_NATIVE", preview.path("protocol").asText());
+    write(path + "/start", store.object(), admin, 200); assertEquals(7, weight.get());
+    before = calls.get(); write(path + "/start", store.object(), admin, 200); assertEquals(before, calls.get());
+    write(path + "/reconcile", store.object(), admin, 200);
+    assertEquals(1, logins.get());
+  }
+
+  @Test
+  void nativeOAuthUsesOpaqueSessionsChecksStateAndAvoidsRepeatedExchange() throws Exception {
+    nativeTarget(); Client supplier = supplier();
+    AtomicInteger logins = new AtomicInteger(); nativeResponder(logins, new AtomicInteger(1), new AtomicInteger(10));
+    ObjectNode input = (ObjectNode) submission(supplier).path("input");
+    input.put("credentialMode", "OAUTH").put("requestKey", UUID.randomUUID().toString());
+    input.remove("refreshToken");
+    ObjectNode authorized = write("/api/resources/oauth/supplier-authorize", input, supplier, 200);
+    assertEquals("READY", authorized.path("state").asText());
+    String sessionId = authorized.path("sessionId").asText();
+    assertFalse(sessionId.equals("fixture-state"));
+    write("/api/resources/oauth/supplier-submit", store.object().put("sessionId", sessionId).put("code", "code#wrong-state"), supplier, 400);
+    ObjectNode completed = write("/api/resources/oauth/supplier-submit", store.object().put("sessionId", sessionId).put("code", "code#fixture-state"), supplier, 200);
+    assertEquals("SUCCESS", completed.path("state").asText());
+    String rid = completed.path("resourceId").asText();
+    assertEquals("new-account", store.get("resource", rid, supplier.owner).path("upstreamAccountId").asText());
+    assertEquals("DELIVERED", store.get("resource", rid, supplier.owner).path("state").asText());
+    int before = calls.get();
+    write("/api/resources/oauth/supplier-submit", store.object().put("sessionId", sessionId).put("code", "code#fixture-state"), supplier, 200);
+    assertEquals(before, calls.get());
+  }
+
+  @Test
+  void nativeDailySyncProducesScopedPendingObservationsWithoutCredentials() throws Exception {
+    nativeTarget(); Client supplier = supplier();
+    ObjectNode local = nativeResource(supplier);
+    local = store.update("resource", local.path("id").asText(), supplier.owner, store.object()
+        .put("targetId", target.path("id").asText()).put("upstreamAccountId", "native-148").put("laneId", "native-148"));
+    nativeResponder(new AtomicInteger(), new AtomicInteger(1), new AtomicInteger(10));
+    java.util.function.BiFunction<String,JsonNode,String> original = responder.get();
+    responder.set((request,body) -> {
+      if (request.equals("GET /api/admin/request-logs")) return "{\"logs\":[{\"id\":\"log-1\",\"created_at\":\"2026-11-10T01:00:00Z\",\"account_id\":\"native-148\",\"request_model\":\"fixture-model\",\"cost_official_usd\":0.25,\"session_key\":\"PRIVATE\"},{\"id\":\"other\",\"account_id\":\"unmapped\"}],\"cursor\":null}";
+      return original.apply(request,body);
+    });
+    ObjectNode body = store.object().put("businessDate", "2026-11-10");
+    body.putArray("resources").add(store.object().put("resourceId", local.path("id").asText()).put("supplierId", supplier.owner));
+    ObjectNode observations = gateway.exchange(target, "POST", "/jobs/ccmax/daily-sync", body, "daily");
+    assertEquals(1, observations.path("rows").size());
+    assertEquals("0.25", observations.path("rows").get(0).path("originalAmount").asText());
+    assertEquals(supplier.owner, observations.path("rows").get(0).path("supplierId").asText());
+    assertFalse(observations.toString().contains("PRIVATE"));
+  }
+
+  @Test
+  void nativeManagementReauthenticatesOnlyAfterUnauthorizedAndNeverLeaksPassword() throws Exception {
+    nativeTarget(); Client admin = administrator();
+    AtomicInteger login = new AtomicInteger(), reads = new AtomicInteger();
+    responder.set((request, body) -> {
+      if (request.equals("POST /api/auth/admin-login")) {
+        login.incrementAndGet(); httpStatus.set(200);
+        return "{\"access_token\":\"PRIVATE-SESSION\",\"user\":{\"role\":\"admin\"}}";
+      }
+      if (reads.incrementAndGet() == 1) {httpStatus.set(401);return "{\"error\":\"expired\"}";}
+      httpStatus.set(200);return "{\"role\":\"admin\"}";
+    });
+    ObjectNode result = write("/api/resource-targets/" + target.path("id").asText() + "/test", store.object(), admin, 200);
+    assertEquals(2, login.get());
+    assertEquals(2, reads.get());
+    assertFalse(result.toString().contains("PRIVATE"));
+    String path = "/api/resource-targets/" + target.path("id").asText();
+    mvc.perform(put(path).session(admin.session).header("X-CSRF-TOKEN",admin.csrf)
+        .contentType("application/json").content(store.object().put("name","Updated native fixture")
+            .put("adminPassword", "").put("version", target.path("version").asLong()).toString()))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.adminPassword").doesNotExist())
+        .andExpect(jsonPath("$.adminPasswordConfigured").value(true));
+    assertEquals("PRIVATE-NATIVE-PASSWORD",store.get("resource-target",target.path("id").asText(),null).path("adminPassword").asText());
+  }
+
+  @Test
+  void nativeOAuthExistingAccountCannotBeRecordedAsNewDelivery() throws Exception {
+    nativeTarget(); Client supplier = supplier();
+    nativeResponder(new AtomicInteger(), new AtomicInteger(1), new AtomicInteger(10));
+    var previous = responder.get();
+    responder.set((request, body) -> request.equals("POST /api/admin/oauth-accounts/exchange")
+        ? "{\"id\":\"native-148\",\"overwritten\":true}" : previous.apply(request,body));
+    ObjectNode input = (ObjectNode) submission(supplier).path("input");
+    input.put("credentialMode", "OAUTH").put("requestKey",UUID.randomUUID().toString());
+    ObjectNode session = write("/api/resources/oauth/supplier-authorize",input,supplier,200);
+    ObjectNode result = write("/api/resources/oauth/supplier-submit",store.object()
+        .put("sessionId",session.path("sessionId").asText()).put("code","code#fixture-state"),supplier,409);
+    assertEquals("RESOURCE_EXISTING_ACCOUNT_UPDATED",result.path("code").asText());
+    assertNotEquals("DELIVERED",store.get("resource",session.path("resourceId").asText(),supplier.owner).path("state").asText());
+  }
+
+  @Test
+  void nativeUsageTimeoutReplayUsesOriginalOperationAndReadOnlyReconciliation() throws Exception {
+    nativeTarget(); Client supplier = supplier();
+    ObjectNode local = nativeResource(supplier);
+    store.update("resource",local.path("id").asText(),supplier.owner,store.object()
+        .put("targetId",target.path("id").asText()).put("upstreamAccountId","native-148").put("laneId","native-148"));
+    nativeResponder(new AtomicInteger(),new AtomicInteger(1),new AtomicInteger(10));
+    var previous = responder.get(); AtomicInteger refreshes = new AtomicInteger();
+    responder.set((request,body)->{
+      if(request.endsWith("/refresh-usage")){refreshes.incrementAndGet();httpStatus.set(504);return "{}";}
+      httpStatus.set(200);return previous.apply(request,body);
+    });
+    ObjectNode payload = store.object().put("requestKey",UUID.randomUUID().toString());
+    write("/api/resources/"+local.path("id").asText()+"/usage",payload,supplier,504);
+    ObjectNode repeated = write("/api/resources/"+local.path("id").asText()+"/usage",payload,supplier,200);
+    assertEquals("UNKNOWN",repeated.path("state").asText());
+    assertEquals(1,refreshes.get());
+    ObjectNode operation = store.list("resource-operation",supplier.owner).get(0);
+    ObjectNode reconciled = write("/api/resource-lifecycle-jobs/"+operation.path("id").asText()+"/reconcile",store.object(),supplier,200);
+    assertEquals("UPDATED",reconciled.path("state").asText());
+    assertEquals(1,refreshes.get());
+  }
+
+  @Test
+  void nativeCredentialImportRefreshAndArchivePreserveReceiptsAndAvoidDuplicates() throws Exception {
+    nativeTarget(); Client supplier = supplier(), admin = administrator();
+    nativeResponder(new AtomicInteger(),new AtomicInteger(1),new AtomicInteger(10));
+    var previous = responder.get(); AtomicInteger imports = new AtomicInteger(),archives = new AtomicInteger();
+    responder.set((request,body)->{
+      if(request.equals("POST /api/admin/oauth-accounts/import-rt")){
+        imports.incrementAndGet();assertEquals("PRIVATE-REFRESH",body.path("refresh_token").asText());
+        assertFalse(body.path("overwrite_existing").asBoolean(true));
+        return "{\"ok\":true,\"id\":\"new-account\",\"overwritten\":false}";
+      }
+      if(request.equals("POST /api/admin/oauth-accounts/new-account/refresh"))
+        return "{\"access_token\":{\"masked\":\"MASKED\"},\"refresh_token\":{\"masked\":\"MASKED\"}}";
+      if(request.equals("DELETE /api/admin/oauth-accounts/new-account")){
+        archives.incrementAndGet();assertFalse(body.path("release_proxy").asBoolean(true));return "{\"ok\":true}";
+      }
+      if(request.equals("GET /api/admin/archived-accounts/new-account")) return "{\"account\":{\"id\":\"new-account\"}}";
+      return previous.apply(request,body);
+    });
+    ObjectNode input = submission(supplier);
+    ObjectNode submitted = write("/api/resources/supplier-submit",input,supplier,200);
+    String rid = submitted.path("resourceId").asText();
+    assertEquals("DELIVERED",store.get("resource",rid,supplier.owner).path("state").asText());
+    write("/api/resources/supplier-submit",input,supplier,200);assertEquals(1,imports.get());
+    ObjectNode refreshed = write("/api/resources/"+rid+"/credential-refresh",store.object().put("requestKey",UUID.randomUUID().toString()),supplier,200);
+    assertEquals("UPDATED",refreshed.path("state").asText());assertFalse(refreshed.toString().contains("MASKED"));
+    ObjectNode removal = store.object().put("action","REMOVE").put("requestKey",UUID.randomUUID().toString());
+    removal.putArray("items").add(store.object().put("resourceId",rid));
+    ObjectNode removed = write("/api/resource-lifecycle-jobs",removal,admin,200);
+    assertEquals("GONE",removed.path("items").get(0).path("state").asText());
+    int before = calls.get();
+    write("/api/resource-lifecycle-jobs/"+removed.path("id").asText()+"/reconcile",store.object(),admin,200);
+    assertEquals(before,calls.get());assertEquals(1,archives.get());
+    write("/api/resources/"+rid+"/usage",store.object(),supplier,409);
+  }
+
+  @Test
+  void nativeReauthorizationUsesBoundAccountAndPreservesStatus() throws Exception {
+    nativeTarget(); Client supplier = supplier();
+    ObjectNode local = nativeResource(supplier);String rid=local.path("id").asText();
+    store.update("resource",rid,supplier.owner,store.object().put("targetId",target.path("id").asText())
+        .put("laneId","native-148").put("upstreamAccountId","native-148").put("upstreamProtocol","CCMAX_NATIVE"));
+    nativeResponder(new AtomicInteger(),new AtomicInteger(0),new AtomicInteger(10));var previous=responder.get();
+    responder.set((request,body)->{
+      if(request.equals("POST /api/admin/oauth-accounts/native-148/reauthorize"))
+        return "{\"url\":\"https://claude.ai/oauth/authorize?state=reauth-state\",\"state\":\"reauth-state\",\"expires_in\":600}";
+      if(request.equals("POST /api/admin/oauth-accounts/native-148/reauthorize/exchange"))
+        return "{\"account\":{\"id\":\"native-148\",\"status\":\"disabled\"}}";
+      return previous.apply(request,body);
+    });
+    ObjectNode start=write("/api/resources/"+rid+"/reauthorizations",store.object().put("requestKey",UUID.randomUUID().toString()),supplier,200);
+    String path="/api/resources/"+rid+"/reauthorizations/"+start.path("id").asText();
+    write(path,store.object().put("code","bad#state").put("requestKey",UUID.randomUUID().toString()),supplier,400);
+    ObjectNode updated=write(path,store.object().put("code","right#reauth-state").put("requestKey",UUID.randomUUID().toString()),supplier,200);
+    assertEquals("SUCCESS",updated.path("state").asText());
+    assertEquals("PAUSED",store.get("resource",rid,supplier.owner).path("operationalState").asText());
+    assertNotEquals("DELIVERED",store.get("resource",rid,supplier.owner).path("state").asText());
+  }
+
 }

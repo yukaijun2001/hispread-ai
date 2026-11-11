@@ -146,6 +146,7 @@ public class ResourcesController {
     boolean configured = gateway.ccmaxConfigured();
     return b.obj()
         .put("allowCcmax", configured)
+        .put("allowDirectCcmax", gateway.allowDirectCcmax())
         .put("forceStopCcmaxIntake", false)
         .put("allowCcmaxReauthorization", configured)
         .put("allowCcmaxPause", configured)
@@ -328,6 +329,12 @@ public class ResourcesController {
   @PostMapping("/resources/{id}/upstream-channel")
   public ObjectNode bindChannel(@PathVariable String id, @RequestBody ObjectNode body, HttpServletRequest req) {
     return operations.bindNewApi(id, body, req);
+  }
+
+  @PostMapping("/resources/{id}/upstream-account")
+  public ObjectNode bindNativeAccount(@PathVariable String id, @RequestBody ObjectNode body, HttpServletRequest req) {
+    operations.bindNativeCcmax(id, body, req);
+    return resourceView(b.resource(id, req), req);
   }
 
   @PutMapping("/resources/{id}/reauthorizations/{op}")

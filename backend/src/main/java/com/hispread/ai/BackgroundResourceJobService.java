@@ -39,7 +39,8 @@ public class BackgroundResourceJobService {
     String id = text(task, "targetId");
     if (!id.isBlank()) {
       ObjectNode target = gateway.requireConfigured(id);
-      if (!target.path("protocol").asText("CUSTOM").equals("CUSTOM"))
+      if (!(target.path("protocol").asText("CUSTOM").equals("CUSTOM")
+          || target.path("protocol").asText().equals("CCMAX_NATIVE") && !eq(task, "type", "CCMAX_PRIORITY_ROTATION")))
         throw new ApiException(503, "CCMAX后台任务需CUSTOM协议资源适配器", "RESOURCE_OPERATION_UNSUPPORTED");
       gateway.validateEndpoint(
           java.net.URI.create(target.path("baseUrl").asText(target.path("endpoint").asText())),
@@ -51,7 +52,8 @@ public class BackgroundResourceJobService {
             .filter(
                 t ->
                     t.path("enabled").asBoolean()
-                        && t.path("protocol").asText("CUSTOM").equals("CUSTOM"))
+                        && (t.path("protocol").asText("CUSTOM").equals("CUSTOM")
+                            || t.path("protocol").asText().equals("CCMAX_NATIVE") && !eq(task, "type", "CCMAX_PRIORITY_ROTATION")))
             .toList();
     if (targets.isEmpty())
       throw new ApiException(503, "尚未配置并启用真实资源上游服务", "RESOURCE_UPSTREAM_NOT_CONFIGURED");
@@ -120,7 +122,9 @@ public class BackgroundResourceJobService {
         .filter(
             r ->
                 r.path("enabled").asBoolean(true)
-                    && !Set.of("REMOVED", "DELETED", "DRAFT").contains(text(r, "state")))
+                    && !Set.of("REMOVED", "DELETED").contains(text(r, "state"))
+                    && (!eq(r, "state", "DRAFT") || !text(r, "upstreamAccountId").isBlank())
+                    && !eq(r, "operationalState", "GONE"))
         .filter(
             r ->
                 text(target, "id")
@@ -249,6 +253,7 @@ public class BackgroundResourceJobService {
           || row.path("priority").asInt() > 1000)
         throw new ApiException(502, "上游优先级无效", "RESOURCE_UPSTREAM_INVALID_RESPONSE");
       patch.set("priority", row.get("priority"));
+      if (eq(resource, "upstreamProtocol", "CCMAX_NATIVE")) patch.set("upstreamPriority", row.get("priority"));
     }
     if (row.has("usage")) {
       JsonNode usage = row.path("usage");
