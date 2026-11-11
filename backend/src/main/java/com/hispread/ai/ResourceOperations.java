@@ -376,8 +376,12 @@ public class ResourceOperations {
         && Set.of("SUCCESS", "PENDING", "UNKNOWN", "FAILED").contains(state)) dispatch = state;
     if (deliveryOperation && !dispatch.isBlank()) {
       update.put("dispatchState", dispatch);
-      if (dispatch.equals("SUCCESS"))
-        update.put("state", "DELIVERED").put("submittedAt", Instant.now().toString());
+      if (dispatch.equals("SUCCESS")) {
+        ObjectNode current = store.get("resource", rid, owner);
+        String submittedAt = eq(current, "dispatchState", "SUCCESS") ? text(current, "submittedAt") : "";
+        update.put("state", "DELIVERED")
+            .put("submittedAt", submittedAt.isBlank() ? Instant.now().toString() : submittedAt);
+      }
     }
     if ((Set.of("CREDENTIAL-REFRESH", "REAUTHORIZATIONS", "OAUTH_COMPLETE").contains(operationType) || operationType.startsWith("REAUTHORIZATIONS/"))
         && Set.of("SUCCESS", "UPDATED", "COMPLETED").contains(text(response, "state"))) {
