@@ -37,6 +37,7 @@ public class AccessPolicy {
           "secretKey",
           "passphrase",
           "apiKey",
+          "adminPassword",
           "api_key",
           "accessToken",
           "refreshToken",

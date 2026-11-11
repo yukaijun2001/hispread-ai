@@ -116,7 +116,7 @@ public class ResourceOperations {
         try {
           getOperation(text(op, "id"), req);
           ObjectNode row =
-              eq(op, "type", "PRIORITY") && eq(op, "protocol", "NEWAPI")
+              eq(op, "type", "PRIORITY") && Set.of("NEWAPI", "CCMAX_NATIVE").contains(text(op, "protocol"))
                   ? newApiPriority.view(op)
                   : publishOperation(op, req);
           out.add(row);
@@ -336,9 +336,27 @@ public class ResourceOperations {
     if (rid == null || rid.isBlank()) return;
     ObjectNode update = b.obj();
     JsonNode upstream = response.path("resource").isObject() ? response.path("resource") : response;
+    if (!text(upstream, "upstreamAccountId").isBlank()) {
+      String targetId = text(upstream, "targetId"), accountId = text(upstream, "upstreamAccountId");
+      ObjectNode local = b.resource(rid, req);
+      if (targetId.isBlank()) targetId = text(local, "targetId");
+      if (targetId.isBlank()) {
+        targetId = store.list("resource-operation", owner).stream()
+            .filter(op -> eq(op, "resourceId", rid) && eq(op, "protocol", "CCMAX_NATIVE"))
+            .map(op -> text(op, "targetId")).findFirst().orElse("");
+      }
+      store.jdbc.queryForObject("select pg_advisory_xact_lock(hashtext(?),hashtext(?))",
+          (row, index) -> true, targetId, accountId);
+      for (ObjectNode other : store.list("resource", null))
+        if (!other.path("deleted").asBoolean() && !eq(other, "id", rid) && eq(other, "targetId", targetId)
+            && eq(other, "upstreamAccountId", accountId))
+          throw new ApiException(409, "同一上游账号已关联其他资源，请核对归属", "RESOURCE_ACCOUNT_ALREADY_MAPPED");
+    }
     for (String f :
         List.of(
             "laneId",
+            "upstreamAccountId",
+            "upstreamProtocol",
             "laneState",
             "operationalState",
             "upstreamPriority",
@@ -458,7 +476,7 @@ public class ResourceOperations {
         throw new ApiException(409, "提交编号已用于不同资料", "IDEMPOTENCY_CONFLICT");
       return result(existing, req);
     }
-    gateway.requireCcmax(gateway.requireConfigured(text(body, "targetId")));
+    ObjectNode ccmaxTarget = gateway.requireCcmaxConfigured(text(body, "targetId"));
     required(input, "accountName", "credentialMode");
     String mode = text(input, "credentialMode");
     if (!Set.of("REFRESH_TOKEN", "ACCESS_TOKEN", "SESSION_KEY").contains(mode))
@@ -477,7 +495,7 @@ public class ResourceOperations {
         "/resources/supplier-submit",
         body,
         key,
-        text(body, "targetId"),
+        text(ccmaxTarget, "id"),
         req);
   }
 
@@ -511,7 +529,12 @@ public class ResourceOperations {
         ? "OAUTH_AUTHORIZE" : (action.equals("oauth/supplier-submit") || action.equals("oauth/complete"))
             ? "OAUTH_COMPLETE" : action.toUpperCase(Locale.ROOT);
     ObjectNode previousOperation = findRequest(owner, key, preliminaryType, req);
-    if (previousOperation == null && !text(resource, "upstreamChannelId").isBlank()
+    if (previousOperation == null && (action.equals("oauth/supplier-submit") || action.equals("oauth/complete"))
+        && body.hasNonNull("sessionId")) {
+      ObjectNode originalSession = getOperation(text(body, "sessionId"), req);
+      gateway.validateNativeCallback(text(originalSession, "targetId"), text(originalSession, "upstreamId"), text(body, "code"));
+    }
+    if (previousOperation == null && (!text(resource, "upstreamChannelId").isBlank() || !text(resource, "upstreamAccountId").isBlank())
         && eq(resource, "operationalState", "GONE"))
       throw new ApiException(409, "渠道已移除，不可再操作", "RESOURCE_CHANNEL_REMOVED");
     String remoteAction = action;
@@ -519,6 +542,7 @@ public class ResourceOperations {
       String localId = action.substring("reauthorizations/".length());
       ObjectNode prior = getOperation(localId, req);
       if (!eq(prior, "resourceId", id)) throw new ApiException(404, "授权操作不存在");
+      if (previousOperation == null) gateway.validateNativeCallback(text(prior, "targetId"), text(prior, "upstreamId"), text(body, "code"));
       remoteAction = "reauthorizations/" + encode(text(prior, "upstreamId"));
     }
     if (action.startsWith("oauth/") && body.hasNonNull("sessionId")) {
@@ -555,6 +579,8 @@ public class ResourceOperations {
     String bound = text(resource, "targetId"), requested = text(body, "targetId");
     if (!bound.isBlank() && !requested.isBlank() && !bound.equals(requested))
       throw new ApiException(409, "资源已关联其他上游目标", "RESOURCE_TARGET_CONFLICT");
+    if (bound.isBlank() && requested.isBlank() && eq(resource, "resourceType", "CCMAX") && gateway.ccmaxConfigured())
+      return text(gateway.requireCcmaxConfigured(null), "id");
     return bound.isBlank() ? requested : bound;
   }
 
@@ -572,7 +598,7 @@ public class ResourceOperations {
       if (!eq(previous, "fingerprint", digest(request))) throw new ApiException(409, "提交编号已用于不同资料", "IDEMPOTENCY_CONFLICT");
       return result(previous, req);
     }
-    gateway.requireCcmax(gateway.requireConfigured(text(input, "targetId")));
+    ObjectNode ccmaxTarget = gateway.requireCcmaxConfigured(text(input, "targetId"));
     ObjectNode resource = newResource(request, owner, req);
     return invoke(
         "OAUTH_AUTHORIZE",
@@ -582,7 +608,7 @@ public class ResourceOperations {
         "/resources/oauth/supplier-authorize",
         request,
         key,
-        text(input, "targetId"),
+        text(ccmaxTarget, "id"),
         req);
   }
 
@@ -609,6 +635,7 @@ public class ResourceOperations {
     ObjectNode payload = body.deepCopy().put("sessionId", text(op, "upstreamId"));
     if (action.equals("complete")) {
       ObjectNode prior = findRequest(text(op, "supplierId"), id + ":" + action, "OAUTH_COMPLETE", req);
+      if (prior == null) gateway.validateNativeCallback(text(op, "targetId"), text(op, "upstreamId"), text(body, "code"));
       payload.set("input", prior == null ? resourceInput(b.resource(text(op, "resourceId"), req)) : prior.path("request").path("input"));
     }
     String path =
@@ -644,7 +671,7 @@ public class ResourceOperations {
     String remote = text(op, "upstreamId");
     if (remote.isBlank()) remote = text(op, "requestKey");
     ObjectNode config = gateway.requireConfigured(text(op, "targetId"));
-    boolean newApiLifecycle = eq(config, "protocol", "NEWAPI") && eq(op, "type", "LIFECYCLE");
+    boolean newApiLifecycle = Set.of("NEWAPI", "CCMAX_NATIVE").contains(text(config, "protocol")) && eq(op, "type", "LIFECYCLE");
     ObjectNode request = op.path("request").deepCopy();
     if (newApiLifecycle) request.set("confirmedItems", op.path("result").path("items"));
     ObjectNode response = gateway.exchange(config, "GET",
@@ -705,7 +732,7 @@ public class ResourceOperations {
       String rid = text(item, "resourceId");
       if (!ids.add(rid)) throw new ApiException(400, "资源不能重复");
       ObjectNode resource = b.resource(rid, req);
-      if (!text(resource, "upstreamChannelId").isBlank() && eq(resource, "operationalState", "GONE"))
+      if ((!text(resource, "upstreamChannelId").isBlank() || !text(resource, "upstreamAccountId").isBlank()) && eq(resource, "operationalState", "GONE"))
         throw new ApiException(409, "渠道已移除，不可再操作", "RESOURCE_CHANNEL_REMOVED");
       String itemTarget = actionTarget(resource, body);
       if (!itemTarget.isBlank() && !selectedTarget.isBlank() && !itemTarget.equals(selectedTarget))
@@ -755,7 +782,7 @@ public class ResourceOperations {
 
   public ObjectNode jobDetail(String id, HttpServletRequest req) {
     ObjectNode op = getOperation(id, req);
-    if (eq(op, "type", "PRIORITY") && eq(op, "protocol", "NEWAPI")) return newApiPriority.view(op);
+    if (eq(op, "type", "PRIORITY") && Set.of("NEWAPI", "CCMAX_NATIVE").contains(text(op, "protocol"))) return newApiPriority.view(op);
     return publishOperation(op, req);
   }
 
@@ -845,6 +872,30 @@ public class ResourceOperations {
   }
 
   @Transactional(noRollbackFor = ApiException.class)
+  public ObjectNode bindNativeCcmax(String id, ObjectNode body, HttpServletRequest req) {
+    if (!auth.admin(req)) throw new ApiException(403, "仅最高管理员可关联外部账号");
+    auth.require(req, "resource.dispatch");
+    ObjectNode local = b.resource(id, req);
+    required(body, "targetId", "accountId", "version");
+    if (body.path("version").asLong() != local.path("version").asLong()) throw new ApiException(409, "资源版本已变化");
+    String targetId = actionTarget(local, body), accountId = text(body, "accountId");
+    ObjectNode target = gateway.requireConfigured(targetId);
+    if (!eq(target, "protocol", "CCMAX_NATIVE")) throw new ApiException(400, "请选择CCMAX原生资源目标");
+    if (!text(local, "laneId").isBlank() && !eq(local, "laneId", accountId))
+      throw new ApiException(409, "资源已关联其他账号，不能覆盖");
+    store.jdbc.queryForObject("select pg_advisory_xact_lock(hashtext(?),hashtext(?))", (row, index) -> true, targetId, accountId);
+    for (ObjectNode other : store.list("resource", null))
+      if (!other.path("deleted").asBoolean() && !eq(other, "id", id) && eq(other, "targetId", targetId)
+          && (eq(other, "upstreamAccountId", accountId) || eq(other, "laneId", accountId)))
+        throw new ApiException(409, "该CCMAX账号已关联其他本地资源");
+    ObjectNode verified = gateway.exchange(target, "GET", "/resources/" + encode(id) + "/account-bind", body, null);
+    ObjectNode patch = b.pick(verified, "upstreamAccountId", "upstreamProtocol", "laneId", "laneState", "operationalState", "upstreamPriority", "usage", "resourceData");
+    patch.put("targetId", targetId).put("version", local.path("version").asLong());
+    ObjectNode saved = b.update("resource", id, req, patch);
+    return safe(saved, req);
+  }
+
+  @Transactional(noRollbackFor = ApiException.class)
   public ObjectNode priority(ObjectNode body, HttpServletRequest req) {
     if (!auth.admin(req)) throw new ApiException(403, "仅最高管理员可调整批量优先级");
     auth.require(req, "resource.dispatch");
@@ -872,7 +923,7 @@ public class ResourceOperations {
     if (!auth.admin(req)) throw new ApiException(403, "仅最高管理员可调整批量优先级");
     auth.require(req, "resource.dispatch");
     ObjectNode op = store.get("resource-operation", id, "GLOBAL");
-    if (eq(op, "protocol", "NEWAPI") && eq(op, "type", "PRIORITY")) return newApiPriority.action(op, action, req);
+    if (Set.of("NEWAPI", "CCMAX_NATIVE").contains(text(op, "protocol")) && eq(op, "type", "PRIORITY")) return newApiPriority.action(op, action, req);
     return invoke(
         "PRIORITY_" + action,
         null,

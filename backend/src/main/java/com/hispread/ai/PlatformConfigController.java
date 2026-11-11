@@ -333,7 +333,8 @@ public class PlatformConfigController {
   private ObjectNode targetView(ObjectNode target) {
     ObjectNode out = target.deepCopy();
     out.put("apiKeyConfigured", !text(out, "apiKey").isBlank());
-    out.remove("apiKey");
+    out.put("adminPasswordConfigured", !text(out, "adminPassword").isBlank());
+    out.remove(List.of("apiKey", "adminPassword"));
     return out;
   }
 
@@ -368,12 +369,15 @@ public class PlatformConfigController {
                 "version",
                 "protocol",
                 "newApiUserId",
+                "adminUsername",
                 "defaultTarget",
                 "timeoutMs")) if (body.has(field)) out.set(field, body.get(field));
     String secret = monitoring ? "token" : "apiKey";
     if (body.has(secret) && !text(body, secret).isBlank()) out.put(secret, text(body, secret));
     if (body.path("clearToken").asBoolean() || body.path("clearApiKey").asBoolean())
       out.remove(secret);
+    if (!monitoring && body.has("adminPassword") && !text(body, "adminPassword").isBlank())
+      out.put("adminPassword", text(body, "adminPassword"));
     required(out, "name", monitoring ? "endpoint" : "baseUrl");
     if (text(out, "name").length() > 160) throw new ApiException(400, "配置名称过长");
     if (monitoring) {
@@ -386,12 +390,17 @@ public class PlatformConfigController {
     }
     if (!monitoring) {
       String protocol = out.path("protocol").asText("CUSTOM");
-      if (!Set.of("CUSTOM", "NEWAPI").contains(protocol))
-        throw new ApiException(400, "资源协议须为CUSTOM或NEWAPI");
+      if (!Set.of("CUSTOM", "NEWAPI", "CCMAX_NATIVE").contains(protocol))
+        throw new ApiException(400, "资源协议须为CUSTOM、NEWAPI或CCMAX_NATIVE");
       out.put("protocol", protocol);
+      if (protocol.equals("CCMAX_NATIVE")) {
+        required(out, "adminUsername", "adminPassword");
+        if (text(out, "adminUsername").length() > 160 || text(out, "adminPassword").length() > 512)
+          throw new ApiException(400, "原生管理员账号或密码过长");
+      }
       if (protocol.equals("NEWAPI") && !text(out, "newApiUserId").matches("[1-9][0-9]{0,18}"))
         throw new ApiException(400, "New API需要有效管理员用户ID");
-      int timeout = out.path("timeoutMs").asInt(15000);
+      int timeout = out.path("timeoutMs").asInt(protocol.equals("CCMAX_NATIVE") ? 60000 : 15000);
       if (timeout < 1000 || timeout > 120000) throw new ApiException(400, "资源超时须为1000至120000毫秒");
       out.put("timeoutMs", timeout);
       String prefix = out.path("upstreamPathPrefix").asText("/api");
@@ -417,6 +426,15 @@ public class PlatformConfigController {
   public Object target(@PathVariable String id, HttpServletRequest r) {
     guard(r, "resource.config.read");
     return targetView(s.get("resource-target", id, null));
+  }
+
+  @GetMapping("/resource-targets/{id}/accounts")
+  public Object nativeAccounts(@PathVariable String id, @RequestParam(defaultValue="1") int page,
+      @RequestParam(defaultValue="") String search, HttpServletRequest r) {
+    guard(r, "resource.config.read");
+    ObjectNode target = resources.requireConfigured(id);
+    if (!eq(target, "protocol", "CCMAX_NATIVE")) throw new ApiException(400, "此目标不是CCMAX原生协议");
+    return resources.exchange(target, "GET", "/native/accounts", s.object().put("page", page).put("search", search), null);
   }
 
   @PutMapping("/resource-targets/{id}")

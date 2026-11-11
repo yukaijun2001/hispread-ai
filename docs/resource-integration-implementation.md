@@ -66,6 +66,10 @@ Production HTTP origins also receive a cryptographically random UUID fallback be
 
 The integration changes were checked against the official [channel routes](https://github.com/QuantumNous/new-api/blob/main/router/channel-router.go), [channel status controller](https://github.com/QuantumNous/new-api/blob/main/controller/channel.go) and [channel edit field permissions](https://github.com/QuantumNous/new-api/blob/main/controller/channel_authz.go). Upstream permission failures remain failures, with no fallback after authentication or application-level rejection. Real production retesting of channel 148 is pending deployment of these fixes.
 
+## CCMAX native integration — 2026-11-11
+
+The authorized Claude Gateway deployment supplied its native management protocol, which is now supported separately as `CCMAX_NATIVE`. See [native configuration, route mapping and acceptance boundaries](ccmax-native-integration.md). The earlier CUSTOM limitations in this document apply to CUSTOM, not to the observed native protocol. Real native administrator login, existing-account binding, status/usage readback and OAuth-link generation were verified from an isolated local Hispread instance; server deployment and live account mutations remain separate acceptance steps.
+
 ## Verification
 
 The 2026-11-10 follow-up fixes give `GET` and `PUT /api/resource-targets/{id}/sync-settings` the same allowlisted response: `perTargetConcurrency`, `globalConcurrency`, `effectiveConcurrency`, `targetVersion`, and `globalVersion`. Neither response returns target configuration or credentials. PUT requires integer limits of 1–32 per target and 1–64 globally, plus both nonnegative versions. PostgreSQL transactions and a shared advisory lock reject stale target/global updates; the global limit is stored once for all targets. Legacy per-target settings remain readable. Existing valid per-target values are retained; missing/invalid values use 2, and the initial global value uses the latest valid legacy value or 4. The recovered editor refreshes its parent target version after saving, so opening the target editor does not immediately submit a stale version.

@@ -19,6 +19,7 @@ public class ResourceIntegrationGateway {
   private final HttpClient client;
   private final ProxyProbeService proxyProbe;
   private final NewApiResourceAdapter newApi;
+  private final NativeCcmaxAdapter nativeCcmax;
   private final ResourceSyncSettings syncSettings;
 
   @Value("${app.integrations.allow-private-targets:false}")
@@ -34,6 +35,7 @@ public class ResourceIntegrationGateway {
     this.proxyProbe = proxyProbe;
     this.syncSettings = syncSettings;
     this.newApi = new NewApiResourceAdapter(store, this::transport);
+    this.nativeCcmax = new NativeCcmaxAdapter(store, this::transport);
     client =
         HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
@@ -54,7 +56,7 @@ public class ResourceIntegrationGateway {
 
   public boolean ccmaxConfigured() {
     return store.list("resource-target", null).stream().anyMatch(target -> {
-      if (!target.path("enabled").asBoolean() || !target.path("protocol").asText("CUSTOM").equals("CUSTOM")) return false;
+      if (!target.path("enabled").asBoolean() || !Set.of("CUSTOM", "CCMAX_NATIVE").contains(target.path("protocol").asText("CUSTOM"))) return false;
       try {
         validateEndpoint(URI.create(target.path("baseUrl").asText()), target.path("allowHttp").asBoolean());
         return true;
@@ -63,8 +65,34 @@ public class ResourceIntegrationGateway {
   }
 
   public void requireCcmax(ObjectNode config) {
-    if (!config.path("protocol").asText("CUSTOM").equals("CUSTOM"))
+    if (!Set.of("CUSTOM", "CCMAX_NATIVE").contains(config.path("protocol").asText("CUSTOM")))
       throw new ApiException(503, "此资源目标不支持CCMAX交付或OAuth，请选择CCMAX兼容适配器", "RESOURCE_OPERATION_UNSUPPORTED");
+  }
+
+  public boolean allowDirectCcmax() {
+    try { return requireCcmaxConfigured(null).path("protocol").asText().equals("CCMAX_NATIVE"); }
+    catch (ApiException unavailable) { return false; }
+  }
+
+  public ObjectNode requireCcmaxConfigured(String id) {
+    if (id != null && !id.isBlank()) {
+      ObjectNode target = requireConfigured(id);
+      requireCcmax(target);
+      return target;
+    }
+    List<ObjectNode> targets = store.list("resource-target", null).stream()
+        .filter(target -> target.path("enabled").asBoolean() && !target.path("baseUrl").asText().isBlank()
+            && Set.of("CUSTOM", "CCMAX_NATIVE").contains(target.path("protocol").asText("CUSTOM")))
+        .toList();
+    if (targets.isEmpty()) {
+      ObjectNode configured = requireConfigured(id);
+      requireCcmax(configured);
+      throw new ApiException(503, "尚未配置CCMAX资源上游", "RESOURCE_UPSTREAM_NOT_CONFIGURED");
+    }
+    if (targets.size() == 1) return targets.get(0);
+    List<ObjectNode> defaults = targets.stream().filter(target -> target.path("defaultTarget").asBoolean()).toList();
+    if (defaults.size() != 1) throw new ApiException(409, "存在多个CCMAX目标，请指定目标", "RESOURCE_TARGET_AMBIGUOUS");
+    return defaults.get(0);
   }
 
   public ObjectNode requireConfigured(String id) {
@@ -110,6 +138,12 @@ public class ResourceIntegrationGateway {
       ObjectNode config, String method, String path, JsonNode body, String key) {
     String protocol = config.path("protocol").asText("CUSTOM");
     if (protocol.equals("NEWAPI")) return newApi.exchange(config, method, path, body, key);
+    if (protocol.equals("CCMAX_NATIVE")) {
+      if (Set.of("/jobs/ccmax/daily-sync", "/jobs/ccmax/status-sync", "/resources/sync").contains(path))
+        return syncSettings.withPermit(config.path("id").asText(), config.path("timeoutMs").asInt(timeoutMs),
+            () -> nativeCcmax.exchange(config, method, path, body, key));
+      return nativeCcmax.exchange(config, method, path, body, key);
+    }
     if (!protocol.equals("CUSTOM"))
       throw new ApiException(400, "资源协议未受支持", "INVALID_RESOURCE_PROTOCOL");
     if (Set.of("/jobs/ccmax/daily-sync", "/jobs/ccmax/status-sync", "/resources/sync").contains(path))
@@ -124,6 +158,12 @@ public class ResourceIntegrationGateway {
 
   public ObjectNode saveSyncSettings(String targetId, ObjectNode input) {
     return syncSettings.save(targetId, input);
+  }
+
+  public void validateNativeCallback(String targetId, String sessionId, String code) {
+    ObjectNode target = requireConfigured(targetId);
+    if (target.path("protocol").asText().equals("CCMAX_NATIVE"))
+      nativeCcmax.validateCallback(target, sessionId, code);
   }
 
   private ObjectNode transport(

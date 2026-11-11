@@ -6,6 +6,8 @@ The original private CCMAX provider implementation was unavailable. The paths be
 
 ## Job lifecycle
 
+As of 2026-11-11, `CCMAX_NATIVE` targets also support native daily/status observation through the mappings in [ccmax-native-integration.md](ccmax-native-integration.md). Automatic priority rotation remains CUSTOM-only because its recoverable snapshot/restore contract has no verified native equivalent. Native daily collection uses a bounded cursor scan and fails the entire incomplete observation batch on timeout, invalid date/scope, missing costs or billing-evaluation failures; it does not persist native request/session bodies.
+
 - Readiness is computed from executable job type and current server configuration; enabling an unready task returns 503. Unconfigured jobs never manufacture successful runs.
 - A PostgreSQL session advisory lock prevents concurrent executions across app instances. All priority rotations share one lock so overlapping tasks cannot race snapshots. A separate connection holds that lock while run records and remote-operation snapshots are committed in short transactions. Connection loss releases the lock. The next run marks abandoned RUNNING records TIMED_OUT/LEASE_LOST.
 - A started execution persists RUNNING, then SUCCESS or FAILED with `resultCode`, safe message and completion time. The task always clears `running`; failures also advance the next scheduled run, preventing a 15-second retry storm. Disabled manual runs do not create a future scheduled time.

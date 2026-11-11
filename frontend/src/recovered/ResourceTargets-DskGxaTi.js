@@ -729,7 +729,7 @@ function A() {
             [h(`服务地址`), x.baseUrl],
             [h(`HTTP 地址`), x.allowHttp ? h(`已明确允许`) : h(`未单独允许`)],
             [h(`管理密钥`), x.apiKeyConfigured ? h(`已配置`) : h(`未配置`)],
-            [h(`上游协议`), x.protocol === `NEWAPI` ? `New API` : h(`CCMAX 兼容适配器`) ]
+            [h(`上游协议`), x.protocol === `NEWAPI` ? `New API` : x.protocol === `CCMAX_NATIVE` ? `CCMAX 原生管理接口` : h(`CCMAX 兼容适配器`) ]
           ] : [],
           [h(`状态`), x.enabled ? h(`已启用`) : h(`已停用`)]
         ]
@@ -846,6 +846,8 @@ function j({
     [w, T] = (0, S.useState)(``),
     [protocol, setProtocol] = (0, S.useState)(i ? `CUSTOM` : e.protocol || `CUSTOM`),
     [newApiUserId, setNewApiUserId] = (0, S.useState)(i ? `` : String(e.newApiUserId ?? ``)),
+    [adminUsername, setAdminUsername] = (0, S.useState)(i ? `` : e.adminUsername || ``),
+    [adminPassword, setAdminPassword] = (0, S.useState)(``),
     [defaultTarget, setDefaultTarget] = (0, S.useState)(!i && !!e.defaultTarget),
     [pathPrefix, setPathPrefix] = (0, S.useState)(i ? `/api` : e.upstreamPathPrefix ?? `/api`),
     [timeoutMs, setTimeoutMs] = (0, S.useState)(i ? `15000` : String(e.timeoutMs || 15000));
@@ -855,8 +857,12 @@ function j({
         T(h(`请填写目标名称和服务地址`));
         return
       }
-      if (i && !l.trim()) {
+      if (protocol !== `CCMAX_NATIVE` && i && !l.trim()) {
         T(h(`请填写管理密钥`));
+        return
+      }
+      if (protocol === `CCMAX_NATIVE` && (!adminUsername.trim() || !adminPassword && !e.adminPasswordConfigured)) {
+        T(`请填写CCMAX管理员账号和密码`);
         return
       }
       x(!0);
@@ -868,6 +874,7 @@ function j({
           enabled: g,
           protocol,
           newApiUserId: protocol === `NEWAPI` ? newApiUserId.trim() : ``,
+          ...protocol === `CCMAX_NATIVE` ? { adminUsername: adminUsername.trim(), ...adminPassword ? { adminPassword } : {} } : {},
           defaultTarget,
           upstreamPathPrefix: pathPrefix.trim(),
           timeoutMs: Number(timeoutMs),
@@ -923,13 +930,17 @@ function j({
         }), (0, C.jsxs)(`label`, {
           className: `field full`,
           children: [(0, C.jsx)(`span`, { children: h(`上游协议`) }), (0, C.jsxs)(`select`, {
-            value: protocol, onChange: e => setProtocol(e.target.value),
+            value: protocol, onChange: e => { setProtocol(e.target.value); if (e.target.value === `CCMAX_NATIVE` && Number(timeoutMs) < 60000) setTimeoutMs(`60000`); },
             children: [(0, C.jsx)(`option`, { value: `CUSTOM`, children: h(`CCMAX 兼容适配器`) }),
-              (0, C.jsx)(`option`, { value: `NEWAPI`, children: h(`New API 官方渠道接口`) })]
-          }), (0, C.jsx)(`small`, { children: h(protocol === `NEWAPI` ? `支持已关联渠道的状态、用量、测试和启停；CCMAX OAuth 与凭据交付需兼容适配器。` : `服务端需实现资源交付、OAuth、用量和维护接口。`) })]
+              (0, C.jsx)(`option`, { value: `NEWAPI`, children: h(`New API 官方渠道接口`) }),
+              (0, C.jsx)(`option`, { value: `CCMAX_NATIVE`, children: `CCMAX 原生管理接口` })]
+          }), (0, C.jsx)(`small`, { children: h(protocol === `NEWAPI` ? `支持已关联渠道的状态、用量、测试和启停；CCMAX OAuth 与凭据交付需兼容适配器。` : protocol === `CCMAX_NATIVE` ? `使用管理员账号登录 Claude Gateway，支持原生 OAuth、凭据导入、账号关联、用量和状态同步。` : `服务端需实现资源交付、OAuth、用量和维护接口。`) })]
         }), protocol === `NEWAPI` && (0, C.jsxs)(`label`, {
           className: `field full`, children: [(0, C.jsx)(`span`, { children: h(`New API 管理员用户 ID`) }),
             (0, C.jsx)(`input`, { required: !0, inputMode: `numeric`, pattern: `[1-9][0-9]{0,18}`, value: newApiUserId, onChange: e => setNewApiUserId(e.target.value) })]
+        }), protocol === `CCMAX_NATIVE` && (0, C.jsxs)(C.Fragment, {
+          children: [(0, C.jsxs)(`label`, { className: `field full`, children: [(0, C.jsx)(`span`, { children: `CCMAX 管理员账号` }), (0, C.jsx)(`input`, { required: true, value: adminUsername, autoComplete: `off`, onChange: event => setAdminUsername(event.target.value) })] }),
+          (0, C.jsxs)(`label`, { className: `field full`, children: [(0, C.jsx)(`span`, { children: `CCMAX 管理员密码` }), (0, C.jsx)(`input`, { type: `password`, value: adminPassword, autoComplete: `new-password`, placeholder: i || !e.adminPasswordConfigured ? `输入管理员密码` : `留空表示不更换`, onChange: event => setAdminPassword(event.target.value) }), (0, C.jsx)(`small`, { children: `仅服务端保存，不回显。模型调用 Key 不能代替管理员登录。` })] })]
         }), protocol === `CUSTOM` && (0, C.jsxs)(`label`, {
           className: `field`, children: [(0, C.jsx)(`span`, { children: h(`接口路径前缀`) }),
             (0, C.jsx)(`input`, { value: pathPrefix, placeholder: `/api`, onChange: e => setPathPrefix(e.target.value) })]
@@ -956,7 +967,7 @@ function j({
             className: `settings-switch-track`,
             "aria-hidden": `true`
           })]
-        }), (0, C.jsxs)(`label`, {
+        }), protocol !== `CCMAX_NATIVE` && (0, C.jsxs)(`label`, {
           className: `field full`,
           children: [(0, C.jsx)(`span`, {
             children: h(`管理密钥`)

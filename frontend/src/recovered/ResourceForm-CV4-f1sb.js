@@ -64,6 +64,7 @@ function y({
       has: me
     } = t(),
     S = le(),
+    nativeCapabilities = ee(`/resources/submission-capabilities`),
     he = `supplier:pending-submission:${pe.id}`,
     ge = ee(`/projects?page=1&size=100`),
     C = ee(`/resources/eligible-projects`),
@@ -220,7 +221,7 @@ function y({
       X(c(`当前账号只能选择已有代理，请从下拉列表选择`));
       return
     }
-    if (t && (V === `INPUT` ? !B.trim() : !z)) {
+    if (t && !nativeCapabilities.data?.allowDirectCcmax && (V === `INPUT` ? !B.trim() : !z)) {
       X(c(`请录入代理地址或从代理池选择代理`));
       return
     }
@@ -587,7 +588,7 @@ function y({
             className: `resource-delivery-oauth full`,
             children: [!(V === `INPUT` ? B.trim() : z) && (0, v.jsx)(`p`, {
               className: `muted`,
-              children: c(`可先生成授权链接；补充代理后请重新生成链接再正式提交。`)
+              children: nativeCapabilities.data?.allowDirectCcmax ? `当前CCMAX原生目标支持直连，可直接生成授权链接并回填。` : c(`可先生成授权链接；补充代理后请重新生成链接再正式提交。`)
             }), (0, v.jsx)(d, {
               disabled: U || je || !S.allowed,
               onClick: () => void et(!1, !0),

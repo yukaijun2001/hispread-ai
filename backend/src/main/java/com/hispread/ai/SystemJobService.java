@@ -77,7 +77,7 @@ public class SystemJobService {
                 ? "报价自动续期的延长期与冲突规则尚未配置"
                 : text(task, "type").equals("WORKBENCH_WECOM_REMINDER")
                     ? "请配置企业微信机器人与服务端加密密钥"
-                    : "请配置已启用的CUSTOM资源上游与有效任务规则");
+                    : "请配置支持该任务的CCMAX原生或CUSTOM资源上游与有效任务规则");
     return out;
   }
 

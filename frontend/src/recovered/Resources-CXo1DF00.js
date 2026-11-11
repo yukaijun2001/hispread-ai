@@ -1,5 +1,6 @@
 // origin: assets/Resources-CXo1DF00.js
 import { ChannelUsage, NewApiChannelDialog, NewApiLinkDialog, channelLabel, isNewApi } from '../runtime/newapi-channel.js';
+import { NativeCcmaxDialog, NativeCcmaxLinkDialog, isNativeCcmax } from '../runtime/ccmax-native.js';
 const __vite__mapDeps = (i, m = __vite__mapDeps, d = (m.f || (m.f = ["assets/ResourceLifecycleDialog-C3CIVivi.js", "assets/index-Dnr0i-H9.js", "assets/index-Co8Tabyn.css", "assets/IntakeReviewDialog-C9xZ8Ftb.js", "assets/intake-D282aV6G.css", "assets/PriorityBatchDialog-DWPDEDJI.js", "assets/labels-DaPzz6Ie.js", "assets/CcmaxResourceOverview-BpVmtOxH.js", "assets/ResourceForm-CV4-f1sb.js", "assets/useDeliveryProxies-DGHL4QCT.js", "assets/resourceHelpers-DoyalwRL.js", "assets/ResourceDetail-PGeCmPlL.js", "assets/CcmaxBatchDelivery-BSCydCTL.js", "assets/NewDelivery-CYrGthQl.js", "assets/NewDelivery-BY50kDnq.css"]))) => i.map(i => d[i]);
 import {
   $ as e,
@@ -228,6 +229,7 @@ function Ie(e, t) {
 
 function Le(e) {
   if (e.readOnly) return false;
+  if (isNativeCcmax(e)) return !!e.upstreamAccountId && ![`GONE`, `DRAINING`].includes(e.operationalState || ``);
   if (isNewApi(e)) return !!e.upstreamChannelId && ![`GONE`, `DRAINING`].includes(e.operationalState || ``);
   return e.resourceType === `CCMAX` && e.state === `DELIVERED` && e.dispatchState === `SUCCESS` && !!e.laneId && ![`GONE`, `DRAINING`].includes(e.laneState || ``)
 }
@@ -553,7 +555,7 @@ var Ue = {
   We = new Set([`COMPLETED`, `PARTIAL_FAILED`, `FAILED`, `NEEDS_REVIEW`]);
 
 function Ge(e) {
-  return !e.readOnly && (isNewApi(e) && e.operationalState !== `GONE` || e.resourceType === `CCMAX` && e.state === `DELIVERED` && e.dispatchState === `SUCCESS` && !!e.laneId)
+  return !e.readOnly && ((isNewApi(e) || isNativeCcmax(e)) && e.operationalState !== `GONE` || e.resourceType === `CCMAX` && e.state === `DELIVERED` && e.dispatchState === `SUCCESS` && !!e.laneId)
 }
 
 function B(e) {
@@ -1364,6 +1366,7 @@ function at({
 
 function ot(e, t) {
   if (isNewApi(e)) return `—（配额原值）`;
+  if (isNativeCcmax(e)) return e.usage?.amount == null ? `未查询` : z.jsx(ce, { value: e.usage.amount, currency: e.usage.currency || `USD` });
   return I(e) ? `—` : t && e.settlementMethod === `ACCOUNT_BUYOUT` ? e.buyoutAmount == null ? T(`未交付`) : (0, z.jsx)(ce, {
     value: e.buyoutAmount,
     currency: e.buyoutCurrency || ``
@@ -1530,6 +1533,7 @@ function st({
 }
 
 function ct(e) {
+  if (isNativeCcmax(e) && e.dispatchState !== `SUCCESS`) return z.jsx(E, { state: `SUCCESS`, label: `已有账号已关联` });
   if (isNewApi(e)) return z.jsx(E, { state: `SUCCESS`, label: `已有渠道已关联` });
   return I(e) ? (0, z.jsx)(E, {
     state: Te(e.deliveryState),
@@ -1545,6 +1549,7 @@ function ct(e) {
 }
 
 function lt(e) {
+  if (isNativeCcmax(e)) return z.jsx(E, { state: e.operationalState === `ACTIVE` ? `SUCCESS` : `COOLING`, label: ({ ACTIVE: `已启用`, PAUSED: `已停用`, GONE: `已归档`, ERROR: `异常` })[e.operationalState] || `待查询` });
   if (isNewApi(e)) return z.jsx(E, { state: e.operationalState === `ACTIVE` ? `SUCCESS` : `COOLING`, label: channelLabel(e) });
   if (I(e)) return (0, z.jsx)(E, {
     state: Te(e.onboardingState),
@@ -2257,6 +2262,7 @@ function St({
   onApiDelivery: l
 }) {
   const [linkChannel, setLinkChannel] = R.useState(false);
+  const [linkNativeAccount, setLinkNativeAccount] = R.useState(false);
   let [d, p] = (0, R.useState)(!1), [h, _] = (0, R.useState)(!1), [v, x] = (0, R.useState)(!1), [S, C] = (0, R.useState)(new Map), [E, D] = (0, R.useState)(null), [ee, ne] = (0, R.useState)(!1), [ce, le] = (0, R.useState)(null), {
     has: N,
     notify: P,
@@ -2577,7 +2583,7 @@ function St({
         size: 12
       }), zt.has(e.id) ? T(`同步中…`) : T(`同步`)]
     }),
-    Wn = e => isNewApi(e) ? z.jsx(A, { onClick: event => { event.stopPropagation(); Y(e); }, children: `渠道详情` }) : e.readOnly ? I(e) ? null : (0, z.jsx)(`div`, {
+    Wn = e => isNativeCcmax(e) ? z.jsx(A, { onClick: event => { event.stopPropagation(); Y(e); }, children: `CCMAX 账号详情` }) : isNewApi(e) ? z.jsx(A, { onClick: event => { event.stopPropagation(); Y(e); }, children: `渠道详情` }) : e.readOnly ? I(e) ? null : (0, z.jsx)(`div`, {
       className: `resource-row-actions`,
       children: Un(e)
     }) : I(e) ? (0, z.jsxs)(`div`, {
@@ -2669,7 +2675,7 @@ function St({
   return (0, z.jsxs)(z.Fragment, {
     children: [(0, z.jsxs)(w, {
       title: fe(s, c),
-      children: [!s && de.role === `ADMIN` && N(`resource.dispatch`) && N(`resource.config.read`) && z.jsx(A, { onClick: () => setLinkChannel(true), children: `关联 New API 渠道` }), !s && (0, z.jsx)(A, {
+      children: [!s && de.role === `ADMIN` && N(`resource.dispatch`) && N(`resource.config.read`) && z.jsx(A, { onClick: () => setLinkNativeAccount(true), children: `关联 CCMAX 原生账号` }), !s && de.role === `ADMIN` && N(`resource.dispatch`) && N(`resource.config.read`) && z.jsx(A, { onClick: () => setLinkChannel(true), children: `关联 New API 渠道` }), !s && (0, z.jsx)(A, {
         icon: `refresh`,
         "aria-label": T(c ? `刷新待分配资源` : `刷新资源列表`),
         "aria-busy": Z.loading || Z.refreshing,
@@ -2765,7 +2771,7 @@ function St({
             onClick: () => _(!0),
             children: T(`批量调整优先级`)
           }), H && (0, z.jsxs)(A, {
-            disabled: !S.size || [...S.values()].some(isNewApi),
+            disabled: !S.size || [...S.values()].some(row => isNewApi(row) || isNativeCcmax(row)),
             title: [...S.values()].some(isNewApi) ? T(`New API 渠道不支持替换代理`) : void 0,
             onClick: () => D([...S.values()]),
             children: [T(`批量替换代理`), S.size ? T(`（{0}）`, [S.size]) : ``]
@@ -3132,7 +3138,7 @@ function St({
           children: T(en ? `标记中…` : `确认删除`)
         })]
       })]
-    }), linkChannel && z.jsx(NewApiLinkDialog, { onClose: () => setLinkChannel(false), onLinked: resource => { setLinkChannel(false); P(`渠道关联成功`); F(); Y(resource); } }), Ot && (isNewApi(Ot) ? z.jsx(NewApiChannelDialog, { resource: Ot, onClose: () => Y(null), onChanged: () => { F(); } }, Ot.id) : (0, z.jsx)(wt, {
+    }), linkNativeAccount && z.jsx(NativeCcmaxLinkDialog, { onClose: () => setLinkNativeAccount(false), onLinked: resource => { setLinkNativeAccount(false); P(`CCMAX 账号关联成功`); F(); Y(resource); } }), linkChannel && z.jsx(NewApiLinkDialog, { onClose: () => setLinkChannel(false), onLinked: resource => { setLinkChannel(false); P(`渠道关联成功`); F(); Y(resource); } }), Ot && (isNativeCcmax(Ot) ? z.jsx(NativeCcmaxDialog, { resource: Ot, onClose: () => Y(null), onChanged: () => { F(); } }, Ot.id) : isNewApi(Ot) ? z.jsx(NewApiChannelDialog, { resource: Ot, onClose: () => Y(null), onChanged: () => { F(); } }, Ot.id) : (0, z.jsx)(wt, {
       resource: Ot,
       supplierSide: s,
       onReauthorize: e => Pt(e, !1, !0),
