@@ -567,7 +567,7 @@ final class NativeCcmaxAdapter {
         || body.path("items").size() > 100) throw new ApiException(400, "优先级参数无效");
     ObjectNode result = store.object();
     ArrayNode items = result.putArray("items");
-    int success = 0;
+    int success = 0, failed = 0;
     Set<String> seen = new HashSet<>();
     for (JsonNode item : body.path("items")) {
       String rid = text(item, "resourceId"), id = mapped(config, store.get("resource", rid, null));
@@ -578,24 +578,33 @@ final class NativeCcmaxAdapter {
           id = mapped(config, store.get("resource", rid, null));
       ObjectNode item =
           items.addObject().put("resourceId", rid).put("laneId", id).put("priority", weight);
+      boolean writeAccepted = false;
       try {
-        if (!readOnly)
+        if (!readOnly) {
           call(config, "PATCH", accountPath(id), store.object().put("weight", weight), key);
+          writeAccepted = true;
+        }
         if (account(config, id, key).path("weight").asInt(-1) != weight) throw invalid();
         item.put("state", "SUCCESS");
         success++;
       } catch (ApiException error) {
-        item.put("state", "UNKNOWN").put("errorCode", error.code);
+        boolean rejected = !readOnly && !writeAccepted
+            && error.status >= 400 && error.status < 500 && error.status != 408;
+        if (rejected) failed++;
+        item.put("state", rejected ? "FAILED" : "UNKNOWN")
+            .put("errorCode", error.code)
+            .put("errorMessage", error.getMessage());
       }
     }
     result
         .putObject("counts")
         .put("SUCCESS", success)
-        .put("FAILED", 0)
-        .put("UNKNOWN", items.size() - success);
+        .put("FAILED", failed)
+        .put("UNKNOWN", items.size() - success - failed);
     return result
         .put("total", items.size())
-        .put("state", success == items.size() ? "COMPLETED" : "UNKNOWN");
+        .put("state", success + failed < items.size() ? "UNKNOWN"
+            : failed == items.size() ? "FAILED" : failed > 0 ? "PARTIAL_FAILED" : "COMPLETED");
   }
 
   private ObjectNode statusSync(ObjectNode config, JsonNode body, String key) {
