@@ -91,7 +91,7 @@ public class OpenCcmaxController {
     return out;
   }
 
-  private ObjectNode publicResource(ObjectNode r) {
+  private ObjectNode publicResource(ObjectNode r, Map<String, String> projectCodes) {
     ObjectNode p = s.object();
     for (String k :
         List.of(
@@ -116,9 +116,22 @@ public class OpenCcmaxController {
             "creationFinished",
             "creationHttpStatus")) if (r.has(k)) p.set(k, r.get(k));
     p.put("resourceType", "CCMAX");
+    String projectCode = projectCode(r, projectCodes);
+    if (!projectCode.isBlank()) p.put("projectCode", projectCode);
     String status = operationalStatus(r);
     if (!status.isBlank()) p.put("operationalStatus", status).put("operationalState", status);
     return p;
+  }
+
+  private Map<String, String> projectCodes() {
+    Map<String, String> codes = new HashMap<>();
+    for (ObjectNode project : s.list("project", null))
+      codes.put(text(project, "id"), text(project, "code"));
+    return codes;
+  }
+
+  private String projectCode(JsonNode resource, Map<String, String> codes) {
+    return codes.getOrDefault(text(resource, "projectId"), text(resource, "projectCode"));
   }
 
   private String operationalStatus(JsonNode resource) {
@@ -146,23 +159,27 @@ public class OpenCcmaxController {
 
   @GetMapping("/resources")
   public Object list(@RequestParam Map<String, String> q, HttpServletRequest r) {
+    List<ObjectNode> scoped = rows(r);
+    Map<String, String> codes = projectCodes();
     List<ObjectNode> list =
-        rows(r).stream()
+        scoped.stream()
             .filter(
                 x ->
                     b.contains(x, q.get("search"), "name", "accountName", "laneId")
                         && b.match(x, q, "state", "state")
                         && (q.getOrDefault("operationalStatus", "").isBlank()
                             || q.get("operationalStatus").equals(operationalStatus(x)))
-                        && b.match(x, q, "projectCode", "projectCode"))
-            .map(this::publicResource)
+                        && (q.getOrDefault("projectCode", "").isBlank()
+                            || q.get("projectCode").equals(projectCode(x, codes))))
+            .map(x -> publicResource(x, codes))
             .toList();
     return b.page(list, q);
   }
 
   @GetMapping("/resources/{id}")
   public Object detail(@PathVariable String id, HttpServletRequest r) {
-    return publicResource(row(id, r));
+    ObjectNode resource = row(id, r);
+    return publicResource(resource, projectCodes());
   }
 
   @GetMapping("/intake")

@@ -814,6 +814,45 @@ class ResourceIntegrationTest {
   }
 
   @Test
+  void openApiProjectCodeFilterFindsOAuthDeliveriesWithoutStoredProjectCodes() throws Exception {
+    nativeTarget(); Client supplier = supplier(), other = supplier();
+    nativeResponder(new AtomicInteger(), new AtomicInteger(1), new AtomicInteger(10));
+    ObjectNode input = (ObjectNode) submission(supplier).path("input");
+    String projectId = input.path("projectId").asText();
+    store.update("project", projectId, null, store.object().put("code", "CCMAX-FORM-TEST"));
+    input.put("credentialMode", "OAUTH").put("requestKey", UUID.randomUUID().toString());
+    input.remove("refreshToken");
+    ObjectNode authorized = write("/api/resources/oauth/supplier-authorize", input, supplier, 200);
+    ObjectNode completed = write("/api/resources/oauth/supplier-submit", store.object()
+        .put("sessionId", authorized.path("sessionId").asText()).put("code", "fixture#fixture-state"), supplier, 200);
+    String resourceId = completed.path("resourceId").asText();
+    ObjectNode foreign = nativeResource(other);
+    store.update("resource", foreign.path("id").asText(), other.owner,
+        store.object().put("projectId", projectId));
+    ObjectNode token = write("/api/auth/api-tokens", store.object().put("name", "fixture-project-filter"), supplier, 200);
+    String bearer = "Bearer " + token.path("key").asText();
+    mvc.perform(get("/api/open/v1/ccmax/resources").header("Authorization", bearer)
+            .param("projectCode", "CCMAX-FORM-TEST").param("operationalStatus", "ACTIVE"))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1))
+        .andExpect(jsonPath("$.items[0].id").value(resourceId))
+        .andExpect(jsonPath("$.items[0].projectCode").value("CCMAX-FORM-TEST"));
+    mvc.perform(get("/api/open/v1/ccmax/resources/" + resourceId).header("Authorization", bearer))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.projectCode").value("CCMAX-FORM-TEST"));
+    mvc.perform(get("/api/open/v1/ccmax/resources").header("Authorization", bearer)
+            .param("projectCode", "NONEXISTENT"))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(0));
+    store.update("resource", resourceId, supplier.owner, store.object().put("projectCode", "STALE-CODE"));
+    store.update("project", projectId, null, store.object().put("code", "CURRENT-CODE"));
+    mvc.perform(get("/api/open/v1/ccmax/resources").header("Authorization", bearer)
+            .param("projectCode", "CURRENT-CODE"))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1))
+        .andExpect(jsonPath("$.items[0].projectCode").value("CURRENT-CODE"));
+    mvc.perform(get("/api/open/v1/ccmax/resources").header("Authorization", bearer)
+            .param("projectCode", "STALE-CODE"))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(0));
+  }
+
+  @Test
   void openApiUsesNativeOperationalStateAndExcludesLegacyNewApiChannels() throws Exception {
     Client supplier = supplier();
     ObjectNode token = write("/api/auth/api-tokens", store.object().put("name", "fixture-open-api"), supplier, 200);
