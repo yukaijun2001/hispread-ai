@@ -1133,6 +1133,58 @@ class ResourceIntegrationTest {
     assertEquals(upstreamBefore, calls.get());
   }
 
+  @Test
+  void overviewCountsEnabledNativeAccountsAndUsesTheResourceFilters() throws Exception {
+    Client supplier = supplier(), other = supplier();
+    String selectedProject = UUID.randomUUID().toString();
+    String otherProject = UUID.randomUUID().toString();
+    for (String[] fixture : List.of(
+        new String[] {selectedProject, "ACTIVE"},
+        new String[] {selectedProject, "READY"},
+        new String[] {otherProject, "PAUSED"})) {
+      store.create("resource", supplier.owner, store.object()
+          .put("supplierId", supplier.owner).put("createdBy", supplier.uid)
+          .put("projectId", fixture[0]).put("resourceType", "CCMAX")
+          .put("state", "DELIVERED").put("dispatchState", "SUCCESS")
+          .put("operationalState", fixture[1]));
+    }
+    store.create("resource", other.owner, store.object()
+        .put("supplierId", other.owner).put("createdBy", other.uid)
+        .put("projectId", selectedProject).put("resourceType", "CCMAX")
+        .put("state", "DELIVERED").put("dispatchState", "SUCCESS")
+        .put("operationalState", "ACTIVE"));
+    store.create("resource", supplier.owner, store.object()
+        .put("supplierId", supplier.owner).put("createdBy", supplier.uid)
+        .put("projectId", selectedProject).put("resourceType", "CCMAX")
+        .put("upstreamProtocol", "NEWAPI").put("upstreamChannelId", "148")
+        .put("state", "DELIVERED").put("dispatchState", "SUCCESS")
+        .put("operationalState", "ACTIVE"));
+    store.create("resource", supplier.owner, store.object()
+        .put("supplierId", supplier.owner).put("createdBy", supplier.uid)
+        .put("projectId", selectedProject).put("resourceType", "CCMAX")
+        .put("state", "DRAFT").put("dispatchState", "NOT_SUBMITTED"));
+    store.create("resource", supplier.owner, store.object()
+        .put("supplierId", supplier.owner).put("createdBy", supplier.uid)
+        .put("projectId", selectedProject).put("resourceType", "OTHER")
+        .put("state", "DELIVERED").put("dispatchState", "SUCCESS")
+        .put("operationalState", "ACTIVE"));
+    mvc.perform(get("/api/resources/overview").session(supplier.session)
+            .param("resourceType", "CCMAX").param("projectId", selectedProject))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.counts.total").value(2))
+        .andExpect(jsonPath("$.counts.active").value(1))
+        .andExpect(jsonPath("$.counts.ready").value(1))
+        .andExpect(jsonPath("$.counts.paused").value(0))
+        .andExpect(jsonPath("$.counts.unknownState").value(0));
+    mvc.perform(get("/api/resources").session(supplier.session)
+            .param("resourceType", "CCMAX").param("projectId", selectedProject)
+            .param("operationalStatus", "ACTIVE"))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1));
+    mvc.perform(get("/api/resources").session(supplier.session)
+            .param("resourceType", "CCMAX").param("projectId", selectedProject)
+            .param("operationalStatus", "ALL"))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(2));
+  }
+
   ObjectNode intakeResource(Client supplier, String creator, String resourceState, String dispatch) {
     return store.create("resource", supplier.owner, store.object()
         .put("supplierId", supplier.owner).put("resourceType", "CCMAX")

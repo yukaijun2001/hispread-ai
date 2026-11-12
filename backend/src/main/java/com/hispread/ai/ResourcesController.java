@@ -98,7 +98,7 @@ public class ResourcesController {
                         && b.match(r, q, "creatorSearch", "createdBy")
                         && b.match(r, q, "newApiDeliveryState", "dispatchState")
                         && b.match(r, q, "newApiResourceState", "operationalState")
-                        && b.match(r, q, "operationalStatus", "operationalState")
+                        && matchesOperationalStatus(r, q.getOrDefault("operationalStatus", ""))
                         && b.dates(r, q, "createdFrom", "createdTo", "createdAt", "createdAt"))
             .toList();
     return b.page(rows.stream().map(x -> resourceView(x, req)).toList(), q);
@@ -529,16 +529,14 @@ public class ResourcesController {
   }
 
   @GetMapping("/resources/overview")
-  public ObjectNode overview(HttpServletRequest req) {
+  public ObjectNode overview(@RequestParam Map<String, String> q, HttpServletRequest req) {
     auth.require(req, "resource.read");
-    List<ObjectNode> rows =
-        b.scopedResources(req).stream()
-            .filter(x -> eq(x, "state", "DELIVERED") && eq(x, "dispatchState", "SUCCESS"))
-            .toList();
+    List<ObjectNode> rows = overviewRows(q, req);
     ObjectNode out = b.obj(), counts = b.obj().put("total", rows.size());
     for (String key :
         List.of(
             "ready",
+            "active",
             "provisioning",
             "invalid",
             "dead",
@@ -552,6 +550,7 @@ public class ResourcesController {
       String key =
           switch (text(r, "operationalState")) {
             case "READY" -> "ready";
+            case "ACTIVE" -> "active";
             case "PROVISIONING" -> "provisioning";
             case "INVALID" -> "invalid";
             case "DEAD" -> "dead";
@@ -578,6 +577,40 @@ public class ResourcesController {
         "dailyConsumption",
         b.obj().put("businessDate", today()).putNull("amount").put("reportedResourceCount", 0));
     return out;
+  }
+
+  /**
+   * The overview is requested with the same filter query as the resource list. Keeping the
+   * filtering at the server boundary prevents a project/category snapshot from silently mixing
+   * unrelated resources into the status and quota counters.
+   */
+  private List<ObjectNode> overviewRows(Map<String, String> q, HttpServletRequest req) {
+    return b.scopedResources(req).stream()
+        .filter(x -> eq(x, "state", "DELIVERED") && eq(x, "dispatchState", "SUCCESS"))
+        .filter(
+            r ->
+                b.contains(r, q.get("search"), "name", "accountName", "laneId")
+                    && (q.getOrDefault("resourceType", "").equals("NEWAPI_CHANNEL")
+                        ? !text(r, "upstreamChannelId").isBlank()
+                        : q.getOrDefault("resourceType", "").equals("CCMAX") && !text(r, "upstreamChannelId").isBlank()
+                            ? false : b.match(r, q, "resourceType", "resourceType"))
+                    && b.match(r, q, "supplierId", "supplierId")
+                    && b.match(r, q, "supplierSearch", "supplierId")
+                    && b.match(r, q, "category", "projectCategory")
+                    && b.match(r, q, "projectId", "projectId")
+                    && b.match(r, q, "credentialMode", "credentialMode")
+                    && b.match(r, q, "state", "state")
+                    && b.match(r, q, "creatorSearch", "createdBy")
+                    && matchesOperationalStatus(r, q.getOrDefault("operationalStatus", ""))
+                    && b.dates(r, q, "createdFrom", "createdTo", "createdAt", "createdAt"))
+        .toList();
+  }
+
+  private boolean matchesOperationalStatus(JsonNode resource, String status) {
+    if (status.isBlank()) return true;
+    if (status.equals("ALL"))
+      return eq(resource, "state", "DELIVERED") && eq(resource, "dispatchState", "SUCCESS");
+    return eq(resource, "operationalState", status);
   }
 
   @GetMapping("/cc-intake/mine")
