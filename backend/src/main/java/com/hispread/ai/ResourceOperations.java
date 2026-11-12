@@ -660,7 +660,26 @@ public class ResourceOperations {
 
   public ObjectNode operation(String id, HttpServletRequest req) {
     ObjectNode op = getOperation(id, req);
+    if (eq(op, "type", "REAUTHORIZATIONS")) return reauthorizationResult(op, req);
     return result(op, req);
+  }
+
+  private ObjectNode reauthorizationResult(ObjectNode authorization, HttpServletRequest req) {
+    String id = text(authorization, "id"), owner = text(authorization, "supplierId");
+    String completionType = "REAUTHORIZATIONS/" + id.toUpperCase(Locale.ROOT);
+    for (ObjectNode completion : store.list("resource-operation", owner)) {
+      if (!eq(completion, "type", completionType)
+          || !eq(completion, "resourceId", text(authorization, "resourceId"))
+          || !eq(completion, "targetId", text(authorization, "targetId"))) continue;
+      ObjectNode out = result(completion, req);
+      out.put("id", id).put("operationId", id)
+          .put("completionOperationId", text(completion, "id"))
+          .put("state", text(completion, "state")).put("status", text(completion, "state"))
+          .put("reauthorizationAllowed", gateway.configured());
+      out.remove(List.of("authUrl", "expiresAt", "sessionId"));
+      return out;
+    }
+    return result(authorization, req);
   }
 
   @Transactional(noRollbackFor = ApiException.class)
@@ -706,7 +725,8 @@ public class ResourceOperations {
   public ObjectNode current(String rid, String type, HttpServletRequest req) {
     b.resource(rid, req);
     for (ObjectNode op : store.list("resource-operation", b.entityOwner("resource", rid, req)))
-      if (eq(op, "resourceId", rid) && eq(op, "type", type)) return result(op, req);
+      if (eq(op, "resourceId", rid) && eq(op, "type", type))
+        return eq(op, "type", "REAUTHORIZATIONS") ? reauthorizationResult(op, req) : result(op, req);
     return b.obj()
         .put("status", "NONE")
         .put("state", "NONE")

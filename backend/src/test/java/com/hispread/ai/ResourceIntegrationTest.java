@@ -1134,6 +1134,104 @@ class ResourceIntegrationTest {
   }
 
   @Test
+  void bearerReauthorizationCurrentAndOriginalIdReflectDurableCompletion() throws Exception {
+    nativeTarget(); Client supplier = supplier(), other = supplier();
+    ObjectNode local = nativeResource(supplier);
+    String rid = local.path("id").asText();
+    store.update("resource", rid, supplier.owner, store.object()
+        .put("targetId", target.path("id").asText()).put("laneId", "native-148")
+        .put("upstreamAccountId", "native-148").put("upstreamProtocol", "CCMAX_NATIVE"));
+    nativeResponder(new AtomicInteger(), new AtomicInteger(1), new AtomicInteger(10));
+    var original = responder.get(); AtomicInteger exchanges = new AtomicInteger();
+    responder.set((request, body) -> {
+      if (request.equals("POST /api/admin/oauth-accounts/native-148/reauthorize"))
+        return "{\"url\":\"https://claude.ai/oauth/authorize?state=reauth-state\",\"state\":\"reauth-state\",\"expires_in\":600}";
+      if (request.equals("POST /api/admin/oauth-accounts/native-148/reauthorize/exchange")) {
+        exchanges.incrementAndGet();
+        return "{\"account\":{\"id\":\"native-148\",\"status\":\"active\"}}";
+      }
+      return original.apply(request, body);
+    });
+    ObjectNode token = write("/api/auth/api-tokens", store.object().put("name", "reauth-fixture"), supplier, 200);
+    String bearer = "Bearer " + token.path("key").asText();
+    String base = "/api/open/v1/ccmax/resources/" + rid + "/reauthorizations";
+    var generated = mvc.perform(post(base).header("Authorization", bearer)
+            .contentType("application/json").content(store.object().put("requestKey", UUID.randomUUID().toString()).toString()))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.state").value("READY")).andReturn();
+    String id = json.readTree(generated.getResponse().getContentAsString()).path("id").asText();
+    ObjectNode input = store.object().put("code", "fixture-code#reauth-state")
+        .put("requestKey", UUID.randomUUID().toString());
+    var completed = mvc.perform(put(base + "/" + id).header("Authorization", bearer)
+            .contentType("application/json").content(input.toString()))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.state").value("SUCCESS")).andReturn();
+    String completionId = json.readTree(completed.getResponse().getContentAsString()).path("operationId").asText();
+    // Existing deployments retain a READY start record and a separate successful completion.
+    assertEquals("READY", store.get("resource-operation", id, supplier.owner).path("state").asText());
+    int before = calls.get(); long version = store.get("resource", rid, supplier.owner).path("version").asLong();
+    for (String path : List.of(base + "/current", base + "/" + id,
+        "/api/resources/" + rid + "/reauthorizations/current",
+        "/api/resources/" + rid + "/reauthorizations/" + id)) {
+      var result = path.startsWith("/api/open/")
+          ? mvc.perform(get(path).header("Authorization", bearer))
+          : mvc.perform(get(path).session(supplier.session));
+      result.andExpect(status().isOk()).andExpect(jsonPath("$.state").value("SUCCESS"))
+          .andExpect(jsonPath("$.id").value(id))
+          .andExpect(jsonPath("$.completionOperationId").value(completionId))
+          .andExpect(jsonPath("$.authUrl").doesNotExist());
+    }
+    mvc.perform(put(base + "/" + id).header("Authorization", bearer)
+            .contentType("application/json").content(input.toString()))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.operationId").value(completionId));
+    assertEquals(before, calls.get()); assertEquals(1, exchanges.get());
+    assertEquals(version, store.get("resource", rid, supplier.owner).path("version").asLong());
+    mvc.perform(get("/api/resources/" + rid + "/reauthorizations/" + id).session(other.session))
+        .andExpect(status().isNotFound());
+    ObjectNode next = write("/api/resources/" + rid + "/reauthorizations",
+        store.object().put("requestKey", UUID.randomUUID().toString()), supplier, 200);
+    assertNotEquals(id, next.path("id").asText());
+    mvc.perform(get(base + "/current").header("Authorization", bearer))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.state").value("READY"))
+        .andExpect(jsonPath("$.id").value(next.path("id").asText()));
+    mvc.perform(get(base + "/" + id).header("Authorization", bearer))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.state").value("SUCCESS"));
+  }
+
+  @Test
+  void currentReauthorizationPreservesUnknownCompletionAfterLinkExpires() throws Exception {
+    nativeTarget(); Client supplier = supplier();
+    ObjectNode local = nativeResource(supplier); String rid = local.path("id").asText();
+    store.update("resource", rid, supplier.owner, store.object()
+        .put("targetId", target.path("id").asText()).put("laneId", "native-148")
+        .put("upstreamAccountId", "native-148").put("upstreamProtocol", "CCMAX_NATIVE"));
+    nativeResponder(new AtomicInteger(), new AtomicInteger(1), new AtomicInteger(10));
+    var original = responder.get();
+    responder.set((request, body) -> {
+      if (request.equals("POST /api/admin/oauth-accounts/native-148/reauthorize"))
+        return "{\"url\":\"https://claude.ai/oauth/authorize?state=reauth-state\",\"state\":\"reauth-state\",\"expires_in\":600}";
+      if (request.equals("POST /api/admin/oauth-accounts/native-148/reauthorize/exchange")) {
+        httpStatus.set(504); return "{}";
+      }
+      return original.apply(request, body);
+    });
+    ObjectNode start = write("/api/resources/" + rid + "/reauthorizations",
+        store.object().put("requestKey", UUID.randomUUID().toString()), supplier, 200);
+    String id = start.path("id").asText();
+    write("/api/resources/" + rid + "/reauthorizations/" + id, store.object()
+        .put("code", "fixture-code#reauth-state").put("requestKey", UUID.randomUUID().toString()), supplier, 504);
+    ObjectNode stored = store.get("resource-operation", id, supplier.owner);
+    ObjectNode result = (ObjectNode) stored.path("result").deepCopy();
+    result.put("expiresAt", java.time.Instant.now().minusSeconds(1).toString());
+    store.update("resource-operation", id, supplier.owner, store.object().set("result", result));
+    int before = calls.get();
+    mvc.perform(get("/api/resources/" + rid + "/reauthorizations/current").session(supplier.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.state").value("UNKNOWN"))
+        .andExpect(jsonPath("$.id").value(id))
+        .andExpect(jsonPath("$.completionOperationId").isNotEmpty())
+        .andExpect(jsonPath("$.authUrl").doesNotExist());
+    assertEquals(before, calls.get());
+  }
+
+  @Test
   void nativeReauthorizationUsesBoundAccountAndPreservesStatus() throws Exception {
     nativeTarget(); Client supplier = supplier();
     ObjectNode local = nativeResource(supplier);String rid=local.path("id").asText();
