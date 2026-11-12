@@ -136,7 +136,10 @@ function v({
         M(!1)
       }
     },
-    children: [(0, _.jsxs)(`div`, {
+    children: [(0, _.jsx)(o, {
+      tone: `amber`,
+      children: l(`注意：此处规则目前仅保存配置，尚未限制上号数量、套餐或优先级。`)
+    }), (0, _.jsxs)(`div`, {
       className: `cc-intake-section-heading`,
       children: [(0, _.jsx)(`h3`, {
         children: f || l(r ? `个人优先级配置` : `CC上号规则`)
@@ -173,7 +176,7 @@ function v({
         })]
       }), (0, _.jsx)(`p`, {
         className: `muted`,
-        children: l(`PRO满额后继续接收非PRO；非PRO满额或停收后停止全部新增上号。PRO资格仍按现有开关判断。`)
+        children: l(`套餐分类及每日数量限制尚未生效。`)
       })]
     }), (0, _.jsxs)(`div`, {
       className: `cc-intake-priority-heading`,

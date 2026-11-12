@@ -8,6 +8,7 @@ const stateLabel = resource => ({ ACTIVE: '已启用', PAUSED: '已停用', GONE
 
 export function NativeCcmaxDialog({ resource, onClose, onChanged }) {
   const { user, has, notify } = context();
+  const capabilities = useData('/resources/submission-capabilities', 30000);
   const [current, setCurrent] = hooks.useState(resource);
   const [busy, setBusy] = hooks.useState(false);
   const [error, setError] = hooks.useState('');
@@ -18,6 +19,11 @@ export function NativeCcmaxDialog({ resource, onClose, onChanged }) {
   const [pendingOperation, setPendingOperation] = hooks.useState(null);
   const removed = current.operationalState === 'GONE';
   const allowed = !current.readOnly && has(user.supplierId ? 'resource.write' : 'resource.dispatch');
+  const knownCapabilities = !!capabilities.data && !capabilities.error;
+  const canPause = knownCapabilities && capabilities.data.allowCcmaxPause === true;
+  const canReauthorize = knownCapabilities && capabilities.data.allowCcmaxReauthorization === true;
+  const canRemove = knownCapabilities && capabilities.data.allowCcmaxSafeRemoval === true;
+  const confirmationAllowed = confirmation === 'REMOVE' ? canRemove : confirmation === 'credential-refresh' ? canReauthorize : canPause;
   async function run(action) {
     if (busy) return;
     setBusy(true); setError('');
@@ -77,13 +83,15 @@ export function NativeCcmaxDialog({ resource, onClose, onChanged }) {
     error && jsx(Notice, { tone: 'red', children: error }),
     pendingOperation && jsx(Button, { disabled: busy, onClick: () => run('reconcile-pending'), children: '核对原操作（不重复写入）' }),
     removed && jsx(Notice, { tone: 'amber', children: '账号已归档，所有上游操作均已禁用。' }),
+    allowed && !removed && capabilities.error && jsx(Notice, { tone: 'red', children: ['操作权限读取失败，请重试。', jsx(Button, { onClick: capabilities.reload, children: '重新读取权限' })] }),
+    allowed && !removed && knownCapabilities && (!canPause || !canReauthorize) && jsx(Notice, { children: [!canPause && '当前账号未开通资源启停。', !canReauthorize && '当前账号未开通凭据刷新和重新授权。'] }),
     allowed && jsx('div', { className: 'form-actions', children: [
-      jsx(Button, { disabled: busy || removed || !!pendingOperation, onClick: () => setConfirmation(current.operationalState === 'PAUSED' ? 'RESUME' : 'PAUSE'), children: current.operationalState === 'PAUSED' ? '恢复启用' : '停用账号' }),
-      jsx(Button, { disabled: busy || removed || !!pendingOperation, onClick: () => setConfirmation('credential-refresh'), children: '刷新凭据' }),
-      jsx(Button, { disabled: busy || removed || !!pendingOperation, onClick: () => run('reauthorize'), children: '生成重新授权链接' }),
-      user.role === 'ADMIN' && jsx(Button, { disabled: busy || removed || !!pendingOperation, onClick: () => setConfirmation('REMOVE'), children: '归档账号' }),
+      jsx(Button, { disabled: busy || removed || !!pendingOperation || !canPause, onClick: () => setConfirmation(current.operationalState === 'PAUSED' ? 'RESUME' : 'PAUSE'), children: current.operationalState === 'PAUSED' ? '恢复启用' : '停用账号' }),
+      jsx(Button, { disabled: busy || removed || !!pendingOperation || !canReauthorize, onClick: () => setConfirmation('credential-refresh'), children: '刷新凭据' }),
+      jsx(Button, { disabled: busy || removed || !!pendingOperation || !canReauthorize, onClick: () => run('reauthorize'), children: '生成重新授权链接' }),
+      user.role === 'ADMIN' && jsx(Button, { disabled: busy || removed || !!pendingOperation || !canRemove, onClick: () => setConfirmation('REMOVE'), children: '归档账号' }),
     ] }),
-    confirmation && jsx(Notice, { tone: 'amber', children: [confirmation === 'REMOVE' ? '确认归档该真实账号？归档后将退出调度。' : confirmation === 'credential-refresh' ? '确认刷新该真实账号凭据？' : '确认修改该真实账号启停状态？', jsx(Button, { disabled: busy, onClick: () => run(confirmation), children: '确认执行' }), jsx(Button, { disabled: busy, onClick: () => setConfirmation(''), children: '取消' })] }),
+    confirmation && jsx(Notice, { tone: 'amber', children: [confirmation === 'REMOVE' ? '确认归档该真实账号？归档后将退出调度。' : confirmation === 'credential-refresh' ? '确认刷新该真实账号凭据？' : '确认修改该真实账号启停状态？', jsx(Button, { disabled: busy || !confirmationAllowed, onClick: () => run(confirmation), children: '确认执行' }), jsx(Button, { disabled: busy, onClick: () => setConfirmation(''), children: '取消' })] }),
     user.role === 'ADMIN' && jsx('section', { className: 'subsection', children: [field('调度权重（0–1000）', jsx('input', { type: 'number', min: 0, max: 1000, value: weight, disabled: busy || removed || !!pendingOperation, onChange: event => setWeight(event.target.value) })), jsx(Button, { disabled: busy || removed || !!pendingOperation, onClick: () => run('priority'), children: '保存调度权重' })] }),
     oauth && jsx('section', { className: 'subsection', children: [jsx('p', { children: `授权有效至 ${oauth.expiresAt || '以官方页面为准'}` }), jsx('textarea', { readOnly: true, rows: 4, value: oauth.authUrl }), jsx('a', { href: oauth.authUrl, target: '_blank', rel: 'noopener noreferrer', children: '打开官方授权页面' }), field('完整回调地址或 code#state', jsx('textarea', { rows: 3, value: callback, onChange: event => setCallback(event.target.value) })), jsx(Button, { disabled: busy || !callback.trim(), onClick: () => run('reauthorize-complete'), children: '回填并更新原账号凭据' })] }),
     jsx('footer', { className: 'dialog-footer', children: [has('resource.usage') && jsx(Button, { disabled: busy || removed || !!pendingOperation, onClick: () => run('usage'), children: busy ? '处理中…' : '刷新上游用量' }), jsx(Button, { onClick: onClose, children: '关闭' })] }),

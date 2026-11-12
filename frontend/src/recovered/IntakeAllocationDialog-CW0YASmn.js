@@ -255,7 +255,10 @@ function y({
           I(!1)
         }
       },
-      children: [(0, g.jsx)(`div`, {
+      children: [(0, g.jsx)(o, {
+        tone: `amber`,
+        children: l(`注意：划拨及交付组 PRO 开关目前仅保存配置，尚未限制上号；已用和剩余额度暂不可用。`)
+      }), (0, g.jsx)(`div`, {
         className: `cc-intake-allocation-summary`,
         children: [`pro`, `nonPro`].map(e => (0, g.jsxs)(`div`, {
           children: [(0, g.jsx)(`strong`, {

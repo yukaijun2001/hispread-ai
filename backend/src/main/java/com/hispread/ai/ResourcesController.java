@@ -21,18 +21,21 @@ public class ResourcesController {
   private final BusinessSupport b;
   private final ResourceOperations operations;
   private final ResourceIntegrationGateway gateway;
+  private final CcmaxAccessPolicy ccmaxPolicy;
 
   public ResourcesController(
       Store store,
       AuthService auth,
       BusinessSupport b,
       ResourceOperations operations,
-      ResourceIntegrationGateway gateway) {
+      ResourceIntegrationGateway gateway,
+      CcmaxAccessPolicy ccmaxPolicy) {
     this.store = store;
     this.auth = auth;
     this.b = b;
     this.operations = operations;
     this.gateway = gateway;
+    this.ccmaxPolicy = ccmaxPolicy;
   }
 
   @GetMapping("/projects/{id}/intake-channel-types")
@@ -143,16 +146,9 @@ public class ResourcesController {
   @GetMapping("/resources/submission-capabilities")
   public ObjectNode capabilities(HttpServletRequest req) {
     auth.require(req, "resource.read");
-    boolean configured = gateway.ccmaxConfigured();
-    return b.obj()
-        .put("allowCcmax", configured)
-        .put("allowDirectCcmax", gateway.allowDirectCcmax())
-        .put("forceStopCcmaxIntake", false)
-        .put("allowCcmaxReauthorization", configured)
-        .put("allowCcmaxPause", configured)
-        .put("allowCcmaxSafeRemoval", configured)
-        .put("externalConfigured", configured)
-        .put("message", configured ? "已配置资源上游，操作结果以真实响应为准" : "尚未配置资源上游，本地资料可保存");
+    String owner = auth.platform(req) ? req.getParameter("supplierId") : auth.owner(req);
+    if (owner != null && !owner.isBlank()) b.access.requireSupplier(req, owner);
+    return ccmaxPolicy.capabilities(owner, gateway.ccmaxConfigured(), gateway.allowDirectCcmax(), req);
   }
 
   @GetMapping("/resources/{id}")

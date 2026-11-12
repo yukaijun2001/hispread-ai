@@ -190,7 +190,7 @@ function y({
   }
   async function et(t, n = !1) {
     if (G.current || Z) return;
-    if (X(``), b || t || n) {
+    if (X(``), (b || t || n) && !(t && A === `OAUTH` && j && N.trim())) {
       G.current = !0, W(!0);
       try {
         await S.requireAllowed()
@@ -680,7 +680,7 @@ function y({
           }), (0, v.jsx)(d, {
             variant: `primary`,
             onClick: () => void et(!0),
-            disabled: U || je || Z || !k || !D || !be || !S.allowed || A === `OAUTH` && (!j || !N.trim()),
+            disabled: U || je || Z || !k || !D || !be || !S.allowed && !(A === `OAUTH` && j && N.trim()) || A === `OAUTH` && (!j || !N.trim()),
             children: c(U ? `正在处理…` : `正式提交`)
           })]
         })]

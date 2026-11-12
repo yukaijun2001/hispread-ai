@@ -327,7 +327,7 @@ function x() {
               children: [(0, _.jsx)(`strong`, {
                 children: f(`每供应商同时上号数`)
               }), (0, _.jsx)(`small`, {
-                children: f(`保存后立即生效，在途请求继续完成。`)
+                children: f(`当前仅保存配置，并发限制尚未生效。`)
               })]
             }), (0, _.jsx)(`input`, {
               type: `number`,
@@ -346,7 +346,7 @@ function x() {
               children: [(0, _.jsx)(`strong`, {
                 children: f(`上号单次超时（秒）`)
               }), (0, _.jsx)(`small`, {
-                children: f(`默认120秒，可设1–300秒；保存后新提交生效，在途请求继续使用原值。`)
+                children: f(`当前仅保存配置，上号单次超时尚未生效。`)
               })]
             }), (0, _.jsx)(`input`, {
               type: `number`,
@@ -406,7 +406,7 @@ function x() {
               children: [(0, _.jsx)(`strong`, {
                 children: f(`全部供应商允许推送 PRO`)
               }), (0, _.jsx)(`small`, {
-                children: f(`配置在下次新账号上号时生效；关闭后 CCMAX 会核验套餐并拒绝 PRO，无法核验时也不会创建账号。`)
+                children: f(`当前仅保存配置，PRO 套餐限制尚未生效。`)
               })]
             }), (0, _.jsx)(`input`, {
               type: `checkbox`,

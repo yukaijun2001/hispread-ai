@@ -122,6 +122,15 @@ class ResourceIntegrationTest {
             .put("name", "Fixture supplier")
             .put("state", "APPROVED")
             .put("enabled", true));
+    store.create(
+        "supplier-settings",
+        "GLOBAL",
+        store.object()
+            .put("id", owner)
+            .put("allowCcmax", true)
+            .put("allowCcmaxReauthorization", true)
+            .put("allowCcmaxPause", true)
+            .put("allowCcmaxSafeRemoval", true));
     MockHttpSession session = new MockHttpSession();
     session.setAttribute("uid", id);
     session.setAttribute("sv", 0L);
@@ -177,6 +186,232 @@ class ResourceIntegrationTest {
             .andExpect(status().is(status))
             .andReturn();
     return (ObjectNode) json.readTree(result.getResponse().getContentAsString());
+  }
+
+  @Test
+  void disabledSupplierCannotStartNewOauthEvenWhenUpstreamIsConfigured() throws Exception {
+    Client supplier = supplier();
+    store.update("supplier-settings", supplier.owner, null, store.object().put("allowCcmax", false));
+    ObjectNode settings = store.list("settings", null).get(0);
+    store.update("settings", settings.path("id").asText(), null,
+        store.object().put("allowAllSuppliersCcmax", false).put("forceStopCcmaxIntake", false));
+    ObjectNode input = (ObjectNode) submission(supplier).path("input").deepCopy();
+    input.put("credentialMode", "OAUTH").put("requestKey", UUID.randomUUID().toString());
+    input.remove("refreshToken");
+    response.set("{\"sessionId\":\"remote\",\"authUrl\":\"https://auth.example.invalid/authorize\",\"expiresAt\":\"2099-01-01T00:00:00Z\"}");
+    mvc.perform(get("/api/resources/submission-capabilities").session(supplier.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.allowCcmax").value(false));
+    ObjectNode error = write("/api/resources/oauth/supplier-authorize", input, supplier, 403);
+    assertEquals("CCMAX_INTAKE_DISABLED", error.path("code").asText());
+    ObjectNode credentialError = write("/api/resources/supplier-submit", submission(supplier), supplier, 403);
+    assertEquals("CCMAX_INTAKE_DISABLED", credentialError.path("code").asText());
+    assertEquals(0, calls.get());
+    assertTrue(store.list("resource", supplier.owner).isEmpty());
+  }
+
+  void switches(ObjectNode patch) {
+    ObjectNode settings = store.list("settings", null).get(0);
+    store.update("settings", settings.path("id").asText(), null, patch);
+  }
+
+  ObjectNode oauthInput(Client supplier) {
+    ObjectNode input = (ObjectNode) submission(supplier).path("input").deepCopy();
+    input.put("credentialMode", "OAUTH").put("requestKey", UUID.randomUUID().toString());
+    input.remove("refreshToken");
+    return input;
+  }
+
+  void oauthReply() {
+    response.set("{\"state\":\"READY\",\"sessionId\":\"remote\",\"authUrl\":\"https://auth.example.invalid/authorize\",\"expiresAt\":\"2099-01-01T00:00:00Z\"}");
+  }
+
+  @Test
+  void forceStopOverridesGlobalAndSupplierButAllowsExistingOauthToCompleteAndCancel() throws Exception {
+    Client supplier = supplier(), admin = administrator();
+    ObjectNode input = oauthInput(supplier);
+    oauthReply();
+    ObjectNode authorized = write("/api/resources/oauth/supplier-authorize", input, supplier, 200);
+    String sessionId = authorized.path("sessionId").asText();
+    String resourceId = authorized.path("resourceId").asText();
+    switches(store.object().put("allowAllSuppliersCcmax", true).put("forceStopCcmaxIntake", true));
+    int before = calls.get();
+    ObjectNode replay = write("/api/resources/oauth/supplier-authorize", input, supplier, 200);
+    assertEquals(authorized.path("sessionId"), replay.path("sessionId"));
+    assertEquals("CCMAX_INTAKE_STOPPED", write("/api/resources/oauth/supplier-authorize",
+        oauthInput(supplier), supplier, 403).path("code").asText());
+    ObjectNode adminInput = oauthInput(supplier).put("supplierId", supplier.owner);
+    write("/api/resources/oauth/supplier-authorize", adminInput, admin, 403);
+    write("/api/resources/" + resourceId + "/oauth/supplier-authorize",
+        store.object().put("requestKey", UUID.randomUUID().toString()), supplier, 403);
+    write("/api/resources/" + resourceId + "/dispatch", store.object(), supplier, 403);
+    response.set("{\"state\":\"SUCCESS\",\"laneId\":\"accepted-before-stop\"}");
+    ObjectNode completion = write("/api/resources/oauth/supplier-submit",
+        store.object().put("sessionId", sessionId).put("code", "valid-before-stop"), supplier, 200);
+    assertEquals("SUCCESS", completion.path("state").asText());
+    before = calls.get();
+    ObjectNode completionReplay = write("/api/resources/oauth/supplier-submit",
+        store.object().put("sessionId", sessionId).put("code", "valid-before-stop"), supplier, 200);
+    assertEquals(completion.path("operationId"), completionReplay.path("operationId"));
+    assertEquals(before, calls.get());
+    write("/api/resources/supplier-submit", submission(supplier), supplier, 403);
+    assertEquals(before, calls.get());
+    mvc.perform(get("/api/resources/" + resourceId).session(supplier.session)).andExpect(status().isOk());
+    response.set("{\"state\":\"READY\"}");
+    mvc.perform(get("/api/resources/oauth/supplier-session/" + sessionId).session(supplier.session))
+        .andExpect(status().isOk());
+    response.set("{\"state\":\"CANCELLED\"}");
+    write("/api/resources/oauth/supplier-session/" + sessionId + "/cancel", store.object(), supplier, 200);
+    mvc.perform(get("/api/resources/submission-capabilities").session(supplier.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.allowCcmax").value(false))
+        .andExpect(jsonPath("$.forceStopCcmaxIntake").value(true))
+        .andExpect(jsonPath("$.allowCcmaxReauthorization").value(true));
+  }
+
+  @Test
+  void globalSwitchAndSupplierOverrideAreScopedAndDefaultClosed() throws Exception {
+    Client supplier = supplier(), other = supplier(), admin = administrator();
+    store.update("supplier-settings", supplier.owner, null, store.object().put("allowCcmax", false));
+    switches(store.object().put("allowAllSuppliersCcmax", true).put("forceStopCcmaxIntake", false));
+    oauthReply();
+    write("/api/resources/oauth/supplier-authorize", oauthInput(supplier), supplier, 200);
+    switches(store.object().put("allowAllSuppliersCcmax", false));
+    store.update("supplier-settings", supplier.owner, null, store.object().put("allowCcmax", true));
+    store.delete("supplier-settings", other.owner, null);
+    write("/api/resources/oauth/supplier-authorize", oauthInput(supplier), supplier, 200);
+    int before = calls.get();
+    write("/api/resources/oauth/supplier-authorize", oauthInput(other), other, 403);
+    assertEquals(before, calls.get());
+    mvc.perform(get("/api/resources/submission-capabilities").session(admin.session)
+            .param("supplierId", other.owner))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.allowCcmax").value(false));
+    mvc.perform(get("/api/resources/submission-capabilities").session(supplier.session)
+            .param("supplierId", other.owner))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.allowCcmax").value(true));
+  }
+
+  @Test
+  void resourceOauthCompletionRequiresAnExistingSessionForThatResource() throws Exception {
+    Client supplier = supplier();
+    oauthReply();
+    ObjectNode first = write("/api/resources/oauth/supplier-authorize", oauthInput(supplier), supplier, 200);
+    ObjectNode second = write("/api/resources/oauth/supplier-authorize", oauthInput(supplier), supplier, 200);
+    String firstId = first.path("resourceId").asText();
+    String endpoint = "/api/resources/" + firstId + "/oauth/supplier-submit";
+    switches(store.object().put("forceStopCcmaxIntake", true));
+    int before = calls.get();
+    write(endpoint, store.object().put("code", "fixture").put("requestKey", UUID.randomUUID().toString()), supplier, 400);
+    write(endpoint, store.object().put("sessionId", second.path("sessionId").asText())
+        .put("code", "fixture").put("requestKey", UUID.randomUUID().toString()), supplier, 404);
+    assertEquals(before, calls.get());
+    response.set("{\"state\":\"SUCCESS\",\"laneId\":\"completed-in-flight\"}");
+    ObjectNode completion = write(endpoint, store.object().put("sessionId", first.path("sessionId").asText())
+        .put("code", "fixture").put("requestKey", UUID.randomUUID().toString()), supplier, 200);
+    assertEquals("SUCCESS", completion.path("state").asText());
+    assertEquals(before + 1, calls.get());
+  }
+
+  @Test
+  void reauthorizationSwitchIsIndependentOfNewIntakeAndKeepsCompletedReplayReadable() throws Exception {
+    Client supplier = supplier(), admin = administrator();
+    ObjectNode delivered = write("/api/resources/supplier-submit", submission(supplier), supplier, 200);
+    String resourceId = delivered.path("resourceId").asText();
+    store.update("supplier-settings", supplier.owner, null, store.object()
+        .put("allowCcmax", false).put("allowCcmaxReauthorization", false));
+    switches(store.object().put("allowAllSuppliersCcmax", false)
+        .put("allowAllSuppliersCcmaxReauthorization", false).put("forceStopCcmaxIntake", true));
+    int before = calls.get();
+    for (String action : List.of("reauthorizations", "credential-refresh", "oauth/authorize")) {
+      ObjectNode error = write("/api/resources/" + resourceId + "/" + action,
+          store.object().put("requestKey", UUID.randomUUID().toString()), supplier, 403);
+      assertEquals("CCMAX_REAUTHORIZATION_DISABLED", error.path("code").asText());
+    }
+    mvc.perform(get("/api/resources/" + resourceId + "/reauthorizations/current").session(supplier.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.reauthorizationAllowed").value(false));
+    assertEquals(before, calls.get());
+    store.update("supplier-settings", supplier.owner, null,
+        store.object().put("allowCcmaxReauthorization", true));
+    oauthReply();
+    ObjectNode existing = write("/api/resources/" + resourceId + "/reauthorizations",
+        store.object().put("requestKey", UUID.randomUUID().toString()), supplier, 200);
+    store.update("supplier-settings", supplier.owner, null,
+        store.object().put("allowCcmaxReauthorization", false));
+    response.set("{\"state\":\"SUCCESS\",\"laneId\":\"fixture-lane\"}");
+    ObjectNode completed = write("/api/resources/" + resourceId + "/reauthorizations/" + existing.path("id").asText(),
+        store.object().put("requestKey", UUID.randomUUID().toString()).put("code", "existing-callback"), supplier, 200);
+    assertEquals("SUCCESS", completed.path("state").asText());
+    switches(store.object().put("allowAllSuppliersCcmaxReauthorization", true));
+    response.set("{\"state\":\"UPDATED\"}");
+    ObjectNode request = store.object().put("requestKey", UUID.randomUUID().toString());
+    ObjectNode refreshed = write("/api/resources/" + resourceId + "/credential-refresh", request, supplier, 200);
+    switches(store.object().put("allowAllSuppliersCcmaxReauthorization", false));
+    before = calls.get();
+    ObjectNode replay = write("/api/resources/" + resourceId + "/credential-refresh", request, supplier, 200);
+    assertEquals(refreshed.path("operationId"), replay.path("operationId"));
+    assertFalse(replay.path("reauthorizationAllowed").asBoolean());
+    mvc.perform(get("/api/resources/" + resourceId + "/credential-refresh").session(supplier.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.reauthorizationAllowed").value(false));
+    assertEquals(before, calls.get());
+    ObjectNode adminRefresh = write("/api/resources/" + resourceId + "/credential-refresh",
+        store.object().put("requestKey", UUID.randomUUID().toString()), admin, 200);
+    assertEquals("UPDATED", adminRefresh.path("state").asText());
+  }
+
+  @Test
+  void supplierLifecycleSwitchesAreEnforcedForEveryItemAndDoNotRestrictNewApi() throws Exception {
+    Client supplier = supplier(), admin = administrator();
+    ObjectNode delivered = write("/api/resources/supplier-submit", submission(supplier), supplier, 200);
+    String resourceId = delivered.path("resourceId").asText();
+    store.update("supplier-settings", supplier.owner, null, store.object()
+        .put("allowCcmaxPause", false).put("allowCcmaxSafeRemoval", false));
+    int before = calls.get();
+    for (String action : List.of("PAUSE", "RESUME", "REMOVE")) {
+      ObjectNode request = store.object().put("requestKey", UUID.randomUUID().toString()).put("action", action);
+      request.putArray("items").add(store.object().put("resourceId", resourceId));
+      ObjectNode rejected = write("/api/resource-lifecycle-jobs", request, supplier, 403);
+      assertEquals(action.equals("REMOVE") ? "CCMAX_REMOVAL_DISABLED" : "CCMAX_PAUSE_DISABLED",
+          rejected.path("code").asText());
+    }
+    assertEquals(before, calls.get());
+    ObjectNode request = store.object().put("requestKey", UUID.randomUUID().toString()).put("action", "PAUSE");
+    request.putArray("items").add(store.object().put("resourceId", resourceId));
+    response.set("{\"state\":\"COMPLETED\",\"items\":[{\"resourceId\":\"" + resourceId + "\",\"state\":\"PAUSED\"}]}");
+    write("/api/resource-lifecycle-jobs", request, admin, 200);
+    store.update("resource", resourceId, supplier.owner,
+        store.object().put("resourceType", "NEWAPI_CHANNEL").put("upstreamChannelId", "148"));
+    request.put("requestKey", UUID.randomUUID().toString());
+    write("/api/resource-lifecycle-jobs", request, supplier, 200);
+  }
+
+  @Test
+  void bearerAndTeamMembersCannotBypassSupplierIntakeOrMaintenanceSwitches() throws Exception {
+    Client supplier = supplier();
+    ObjectNode input = oauthInput(supplier);
+    String memberId = UUID.randomUUID().toString();
+    ObjectNode member = store.object().put("id", memberId).put("username", "ccmax_member_" + memberId)
+        .put("role", "SUPPLIER_AGENT").put("supplierId", supplier.owner).put("version", 0);
+    member.set("permissions", auth.rolePermissions("SUPPLIER_AGENT"));
+    member.putArray("projectIds").add(input.path("projectId").asText());
+    auth.createUser(member, "FixtureTest@123");
+    MockHttpSession session = new MockHttpSession();
+    session.setAttribute("uid", memberId); session.setAttribute("sv", 0L);
+    String csrf = json.readTree(mvc.perform(get("/api/auth/csrf").session(session))
+        .andReturn().getResponse().getContentAsString()).path("token").asText();
+    Client memberClient = new Client(session, csrf, supplier.owner, memberId);
+    ObjectNode token = write("/api/auth/api-tokens", store.object().put("name", "policy-fixture"), memberClient, 200);
+    store.update("supplier-settings", supplier.owner, null, store.object()
+        .put("allowCcmax", false).put("allowCcmaxReauthorization", false));
+    switches(store.object().put("allowAllSuppliersCcmax", false)
+        .put("allowAllSuppliersCcmaxReauthorization", false).put("forceStopCcmaxIntake", false));
+    oauthReply();
+    write("/api/resources/oauth/supplier-authorize", input, memberClient, 403);
+    mvc.perform(post("/api/open/v1/ccmax/submissions/oauth/authorize")
+            .header("Authorization", "Bearer " + token.path("key").asText())
+            .contentType("application/json").content(input.toString()))
+        .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("CCMAX_INTAKE_DISABLED"));
+    mvc.perform(get("/api/resources/submission-capabilities").session(session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.allowCcmax").value(false))
+        .andExpect(jsonPath("$.allowCcmaxReauthorization").value(false));
+    assertEquals(0, calls.get());
   }
 
   @Test

@@ -20,14 +20,17 @@ public class ResourceOperations {
   private final BusinessSupport b;
   private final ResourceIntegrationGateway gateway;
   private final NewApiPriorityService newApiPriority;
+  private final CcmaxAccessPolicy ccmaxPolicy;
 
   public ResourceOperations(
-      Store store, AuthService auth, BusinessSupport b, ResourceIntegrationGateway gateway, NewApiPriorityService newApiPriority) {
+      Store store, AuthService auth, BusinessSupport b, ResourceIntegrationGateway gateway, NewApiPriorityService newApiPriority,
+      CcmaxAccessPolicy ccmaxPolicy) {
     this.store = store;
     this.auth = auth;
     this.b = b;
     this.gateway = gateway;
     this.newApiPriority = newApiPriority;
+    this.ccmaxPolicy = ccmaxPolicy;
   }
 
   private JsonNode canonical(JsonNode value) {
@@ -455,7 +458,8 @@ public class ResourceOperations {
       }
     }
     if (Set.of("REAUTHORIZATIONS", "CREDENTIAL-REFRESH").contains(text(op, "type")))
-      out.put("reauthorizationAllowed", gateway.configured());
+      out.put("reauthorizationAllowed", gateway.ccmaxConfigured()
+          && ccmaxPolicy.allowsReauthorization(text(op, "supplierId"), req));
     ObjectNode safe = safe(out, req);
     if (eq(op, "type", "OAUTH_AUTHORIZE") && out.hasNonNull("authUrl"))
       safe.set("authUrl", out.get("authUrl"));
@@ -481,6 +485,7 @@ public class ResourceOperations {
       return result(existing, req);
     }
     ObjectNode ccmaxTarget = gateway.requireCcmaxConfigured(text(body, "targetId"));
+    ccmaxPolicy.requireIntake(owner);
     required(input, "accountName", "credentialMode");
     String mode = text(input, "credentialMode");
     if (!Set.of("REFRESH_TOKEN", "ACCESS_TOKEN", "SESSION_KEY").contains(mode))
@@ -533,9 +538,20 @@ public class ResourceOperations {
         ? "OAUTH_AUTHORIZE" : (action.equals("oauth/supplier-submit") || action.equals("oauth/complete"))
             ? "OAUTH_COMPLETE" : action.toUpperCase(Locale.ROOT);
     ObjectNode previousOperation = findRequest(owner, key, preliminaryType, req);
-    if (previousOperation == null && (action.equals("oauth/supplier-submit") || action.equals("oauth/complete"))
-        && body.hasNonNull("sessionId")) {
+    if (previousOperation == null && isCcmax(resource)) {
+      if (action.equals("credential-refresh") || action.equals("reauthorizations"))
+        ccmaxPolicy.requireReauthorization(owner, req);
+      if (Set.of("submit", "dispatch").contains(action)) ccmaxPolicy.requireIntake(owner);
+      if (Set.of("oauth/supplier-authorize", "oauth/authorize").contains(action)) {
+        if (hasUpstreamAccount(resource)) ccmaxPolicy.requireReauthorization(owner, req);
+        else ccmaxPolicy.requireIntake(owner);
+      }
+    }
+    if (previousOperation == null && (action.equals("oauth/supplier-submit") || action.equals("oauth/complete"))) {
+      required(body, "sessionId");
       ObjectNode originalSession = getOperation(text(body, "sessionId"), req);
+      if (!eq(originalSession, "type", "OAUTH_AUTHORIZE") || !eq(originalSession, "resourceId", id))
+        throw new ApiException(404, "授权会话不存在");
       gateway.validateNativeCallback(text(originalSession, "targetId"), text(originalSession, "upstreamId"), text(body, "code"));
     }
     if (previousOperation == null && (!text(resource, "upstreamChannelId").isBlank() || !text(resource, "upstreamAccountId").isBlank())
@@ -545,7 +561,8 @@ public class ResourceOperations {
     if (action.startsWith("reauthorizations/")) {
       String localId = action.substring("reauthorizations/".length());
       ObjectNode prior = getOperation(localId, req);
-      if (!eq(prior, "resourceId", id)) throw new ApiException(404, "授权操作不存在");
+      if (!eq(prior, "type", "REAUTHORIZATIONS") || !eq(prior, "resourceId", id))
+        throw new ApiException(404, "授权操作不存在");
       if (previousOperation == null) gateway.validateNativeCallback(text(prior, "targetId"), text(prior, "upstreamId"), text(body, "code"));
       remoteAction = "reauthorizations/" + encode(text(prior, "upstreamId"));
     }
@@ -603,6 +620,7 @@ public class ResourceOperations {
       return result(previous, req);
     }
     ObjectNode ccmaxTarget = gateway.requireCcmaxConfigured(text(input, "targetId"));
+    ccmaxPolicy.requireIntake(owner);
     ObjectNode resource = newResource(request, owner, req);
     return invoke(
         "OAUTH_AUTHORIZE",
@@ -675,7 +693,8 @@ public class ResourceOperations {
       out.put("id", id).put("operationId", id)
           .put("completionOperationId", text(completion, "id"))
           .put("state", text(completion, "state")).put("status", text(completion, "state"))
-          .put("reauthorizationAllowed", gateway.configured());
+          .put("reauthorizationAllowed", gateway.ccmaxConfigured()
+              && ccmaxPolicy.allowsReauthorization(owner, req));
       out.remove(List.of("authUrl", "expiresAt", "sessionId"));
       return out;
     }
@@ -724,13 +743,26 @@ public class ResourceOperations {
 
   public ObjectNode current(String rid, String type, HttpServletRequest req) {
     b.resource(rid, req);
-    for (ObjectNode op : store.list("resource-operation", b.entityOwner("resource", rid, req)))
+    List<ObjectNode> operations = new ArrayList<>(store.list("resource-operation", b.entityOwner("resource", rid, req)));
+    // PostgreSQL now() is the transaction start time. Several operations created in one
+    // transaction can therefore share created_at; their application timestamps order them.
+    operations.sort(Comparator.comparing(this::operationCreatedAt).reversed());
+    for (ObjectNode op : operations)
       if (eq(op, "resourceId", rid) && eq(op, "type", type))
         return eq(op, "type", "REAUTHORIZATIONS") ? reauthorizationResult(op, req) : result(op, req);
     return b.obj()
         .put("status", "NONE")
         .put("state", "NONE")
-        .put("reauthorizationAllowed", gateway.configured());
+        .put("reauthorizationAllowed", gateway.ccmaxConfigured()
+            && ccmaxPolicy.allowsReauthorization(b.entityOwner("resource", rid, req), req));
+  }
+
+  private Instant operationCreatedAt(ObjectNode operation) {
+    try {
+      return Instant.parse(text(operation, "createdAt"));
+    } catch (RuntimeException invalid) {
+      return Instant.MIN;
+    }
   }
 
   @Transactional(noRollbackFor = ApiException.class)
@@ -773,6 +805,8 @@ public class ResourceOperations {
       if (type.equals("LIFECYCLE")
           && !Set.of("PAUSE", "RESUME", "REMOVE").contains(text(body, "action")))
         throw new ApiException(400, "不支持的资源生命周期操作");
+      if (type.equals("LIFECYCLE") && isCcmax(resource))
+        ccmaxPolicy.requireLifecycle(next, text(body, "action"), req);
       if (type.equals("PROXY_REPLACEMENT") && item.hasNonNull("proxyUrl")) {
         auth.require(req, "proxy.read");
         auth.require(req, "proxy.write");
@@ -802,6 +836,16 @@ public class ResourceOperations {
     String id = text(response, "operationId");
     ObjectNode op = getOperation(id, req);
     return publishOperation(op, req);
+  }
+
+  private boolean isCcmax(ObjectNode resource) {
+    return eq(resource, "resourceType", "CCMAX")
+        && text(resource, "upstreamChannelId").isBlank()
+        && !eq(resource, "upstreamProtocol", "NEWAPI");
+  }
+
+  private boolean hasUpstreamAccount(ObjectNode resource) {
+    return !text(resource, "upstreamAccountId").isBlank() || !text(resource, "laneId").isBlank();
   }
 
   public ObjectNode jobDetail(String id, HttpServletRequest req) {

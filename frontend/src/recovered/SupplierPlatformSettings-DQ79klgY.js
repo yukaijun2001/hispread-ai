@@ -185,7 +185,7 @@ function g({
         children: _.globalAllowPro ? l(`当前全局已开启，所有供应商均允许推送 PRO。`) : l(`当前全局已关闭，按该供应商的开关判断。`)
       }), (0, p.jsx)(`p`, {
         className: `muted`,
-        children: l(`配置在下次新账号上号时生效；关闭后 CCMAX 会核验套餐并拒绝 PRO，无法核验时也不会创建账号。`)
+        children: l(`当前仅保存配置，PRO 套餐限制尚未生效。`)
       })]
     }), (0, p.jsxs)(`section`, {
       className: `subsection`,
