@@ -228,7 +228,7 @@ function y({
             disabled: W || !I.total || I.counts.SKIPPED === I.total,
             onClick: () => void Q(`start`),
             children: l(W ? `提交中…` : `确认执行调整`)
-          }), I.protocol === `NEWAPI` && I.state === `UNKNOWN` && (0, g.jsx)(d, {
+          }), [`NEWAPI`, `CCMAX_NATIVE`].includes(I.protocol) && I.state === `UNKNOWN` && (0, g.jsx)(d, {
             disabled: W, onClick: () => void Q(`reconcile`), children: l(`核对原操作（不重新提交）`)
           }), I.state !== `PREVIEW` && !!I.counts.FAILED && (0, g.jsx)(d, {
             type: `button`,

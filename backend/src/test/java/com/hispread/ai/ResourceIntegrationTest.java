@@ -646,6 +646,85 @@ class ResourceIntegrationTest {
   }
 
   @Test
+  void nativePriorityRetryOnlyResendsExplicitlyRejectedItems() throws Exception {
+    nativeTarget(); Client supplier = supplier(), admin = administrator();
+    AtomicInteger weight = new AtomicInteger(10), secondWeight = new AtomicInteger(10);
+    AtomicInteger firstWrites = new AtomicInteger(), secondWrites = new AtomicInteger();
+    AtomicBoolean rejectSecond = new AtomicBoolean(true);
+    nativeResponder(new AtomicInteger(), new AtomicInteger(1), weight);
+    var original = responder.get();
+    responder.set((request, body) -> {
+      httpStatus.set(200);
+      if (request.equals("PATCH /api/admin/oauth-accounts/native-148")) firstWrites.incrementAndGet();
+      if (request.equals("PATCH /api/admin/oauth-accounts/native-second")) {
+        secondWrites.incrementAndGet();
+        if (rejectSecond.get()) { httpStatus.set(422); return "{\"error\":\"fixture rejection\"}"; }
+        secondWeight.set(body.path("weight").asInt());
+        return "{\"ok\":true}";
+      }
+      if (request.equals("GET /api/admin/oauth-accounts/native-second"))
+        return "{\"account\":{\"id\":\"native-second\",\"status\":\"active\",\"weight\":" + secondWeight.get() + "}}";
+      return original.apply(request, body);
+    });
+    ObjectNode first = nativeResource(supplier), second = nativeResource(supplier);
+    store.update("resource", first.path("id").asText(), supplier.owner,
+        store.object().put("targetId", target.path("id").asText()).put("upstreamAccountId", "native-148"));
+    store.update("resource", second.path("id").asText(), supplier.owner,
+        store.object().put("targetId", target.path("id").asText()).put("upstreamAccountId", "native-second"));
+    ObjectNode input = store.object().put("priority", 11).put("requestKey", UUID.randomUUID().toString());
+    input.putArray("resourceIds").add(first.path("id").asText()).add(second.path("id").asText());
+    ObjectNode preview = write("/api/cc-intake/admin/priority/jobs", input, admin, 200);
+    String path = "/api/cc-intake/admin/priority/jobs/" + preview.path("id").asText();
+    ObjectNode partial = write(path + "/start", store.object(), admin, 200);
+    assertEquals("PARTIAL_FAILED", partial.path("state").asText());
+    assertEquals(1, partial.path("counts").path("SUCCESS").asInt());
+    assertEquals(1, partial.path("counts").path("FAILED").asInt());
+    assertEquals(0, partial.path("counts").path("UNKNOWN").asInt());
+    write(path + "/start", store.object(), admin, 200);
+    assertEquals(1, firstWrites.get()); assertEquals(1, secondWrites.get());
+    rejectSecond.set(false);
+    ObjectNode retried = write(path + "/retry", store.object(), admin, 200);
+    assertEquals("COMPLETED", retried.path("state").asText());
+    assertEquals(2, retried.path("counts").path("SUCCESS").asInt());
+    assertEquals(1, firstWrites.get()); assertEquals(2, secondWrites.get());
+    write(path + "/retry", store.object(), admin, 200);
+    assertEquals(1, firstWrites.get()); assertEquals(2, secondWrites.get());
+  }
+
+  @Test
+  void nativePriorityReadbackFailureStaysUnknownAndReconcilesWithoutWriting() throws Exception {
+    nativeTarget(); Client supplier = supplier(), admin = administrator();
+    AtomicInteger writes = new AtomicInteger(), weight = new AtomicInteger(10);
+    AtomicBoolean readUnavailable = new AtomicBoolean(true);
+    nativeResponder(new AtomicInteger(), new AtomicInteger(1), weight);
+    var original = responder.get();
+    responder.set((request, body) -> {
+      httpStatus.set(200);
+      if (request.equals("PATCH /api/admin/oauth-accounts/native-148")) writes.incrementAndGet();
+      if (request.equals("GET /api/admin/oauth-accounts/native-148") && readUnavailable.get()) {
+        httpStatus.set(403); return "{\"error\":\"fixture read temporarily forbidden\"}";
+      }
+      return original.apply(request, body);
+    });
+    ObjectNode resource = nativeResource(supplier);
+    store.update("resource", resource.path("id").asText(), supplier.owner,
+        store.object().put("targetId", target.path("id").asText()).put("upstreamAccountId", "native-148"));
+    ObjectNode input = store.object().put("priority", 11).put("requestKey", UUID.randomUUID().toString());
+    input.putArray("resourceIds").add(resource.path("id").asText());
+    ObjectNode preview = write("/api/cc-intake/admin/priority/jobs", input, admin, 200);
+    String path = "/api/cc-intake/admin/priority/jobs/" + preview.path("id").asText();
+    ObjectNode uncertain = write(path + "/start", store.object(), admin, 200);
+    assertEquals("UNKNOWN", uncertain.path("state").asText());
+    assertEquals(1, uncertain.path("counts").path("UNKNOWN").asInt());
+    write(path + "/retry", store.object(), admin, 200); assertEquals(1, writes.get());
+    readUnavailable.set(false);
+    ObjectNode reconciled = write(path + "/reconcile", store.object(), admin, 200);
+    assertEquals("COMPLETED", reconciled.path("state").asText());
+    assertEquals(1, reconciled.path("counts").path("SUCCESS").asInt());
+    assertEquals(1, writes.get());
+  }
+
+  @Test
   void nativeOAuthUsesOpaqueSessionsChecksStateAndAvoidsRepeatedExchange() throws Exception {
     nativeTarget(); Client supplier = supplier();
     AtomicInteger logins = new AtomicInteger(); nativeResponder(logins, new AtomicInteger(1), new AtomicInteger(10));
