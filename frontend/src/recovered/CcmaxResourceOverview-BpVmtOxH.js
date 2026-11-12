@@ -21,6 +21,7 @@ var f = d(i(), 1),
     ALL: c(`已成功交付`),
     PAUSED: c(`已暂停`),
     READY: c(`就绪`),
+    ACTIVE: c(`已启用`),
     PROVISIONING: c(`配置中`),
     COOLING: c(`冷却中`),
     DRAINING: c(`退出中`),
@@ -116,6 +117,10 @@ var b = [
     key: `ready`,
     status: `READY`,
     label: c(`就绪 / 总数`)
+  }, {
+    key: `active`,
+    status: `ACTIVE`,
+    label: c(`已启用`)
   }, {
     key: `provisioning`,
     status: `PROVISIONING`,
