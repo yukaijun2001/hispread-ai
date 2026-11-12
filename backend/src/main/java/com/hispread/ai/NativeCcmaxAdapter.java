@@ -47,6 +47,7 @@ final class NativeCcmaxAdapter {
       if (id.endsWith("/cancel")) {
         id = id.substring(0, id.length() - "/cancel".length());
         ObjectNode saved = session(config, id);
+        if (eq(saved, "state", "EXPIRED")) return store.object().put("state", "EXPIRED");
         if (!Set.of("READY", "CANCELLED").contains(text(saved, "state")))
           throw new ApiException(409, "已提交授权不可取消，请核对原操作");
         store.update("native-oauth", id, "GLOBAL", store.object().put("state", "CANCELLED"));
@@ -343,23 +344,21 @@ final class NativeCcmaxAdapter {
   }
 
   private ObjectNode session(ObjectNode config, String id) {
+    store.jdbc.queryForObject(
+        "select pg_advisory_xact_lock(hashtext(?),hashtext(?))",
+        (row, index) -> true, "native-oauth", id);
     ObjectNode session = store.get("native-oauth", id, "GLOBAL");
     if (!eq(session, "targetId", text(config, "id"))) throw new ApiException(404, "授权会话不存在");
     if (!Instant.parse(text(session, "expiresAt")).isAfter(Instant.now())
         && eq(session, "state", "READY"))
-      throw new ApiException(409, "授权会话已过期，请重新生成链接", "OAUTH_SESSION_EXPIRED");
+      return store.update("native-oauth", id, "GLOBAL", store.object().put("state", "EXPIRED"));
     return session;
   }
 
   private ObjectNode complete(ObjectNode config, JsonNode input, String key) {
     String sessionId = text(input, "sessionId");
-    store.jdbc.queryForObject(
-        "select pg_advisory_xact_lock(hashtext(?),hashtext(?))",
-        (row, index) -> true,
-        "native-oauth",
-        sessionId);
     ObjectNode session = session(config, sessionId);
-    if (!eq(session, "state", "READY")) throw new ApiException(409, "授权会话已使用，请核对原结果");
+    requireReadySession(session);
     if (!text(input, "localResourceId").isBlank()
         && !eq(session, "localResourceId", text(input, "localResourceId")))
       throw new ApiException(409, "授权会话与资源不匹配");
@@ -415,7 +414,16 @@ final class NativeCcmaxAdapter {
   }
 
   void validateCallback(ObjectNode config, String sessionId, String code) {
-    validatedCallback(session(config, sessionId), code);
+    ObjectNode saved = session(config, sessionId);
+    requireReadySession(saved);
+    validatedCallback(saved, code);
+  }
+
+  private void requireReadySession(JsonNode session) {
+    if (eq(session, "state", "EXPIRED"))
+      throw new ApiException(409, "授权会话已过期，请重新生成链接", "OAUTH_SESSION_EXPIRED");
+    if (!eq(session, "state", "READY"))
+      throw new ApiException(409, "授权会话已提交或已取消，请核对原结果", "OAUTH_SESSION_NOT_READY");
   }
 
   private String validatedCallback(ObjectNode session, String raw) {

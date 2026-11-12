@@ -753,6 +753,67 @@ class ResourceIntegrationTest {
   }
 
   @Test
+  void expiredNativeOAuthCanBeQueriedCancelledAndReplacedWithoutExchangingCode() throws Exception {
+    nativeTarget(); Client supplier = supplier(), other = supplier();
+    nativeResponder(new AtomicInteger(), new AtomicInteger(1), new AtomicInteger(10));
+    ObjectNode input = (ObjectNode) submission(supplier).path("input");
+    input.put("credentialMode", "OAUTH").put("requestKey", UUID.randomUUID().toString());
+    input.remove("refreshToken");
+    ObjectNode authorized = write("/api/resources/oauth/supplier-authorize", input, supplier, 200);
+    String id = authorized.path("sessionId").asText();
+    ObjectNode operation = store.get("resource-operation", id, supplier.owner);
+    String upstreamId = operation.path("upstreamId").asText();
+    store.update("native-oauth", upstreamId, "GLOBAL", store.object()
+        .put("expiresAt", java.time.Instant.now().minusSeconds(1).toString()));
+    int upstreamCalls = calls.get();
+    mvc.perform(get("/api/resources/oauth/supplier-session/" + id).session(supplier.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.state").value("EXPIRED"))
+        .andExpect(jsonPath("$.authUrl").doesNotExist());
+    assertEquals("EXPIRED", store.get("native-oauth", upstreamId, "GLOBAL").path("state").asText());
+    mvc.perform(get("/api/resources/oauth/supplier-session/" + id).session(other.session))
+        .andExpect(status().isNotFound());
+    ObjectNode denied = write("/api/resources/oauth/supplier-submit", store.object()
+        .put("sessionId", id).put("code", "fixture-code#fixture-state"), supplier, 409);
+    assertEquals("OAUTH_SESSION_EXPIRED", denied.path("code").asText());
+    for (int repeat = 0; repeat < 2; repeat++) {
+      ObjectNode cancelled = write("/api/resources/oauth/supplier-session/" + id + "/cancel",
+          store.object(), supplier, 200);
+      assertEquals("EXPIRED", cancelled.path("state").asText());
+    }
+    assertEquals(upstreamCalls, calls.get());
+    assertFalse(store.list("resource-operation", supplier.owner).stream()
+        .anyMatch(op -> op.path("type").asText().equals("OAUTH_COMPLETE")));
+    input.put("requestKey", UUID.randomUUID().toString());
+    ObjectNode next = write("/api/resources/oauth/supplier-authorize", input, supplier, 200);
+    assertEquals("READY", next.path("state").asText());
+    assertNotEquals(id, next.path("sessionId").asText());
+  }
+
+  @Test
+  void expiredClockDoesNotClearNativeOAuthAlreadySubmittedForExchange() throws Exception {
+    nativeTarget(); Client supplier = supplier();
+    nativeResponder(new AtomicInteger(), new AtomicInteger(1), new AtomicInteger(10));
+    ObjectNode input = (ObjectNode) submission(supplier).path("input");
+    input.put("credentialMode", "OAUTH").put("requestKey", UUID.randomUUID().toString());
+    input.remove("refreshToken");
+    ObjectNode authorized = write("/api/resources/oauth/supplier-authorize", input, supplier, 200);
+    String id = authorized.path("sessionId").asText();
+    String upstreamId = store.get("resource-operation", id, supplier.owner).path("upstreamId").asText();
+    store.update("native-oauth", upstreamId, "GLOBAL", store.object().put("state", "SUBMITTING")
+        .put("expiresAt", java.time.Instant.now().minusSeconds(1).toString()));
+    int before = calls.get();
+    mvc.perform(get("/api/resources/oauth/supplier-session/" + id).session(supplier.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.state").value("SUBMITTING"));
+    write("/api/resources/oauth/supplier-session/" + id + "/cancel", store.object(), supplier, 409);
+    write("/api/resources/oauth/supplier-submit", store.object()
+        .put("sessionId", id).put("code", "fixture-code#fixture-state"), supplier, 409);
+    assertEquals(before, calls.get());
+    assertEquals("SUBMITTING", store.get("native-oauth", upstreamId, "GLOBAL").path("state").asText());
+    assertFalse(store.list("resource-operation", supplier.owner).stream()
+        .anyMatch(op -> op.path("type").asText().equals("OAUTH_COMPLETE")));
+  }
+
+  @Test
   void openApiUsesNativeOperationalStateAndExcludesLegacyNewApiChannels() throws Exception {
     Client supplier = supplier();
     ObjectNode token = write("/api/auth/api-tokens", store.object().put("name", "fixture-open-api"), supplier, 200);
