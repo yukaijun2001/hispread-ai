@@ -752,6 +752,52 @@ class ResourceIntegrationTest {
         .andExpect(jsonPath("$.nonPro").value(0));
   }
 
+  @Test
+  void openApiUsesNativeOperationalStateAndExcludesLegacyNewApiChannels() throws Exception {
+    Client supplier = supplier();
+    ObjectNode token = write("/api/auth/api-tokens", store.object().put("name", "fixture-open-api"), supplier, 200);
+    String bearer = "Bearer " + token.path("key").asText();
+    ObjectNode active = nativeResource(supplier);
+    active = store.update("resource", active.path("id").asText(), supplier.owner, store.object()
+        .put("operationalState", "ACTIVE").put("upstreamProtocol", "CCMAX_NATIVE")
+        .put("upstreamAccountId", "native-active").put("laneId", "native-active")
+        .put("state", "DELIVERED").put("dispatchState", "SUCCESS")
+        .put("accessToken", "PRIVATE-RESOURCE-CREDENTIAL"));
+    ObjectNode paused = nativeResource(supplier);
+    store.update("resource", paused.path("id").asText(), supplier.owner,
+        store.object().put("operationalStatus", "PAUSED"));
+    ObjectNode newApi = nativeResource(supplier);
+    store.update("resource", newApi.path("id").asText(), supplier.owner,
+        store.object().put("upstreamChannelId", "148").put("upstreamProtocol", "NEWAPI")
+            .put("operationalState", "ACTIVE"));
+    mvc.perform(get("/api/open/v1/ccmax/resources").header("Authorization", bearer))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(2));
+    mvc.perform(get("/api/open/v1/ccmax/resources").header("Authorization", bearer)
+            .param("operationalStatus", "ACTIVE"))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1))
+        .andExpect(jsonPath("$.items[0].id").value(active.path("id").asText()))
+        .andExpect(jsonPath("$.items[0].operationalStatus").value("ACTIVE"))
+        .andExpect(jsonPath("$.items[0].operationalState").value("ACTIVE"))
+        .andExpect(jsonPath("$.items[0].accessToken").doesNotExist());
+    mvc.perform(get("/api/open/v1/ccmax/resources/" + active.path("id").asText())
+            .header("Authorization", bearer))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.operationalStatus").value("ACTIVE"))
+        .andExpect(jsonPath("$.operationalState").value("ACTIVE"))
+        .andExpect(jsonPath("$.accessToken").doesNotExist());
+    mvc.perform(get("/api/open/v1/ccmax/resources").header("Authorization", bearer)
+            .param("operationalStatus", "PAUSED"))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1))
+        .andExpect(jsonPath("$.items[0].operationalStatus").value("PAUSED"));
+    mvc.perform(get("/api/open/v1/ccmax/resources/" + newApi.path("id").asText())
+            .header("Authorization", bearer))
+        .andExpect(status().isNotFound());
+    int upstreamBefore = calls.get();
+    mvc.perform(post("/api/open/v1/ccmax/resources/" + newApi.path("id").asText() + "/credential-refresh")
+            .header("Authorization", bearer).contentType("application/json").content("{}"))
+        .andExpect(status().isNotFound());
+    assertEquals(upstreamBefore, calls.get());
+  }
+
   ObjectNode intakeResource(Client supplier, String creator, String resourceState, String dispatch) {
     return store.create("resource", supplier.owner, store.object()
         .put("supplierId", supplier.owner).put("resourceType", "CCMAX")

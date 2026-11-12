@@ -117,6 +117,53 @@ class ProfessionalDomainAuthorizationTest {
   }
 
   @Test
+  void assignedOperatorResourceResponsesDoNotExposeFinancialSnapshotsOrTotals() throws Exception {
+    Client operator = client("OPERATOR", null);
+    String owner = supplier(operator);
+    Client principal = client("SUPPLIER", owner), administrator = client("ADMIN", null);
+    ObjectNode resource = store.object().put("supplierId", owner).put("createdBy", principal.uid)
+        .put("resourceType", "CCMAX").put("projectCategory", "ANTHROPIC")
+        .put("state", "DELIVERED").put("dispatchState", "SUCCESS")
+        .put("operationalState", "ACTIVE").put("name", "Native resource with costs");
+    resource.putObject("usage").put("amount", "123.45").put("currency", "USD")
+        .put("basis", "UPSTREAM_LIFETIME_TOTAL");
+    resource.putObject("quoteBasis").put("multiplier", "0.27").put("currency", "USD");
+    resource.putObject("resourceData").put("total_cost", "123.45")
+        .putObject("health").put("status", "healthy");
+    resource = store.create("resource", owner, resource);
+    String id = resource.path("id").asText();
+    mvc.perform(get("/api/resources/" + id).session(operator.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.quoteBasis").doesNotExist())
+        .andExpect(jsonPath("$.usage.amount").doesNotExist())
+        .andExpect(jsonPath("$.usage.currency").doesNotExist())
+        .andExpect(jsonPath("$.resourceData.total_cost").doesNotExist())
+        .andExpect(jsonPath("$.resourceData.health.status").value("healthy"));
+    mvc.perform(get("/api/resources?size=100").session(operator.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1))
+        .andExpect(jsonPath("$.items[0].quoteBasis").doesNotExist())
+        .andExpect(jsonPath("$.items[0].usage.amount").doesNotExist());
+    mvc.perform(get("/api/resources/summary").session(operator.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$[0].amounts").isEmpty());
+    mvc.perform(get("/api/resources/creator-summary").session(operator.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$[0].resourceCount").value(1))
+        .andExpect(jsonPath("$[0].consumptionAmountUsd").doesNotExist());
+    ObjectNode operation = store.object().put("supplierId", owner).put("resourceId", id)
+        .put("type", "LIFECYCLE").put("state", "COMPLETED").put("total", 1);
+    operation.putObject("result").put("state", "COMPLETED").put("amount", "123.45")
+        .put("currency", "USD").put("completedCount", 1);
+    operation = store.create("resource-operation", owner, operation);
+    mvc.perform(get("/api/resource-lifecycle-jobs/" + operation.path("id").asText())
+            .session(operator.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1))
+        .andExpect(jsonPath("$.completedCount").value(1))
+        .andExpect(jsonPath("$.amount").doesNotExist());
+    for (Client allowed : List.of(principal, administrator))
+      mvc.perform(get("/api/resources/" + id).session(allowed.session))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.usage.amount").value("123.45"))
+          .andExpect(jsonPath("$.quoteBasis.multiplier").value("0.27"));
+  }
+
+  @Test
   void operatorsCannotReadOrMutateOtherAssignmentsOrSelfAssignOwnership() throws Exception {
     Client op1 = client("OPERATOR", null),
         op2 = client("OPERATOR", null),
