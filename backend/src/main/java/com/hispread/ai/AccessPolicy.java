@@ -258,10 +258,17 @@ public class AccessPolicy {
                 "reauthorization",
                 "proxy-replacement")
             .contains(kind)) redactMemberFinancial(out);
+    if (operator(req)
+        && Set.of("resource", "intake", "submission", "reauthorization", "proxy-replacement")
+            .contains(kind)) redactFinancial(out, false);
     return out;
   }
 
   private void redactMemberFinancial(JsonNode node) {
+    redactFinancial(node, true);
+  }
+
+  private void redactFinancial(JsonNode node, boolean removeTotals) {
     if (node.isObject()) {
       ObjectNode object = (ObjectNode) node;
       object.remove(
@@ -277,7 +284,6 @@ public class AccessPolicy {
               "buyoutAmount",
               "buyoutCurrency",
               "amount",
-              "total",
               "payable",
               "payableTotal",
               "originalAmount",
@@ -287,9 +293,11 @@ public class AccessPolicy {
               "receivedAmount",
               "reservedAmount",
               "suggestedMultiplier",
-              "priceHistory"));
-      object.fields().forEachRemaining(entry -> redactMemberFinancial(entry.getValue()));
-    } else if (node.isArray()) for (JsonNode item : node) redactMemberFinancial(item);
+              "priceHistory",
+              "total_cost"));
+      if (removeTotals) object.remove("total");
+      object.fields().forEachRemaining(entry -> redactFinancial(entry.getValue(), removeTotals));
+    } else if (node.isArray()) for (JsonNode item : node) redactFinancial(item, removeTotals);
   }
 
   private void redact(JsonNode node) {

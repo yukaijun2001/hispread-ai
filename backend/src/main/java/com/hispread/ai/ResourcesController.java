@@ -465,7 +465,7 @@ public class ResourcesController {
                   .put("category", category)
                   .put("categoryName", text(rows.get(0), "projectCategoryName"));
           ArrayNode amounts = x.putArray("amounts");
-          if (!b.member(req)) {
+          if (!b.member(req) && !b.access.operator(req)) {
             Map<String, java.math.BigDecimal> sums = new LinkedHashMap<>();
             Map<String, Integer> counts = new HashMap<>();
             for (ObjectNode row : rows) {
@@ -524,8 +524,9 @@ public class ResourcesController {
               count++;
             }
           }
-          r.put("amountResourceCount", b.member(req) ? 0 : count)
-              .put("consumptionAmountUsd", b.member(req) ? "0" : amount.toPlainString());
+          if (!b.access.operator(req))
+            r.put("amountResourceCount", b.member(req) ? 0 : count)
+                .put("consumptionAmountUsd", b.member(req) ? "0" : amount.toPlainString());
           out.add(r);
         });
     return out;

@@ -9,9 +9,7 @@ import java.math.BigDecimal;
 import java.util.*;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * Documented Bearer API. Local reads/records are real; upstream effects are explicitly unavailable.
- */
+/** Documented Bearer API, with the same scoped resources and configured upstream operations as the console. */
 @RestController
 @RequestMapping("/api/open/v1/ccmax")
 public class OpenCcmaxController {
@@ -107,7 +105,6 @@ public class OpenCcmaxController {
             "dispatchState",
             "laneId",
             "laneState",
-            "operationalStatus",
             "createdAt",
             "updatedAt",
             "submittedAt",
@@ -119,18 +116,31 @@ public class OpenCcmaxController {
             "creationFinished",
             "creationHttpStatus")) if (r.has(k)) p.set(k, r.get(k));
     p.put("resourceType", "CCMAX");
+    String status = operationalStatus(r);
+    if (!status.isBlank()) p.put("operationalStatus", status).put("operationalState", status);
     return p;
+  }
+
+  private String operationalStatus(JsonNode resource) {
+    String state = text(resource, "operationalState");
+    return state.isBlank() ? text(resource, "operationalStatus") : state;
+  }
+
+  private boolean ccmaxResource(JsonNode resource) {
+    return eq(resource, "resourceType", "CCMAX")
+        && text(resource, "upstreamChannelId").isBlank()
+        && !eq(resource, "upstreamProtocol", "NEWAPI");
   }
 
   private List<ObjectNode> rows(HttpServletRequest r) {
     a.require(r, "resource.read");
-    return b.scopedResources(r).stream().filter(x -> eq(x, "resourceType", "CCMAX")).toList();
+    return b.scopedResources(r).stream().filter(this::ccmaxResource).toList();
   }
 
   private ObjectNode row(String id, HttpServletRequest r) {
     a.require(r, "resource.read");
     ObjectNode d = b.resource(id, r);
-    if (!eq(d, "resourceType", "CCMAX")) throw new ApiException(404, "CCMAX资源不存在");
+    if (!ccmaxResource(d)) throw new ApiException(404, "CCMAX资源不存在");
     return d;
   }
 
@@ -142,7 +152,8 @@ public class OpenCcmaxController {
                 x ->
                     b.contains(x, q.get("search"), "name", "accountName", "laneId")
                         && b.match(x, q, "state", "state")
-                        && b.match(x, q, "operationalStatus", "operationalStatus")
+                        && (q.getOrDefault("operationalStatus", "").isBlank()
+                            || q.get("operationalStatus").equals(operationalStatus(x)))
                         && b.match(x, q, "projectCode", "projectCode"))
             .map(this::publicResource)
             .toList();
