@@ -4,7 +4,7 @@ import {
   C as t,
   G as n,
   P as r,
-  Q as i,
+  Q as ApiError,
   S as ee,
   X as a,
   Z as o,
@@ -153,7 +153,7 @@ function y({
     q(!0), X(t.state === `FAILED` ? l(t.creationFailureHint || t.message || p) : ae(t.state, t)), t.creationFinished && t.resourceId && Q(null), t.resourceId && E(await e(`/resources/${m(t.resourceId)}`))
   }
   async function Qe(t) {
-    if (!(t instanceof i) || t.details?.creationNotStarted !== !0) return !1;
+    if (!(t instanceof ApiError) || t.details?.creationNotStarted !== !0) return !1;
     if (Q(null), q(!1), E(null), J(null), Y({}), Re.current = crypto.randomUUID(), X(t.message), t.details.resourceId) try {
       let n = await e(`/resources/${m(t.details.resourceId)}`);
       E(n), J(n.dispatchState || null), Y(g(n)), q(h(n)), h(n) && X(ae(n.dispatchState, n))
@@ -170,7 +170,7 @@ function y({
           try {
             n = await e(t)
           } catch (e) {
-            if (!(e instanceof i) || e.status !== 404) throw e;
+            if (!(e instanceof ApiError) || e.status !== 404) throw e;
             n = await u(`${t}/cancel`, {})
           }
           n.state === `READY` && (n = await u(`${t}/cancel`, {})), await $(n);
@@ -178,6 +178,10 @@ function y({
         }
         Ye(await e(`/resources/${m(T.id)}`))
       } catch (e) {
+        if (b && e instanceof ApiError && e.details?.code === `OAUTH_SESSION_EXPIRED`) {
+          Ze(c(`授权会话已过期，请重新生成授权链接。`));
+          return
+        }
         q(!0), X(c(`交付结果查询失败：{0}。请勿重复提交。`, [e.message]))
       } finally {
         G.current = !1, W(!1)
@@ -302,6 +306,7 @@ function y({
         return
       }
       G.current = !0, W(!0);
+      let keepOauthSession = !1;
       try {
         if (b) {
           Q({
@@ -340,10 +345,18 @@ function y({
         }
         x(l(t.message || c(`CCMAX资源已创建（{0}）`, [t.laneId]))), f()
       } catch (e) {
+        if (e instanceof ApiError && e.details?.code === `OAUTH_STATE_MISMATCH`) {
+          keepOauthSession = !0, Q(null), q(!1), P(``), X(e.message);
+          return
+        }
+        if (e instanceof ApiError && e.details?.code === `OAUTH_SESSION_EXPIRED`) {
+          b ? Ze(c(`授权会话已过期，请重新生成授权链接。`)) : (q(!1), X(e.message));
+          return
+        }
         if (b && await Qe(e)) return;
         q(!0), X(c(`交付结果尚未确认：{0}。请刷新交付结果，勿重复提交。`, [e.message]))
       } finally {
-        M(null), P(``), G.current = !1, W(!1)
+        keepOauthSession || (M(null), P(``)), G.current = !1, W(!1)
       }
       return
     }
