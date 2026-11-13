@@ -962,6 +962,37 @@ class ResourceIntegrationTest {
   }
 
   @Test
+  void historicalFailedPriorityHasStableDetailShapeWithoutInventedItemCounts() throws Exception {
+    Client admin = administrator();
+    ObjectNode operation = store.object().put("supplierId", "GLOBAL").put("type", "PRIORITY")
+        .put("state", "FAILED").put("total", 1)
+        .put("errorCode", "RESOURCE_OPERATION_UNSUPPORTED")
+        .put("error", "上游操作未完成，请查询原操作");
+    operation.putArray("items").addObject().put("resourceId", "historical-removed-local")
+        .put("resourceName", "Historical channel");
+    ObjectNode saved = store.create("resource-operation", "GLOBAL", operation);
+    String id = saved.path("id").asText();
+    long version = saved.path("version").asLong();
+    mvc.perform(get("/api/cc-intake/admin/priority/jobs/" + id).session(admin.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.state").value("FAILED"))
+        .andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.counts").isMap())
+        .andExpect(jsonPath("$.counts").isEmpty())
+        .andExpect(jsonPath("$.items[0].resourceName").value("Historical channel"))
+        .andExpect(jsonPath("$.items[0].state").doesNotExist())
+        .andExpect(jsonPath("$.errorCode").value("RESOURCE_OPERATION_UNSUPPORTED"));
+    var response = mvc.perform(get("/api/cc-intake/admin/priority/jobs").session(admin.session))
+        .andExpect(status().isOk()).andReturn();
+    JsonNode listed = null;
+    for (JsonNode item : json.readTree(response.getResponse().getContentAsString()))
+      if (item.path("id").asText().equals(id)) listed = item;
+    assertNotNull(listed);
+    assertTrue(listed.path("counts").isObject());
+    assertTrue(listed.path("counts").isEmpty());
+    assertEquals(version, store.get("resource-operation", id, "GLOBAL").path("version").asLong());
+    assertEquals(0, calls.get());
+  }
+
+  @Test
   void nativeOAuthUsesOpaqueSessionsChecksStateAndAvoidsRepeatedExchange() throws Exception {
     nativeTarget(); Client supplier = supplier();
     AtomicInteger logins = new AtomicInteger(); nativeResponder(logins, new AtomicInteger(1), new AtomicInteger(10));

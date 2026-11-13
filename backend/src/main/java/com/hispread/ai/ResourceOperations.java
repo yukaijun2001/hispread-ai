@@ -893,6 +893,14 @@ public class ResourceOperations {
           List.of("state", "completedCount", "failedCount", "successCount", "unknownCount"))
         if (op.path("result").has(field)) out.set(field, op.path("result").path(field));
     }
+    if (eq(op, "type", "PRIORITY")) {
+      // Old unsupported/failed tasks predate item counts. Keep their original state and
+      // unknown per-item outcomes, while providing the arrays/objects the history UI needs.
+      if (!out.path("items").isArray()) out.putArray("items");
+      if (op.path("result").path("counts").isObject())
+        out.set("counts", op.path("result").path("counts"));
+      else if (!out.path("counts").isObject()) out.putObject("counts");
+    }
     out.remove(List.of("request", "result", "fingerprint", "upstreamPath", "targetId", "upstreamId"));
     return safe(out, req);
   }
