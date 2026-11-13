@@ -99,7 +99,12 @@ final class NativeCcmaxAdapter {
       ObjectNode refreshed =
           call(config, "POST", accountPath(accountId) + "/refresh-usage", store.object(), key);
       requireOk(refreshed);
-      return observation(account(config, accountId, key));
+      ObjectNode observed = observation(account(config, accountId, key));
+      ObjectNode query = store.object();
+      query.putArray("resources").addObject().put("resourceId", localId)
+          .put("supplierId", text(resource, "supplierId"));
+      observed.set("dailyConsumption", todayConsumption(config, query, key).get(localId));
+      return observed;
     }
     if (action.equals("credential-refresh")) {
       ObjectNode refreshed =
@@ -218,7 +223,10 @@ final class NativeCcmaxAdapter {
     if (!eq(account, "id", id)
         || !Set.of("active", "disabled", "error").contains(text(account, "status")))
       throw invalid();
-    return (ObjectNode) account;
+    ObjectNode out = ((ObjectNode) account).deepCopy();
+    // The native detail response places runtime stats beside account, unlike the list rows.
+    if (result.path("stats").isObject()) out.set("stats", result.path("stats"));
+    return out;
   }
 
   private ObjectNode summary(JsonNode account) {
@@ -251,6 +259,24 @@ final class NativeCcmaxAdapter {
         .put("paused", status.equals("disabled"))
         .put("status", text(account, "health_status"));
     data.put("upstreamProtocol", "CCMAX_NATIVE");
+    ObjectNode quota = data.putObject("usage");
+    JsonNode stats = account.path("stats"), utilization = stats.path("claude_utilization");
+    for (String[] window : List.of(new String[] {"five_hour", "fiveHour"}, new String[] {"seven_day", "sevenDay"})) {
+      JsonNode source = utilization.path(window[0]);
+      JsonNode percent = source.path("utilization");
+      if (percent.isNumber() && Double.isFinite(percent.asDouble())
+          && percent.asDouble() >= 0 && percent.asDouble() <= 100)
+        quota.set(window[1] + "Percent", percent);
+      copyInstant(source, "resets_at", quota, window[1] + "ResetsAt");
+      copyInstant(stats, "claude_utilization_updated_at", quota, window[1] + "ObservedAt");
+    }
+    JsonNode subscription = account.path("subscription_info");
+    if (subscription.path("plan").isTextual() && !text(subscription, "plan").isBlank()) {
+      ObjectNode plan = quota.putObject("plan");
+      plan.put("tier", text(subscription, "plan")).put("label", text(subscription, "plan"));
+      copyInstant(subscription, "checked_at", plan, "checkedAt");
+    }
+    if (quota.isEmpty()) data.remove("usage");
     if (account.hasNonNull("total_cost")) {
       java.math.BigDecimal cost;
       try {
@@ -268,6 +294,15 @@ final class NativeCcmaxAdapter {
           .put("queriedAt", Instant.now().toString());
     }
     return result;
+  }
+
+  private void copyInstant(JsonNode source, String field, ObjectNode target, String output) {
+    if (!source.path(field).isTextual()) return;
+    try {
+      target.put(output, Instant.parse(text(source, field)).toString());
+    } catch (java.time.format.DateTimeParseException ignored) {
+      // Missing or malformed optional telemetry remains missing, never a fabricated timestamp.
+    }
   }
 
   private ObjectNode authorize(ObjectNode config, JsonNode body, String localId, String key) {
@@ -645,8 +680,30 @@ final class NativeCcmaxAdapter {
               .put("operationalState", text(observed, "operationalState"))
               .put("priority", observed.path("upstreamPriority").asInt());
       if (observed.has("usage")) row.set("usage", observed.get("usage"));
+      row.set("resourceData", observed.path("resourceData"));
     }
+    ObjectNode query = store.object();
+    query.set("resources", requested);
+    Map<String, ObjectNode> daily = todayConsumption(config, query, key);
+    for (JsonNode row : resources)
+      ((ObjectNode) row).set("dailyConsumption", daily.get(text(row, "resourceId")));
     return result;
+  }
+
+  private Map<String, ObjectNode> todayConsumption(ObjectNode config, ObjectNode query, String key) {
+    String day = BusinessSupport.today();
+    query.put("businessDate", day);
+    ObjectNode amounts = dailySync(config, query, key);
+    Map<String, java.math.BigDecimal> totals = new LinkedHashMap<>();
+    for (JsonNode resource : query.path("resources")) totals.put(text(resource, "resourceId"), java.math.BigDecimal.ZERO);
+    for (JsonNode row : amounts.path("rows"))
+      totals.merge(text(row, "resourceId"), new java.math.BigDecimal(text(row, "originalAmount")), java.math.BigDecimal::add);
+    Map<String, ObjectNode> out = new LinkedHashMap<>();
+    String now = Instant.now().toString();
+    totals.forEach((id, amount) -> out.put(id, store.object().put("businessDate", day)
+        .put("currency", "USD").put("amount", amount.toPlainString())
+        .put("basis", "UPSTREAM_REQUEST_LOG_OFFICIAL_TOTAL").put("queriedAt", now)));
+    return out;
   }
 
   private ObjectNode reconcileOperation(ObjectNode config, String path, String key) {
@@ -665,6 +722,10 @@ final class NativeCcmaxAdapter {
       ObjectNode observed = observation(account(config, mapped(config, local), key));
       if (type.equals("CREDENTIAL-REFRESH")) {
         observed.put("state", "UNKNOWN").put("message", "账号可读取，但无法仅凭状态确认刷新凭据结果，请人工核对");
+      } else {
+        ObjectNode query = store.object();
+        query.putArray("resources").addObject().put("resourceId", rid).put("supplierId", text(local, "supplierId"));
+        observed.set("dailyConsumption", todayConsumption(config, query, key).get(rid));
       }
       return observed;
     }

@@ -127,6 +127,8 @@ class ProfessionalDomainAuthorizationTest {
         .put("operationalState", "ACTIVE").put("name", "Native resource with costs");
     resource.putObject("usage").put("amount", "123.45").put("currency", "USD")
         .put("basis", "UPSTREAM_LIFETIME_TOTAL");
+    resource.putObject("dailyConsumption").put("businessDate", BusinessSupport.today())
+        .put("amount", "10.25").put("currency", "USD");
     resource.putObject("quoteBasis").put("multiplier", "0.27").put("currency", "USD");
     resource.putObject("resourceData").put("total_cost", "123.45")
         .putObject("health").put("status", "healthy");
@@ -136,6 +138,7 @@ class ProfessionalDomainAuthorizationTest {
         .andExpect(status().isOk()).andExpect(jsonPath("$.quoteBasis").doesNotExist())
         .andExpect(jsonPath("$.usage.amount").doesNotExist())
         .andExpect(jsonPath("$.usage.currency").doesNotExist())
+        .andExpect(jsonPath("$.dailyConsumption.amount").doesNotExist())
         .andExpect(jsonPath("$.resourceData.total_cost").doesNotExist())
         .andExpect(jsonPath("$.resourceData.health.status").value("healthy"));
     mvc.perform(get("/api/resources?size=100").session(operator.session))
@@ -147,6 +150,9 @@ class ProfessionalDomainAuthorizationTest {
     mvc.perform(get("/api/resources/creator-summary").session(operator.session))
         .andExpect(status().isOk()).andExpect(jsonPath("$[0].resourceCount").value(1))
         .andExpect(jsonPath("$[0].consumptionAmountUsd").doesNotExist());
+    mvc.perform(get("/api/resources/overview").session(operator.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.dailyConsumption").doesNotExist())
+        .andExpect(jsonPath("$.counts.total").value(1));
     ObjectNode operation = store.object().put("supplierId", owner).put("resourceId", id)
         .put("type", "LIFECYCLE").put("state", "COMPLETED").put("total", 1);
     operation.putObject("result").put("state", "COMPLETED").put("amount", "123.45")
@@ -160,7 +166,8 @@ class ProfessionalDomainAuthorizationTest {
     for (Client allowed : List.of(principal, administrator))
       mvc.perform(get("/api/resources/" + id).session(allowed.session))
           .andExpect(status().isOk()).andExpect(jsonPath("$.usage.amount").value("123.45"))
-          .andExpect(jsonPath("$.quoteBasis.multiplier").value("0.27"));
+          .andExpect(jsonPath("$.quoteBasis.multiplier").value("0.27"))
+          .andExpect(jsonPath("$.dailyConsumption.amount").value("10.25"));
   }
 
   @Test

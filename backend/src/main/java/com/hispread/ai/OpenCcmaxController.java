@@ -168,7 +168,7 @@ public class OpenCcmaxController {
                     b.contains(x, q.get("search"), "name", "accountName", "laneId")
                         && b.match(x, q, "state", "state")
                         && (q.getOrDefault("operationalStatus", "").isBlank()
-                            || q.get("operationalStatus").equals(operationalStatus(x)))
+                            || ResourceTelemetry.matches(x, q.get("operationalStatus")))
                         && (q.getOrDefault("projectCode", "").isBlank()
                             || q.get("projectCode").equals(projectCode(x, codes))))
             .map(x -> publicResource(x, codes))

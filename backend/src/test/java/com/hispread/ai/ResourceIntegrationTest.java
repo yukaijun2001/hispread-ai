@@ -34,6 +34,7 @@ class ResourceIntegrationTest {
   @Autowired ObjectMapper json;
   @Autowired MockMvc mvc;
   @Autowired ResourceIntegrationGateway gateway;
+  @Autowired BackgroundResourceJobService backgroundJobs;
   HttpServer server;
   AtomicInteger calls;
   AtomicReference<String> response;
@@ -808,6 +809,7 @@ class ResourceIntegrationTest {
       }
       assertEquals("Bearer PRIVATE-NATIVE-SESSION", seenAuth.get());
       if (request.equals("GET /api/auth/me")) return "{\"role\":\"admin\"}";
+      if (request.equals("GET /api/admin/request-logs")) return "{\"logs\":[],\"cursor\":null}";
       if (request.equals("GET /api/admin/oauth-accounts"))
         return "{\"accounts\":[{\"id\":\"native-148\",\"name\":\"Fixture\",\"status\":\"active\",\"weight\":10}],\"pagination\":{\"total_rows\":1}}";
       if (request.equals("PATCH /api/admin/oauth-accounts/native-148")) {
@@ -1183,6 +1185,178 @@ class ResourceIntegrationTest {
             .param("resourceType", "CCMAX").param("projectId", selectedProject)
             .param("operationalStatus", "ALL"))
         .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(2));
+  }
+
+  @Test
+  void nativeQuotaStatsAndTodayConsumptionSurviveRefreshAndOverview() throws Exception {
+    nativeTarget();
+    Client supplier = supplier(), admin = administrator();
+    AtomicInteger logins = new AtomicInteger(), state = new AtomicInteger(1), weight = new AtomicInteger(10);
+    nativeResponder(logins, state, weight);
+    var original = responder.get();
+    String observed = "2026-11-13T00:57:33.425Z";
+    String reset = "2027-01-01T05:40:00Z";
+    String today = BusinessSupport.today();
+    String logTime = java.time.LocalDate.parse(today).atStartOfDay(java.time.ZoneId.of("Asia/Shanghai"))
+        .plusHours(1).toInstant().toString();
+    responder.set((request, input) -> {
+      if (request.equals("GET /api/admin/oauth-accounts/native-148")) {
+        ObjectNode reply = store.object();
+        reply.putObject("account").put("id", "native-148").put("status", "active")
+            .put("weight", 10).put("health_status", "healthy").put("total_cost", "12.5")
+            .put("access_token", "PRIVATE-DO-NOT-PROJECT");
+        ((ObjectNode) reply.path("account")).putObject("subscription_info").put("plan", "max")
+            .put("checked_at", observed).put("private_field", "PRIVATE-UNMAPPED");
+        ObjectNode stats = reply.putObject("stats");
+        stats.put("claude_utilization_updated_at", observed).put("daily_cost", 999999);
+        ObjectNode utilization = stats.putObject("claude_utilization");
+        utilization.putObject("five_hour").put("utilization", 0).put("resets_at", reset);
+        utilization.putObject("seven_day").put("utilization", 83).put("resets_at", reset);
+        return reply.toString();
+      }
+      if (request.equals("GET /api/admin/request-logs")) {
+        ObjectNode reply = store.object();
+        ArrayNode logs = reply.putArray("logs");
+        for (String[] log : List.of(new String[] {"log-1", "0.113479"}, new String[] {"log-2", "0.096663"}))
+          logs.addObject().put("id", log[0]).put("account_id", "native-148")
+              .put("created_at", logTime).put("request_model", "fixture-model")
+              .put("cost_official_usd", log[1]);
+        reply.putNull("cursor");
+        return reply.toString();
+      }
+      return original.apply(request, input);
+    });
+    ObjectNode local = nativeResource(supplier);
+    String id = local.path("id").asText();
+    write("/api/resources/" + id + "/upstream-account", store.object()
+        .put("targetId", target.path("id").asText()).put("accountId", "native-148").put("version", 0), admin, 200);
+    ObjectNode refreshed = write("/api/resources/" + id + "/usage", store.object()
+        .put("requestKey", UUID.randomUUID().toString()), supplier, 200);
+    assertEquals(0, refreshed.path("resourceData").path("usage").path("fiveHourPercent").asInt(-1));
+    assertEquals(83, refreshed.path("resourceData").path("usage").path("sevenDayPercent").asInt(-1));
+    assertEquals(reset, refreshed.path("resourceData").path("usage").path("fiveHourResetsAt").asText());
+    assertEquals(observed, refreshed.path("resourceData").path("usage").path("fiveHourObservedAt").asText());
+    assertEquals("max", refreshed.path("resourceData").path("usage").path("plan").path("tier").asText());
+    assertEquals("0.210142", refreshed.path("dailyConsumption").path("amount").asText());
+    assertEquals(today, refreshed.path("dailyConsumption").path("businessDate").asText());
+    assertFalse(refreshed.toString().contains("PRIVATE"));
+    assertFalse(refreshed.toString().contains("999999"));
+    ObjectNode batch = gateway.exchange(target, "POST", "/resources/sync", store.object(), "quota-sync");
+    assertEquals(0, batch.path("resources").path(0).path("resourceData").path("usage").path("fiveHourPercent").asInt(-1));
+    assertEquals("0.210142", batch.path("resources").path(0).path("dailyConsumption").path("amount").asText());
+    store.update("resource", id, supplier.owner, store.object().putNull("resourceData").putNull("dailyConsumption"));
+    ObjectNode syncResult = backgroundJobs.sync(store.object().put("type", "CCMAX_STATUS_SYNC")
+        .put("targetId", target.path("id").asText()), UUID.randomUUID().toString());
+    assertEquals(1, syncResult.path("processedCount").asInt());
+    ObjectNode persisted = store.get("resource", id, supplier.owner);
+    assertEquals(83, persisted.path("resourceData").path("usage").path("sevenDayPercent").asInt(-1));
+    assertEquals("0.210142", persisted.path("dailyConsumption").path("amount").asText());
+    assertEquals(0, store.list("bill", supplier.owner).size());
+    var healthy = responder.get();
+    AtomicBoolean failRead = new AtomicBoolean(true);
+    AtomicInteger refreshRequests = new AtomicInteger();
+    responder.set((request, input) -> {
+      if (request.endsWith("/refresh-usage")) refreshRequests.incrementAndGet();
+      if (request.equals("GET /api/admin/request-logs") && failRead.get()) {
+        httpStatus.set(503);
+        return "{\"error\":\"unavailable\"}";
+      }
+      httpStatus.set(200);
+      return healthy.apply(request, input);
+    });
+    long beforeFailure = store.get("resource", id, supplier.owner).path("version").asLong();
+    ObjectNode request = store.object().put("requestKey", UUID.randomUUID().toString());
+    write("/api/resources/" + id + "/usage", request, supplier, 503);
+    assertEquals(beforeFailure, store.get("resource", id, supplier.owner).path("version").asLong());
+    ObjectNode replay = write("/api/resources/" + id + "/usage", request, supplier, 200);
+    assertEquals("UNKNOWN", replay.path("state").asText());
+    assertEquals(1, refreshRequests.get());
+    failRead.set(false);
+    ObjectNode reconciled = write("/api/resource-lifecycle-jobs/" + replay.path("operationId").asText()
+        + "/reconcile", store.object(), supplier, 200);
+    assertEquals("UPDATED", reconciled.path("state").asText());
+    assertEquals(1, refreshRequests.get());
+    assertEquals("0.210142", store.get("resource", id, supplier.owner).path("dailyConsumption").path("amount").asText());
+    store.update("resource", id, supplier.owner, store.object().put("state", "DELIVERED").put("dispatchState", "SUCCESS"));
+    mvc.perform(get("/api/resources/overview").session(supplier.session).param("resourceType", "CCMAX"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.fiveHour.reportedCount").value(1))
+        .andExpect(jsonPath("$.fiveHour.averageUsedPercent").value(0))
+        .andExpect(jsonPath("$.fiveHour.missingCount").value(0))
+        .andExpect(jsonPath("$.sevenDay.averageUsedPercent").value(83))
+        .andExpect(jsonPath("$.dailyConsumption.amount").value("0.210142"))
+        .andExpect(jsonPath("$.dailyConsumption.reportedResourceCount").value(1));
+  }
+
+  @Test
+  void nativeQuotaIgnoresInvalidOptionalTelemetryAndKeepsConfirmedZeroDailyUsage() throws Exception {
+    nativeTarget();
+    Client supplier = supplier(), admin = administrator();
+    nativeResponder(new AtomicInteger(), new AtomicInteger(1), new AtomicInteger(10));
+    var original = responder.get();
+    responder.set((request, input) -> {
+      if (request.equals("GET /api/admin/oauth-accounts/native-148")) {
+        ObjectNode reply = store.parse(original.apply(request, input));
+        ObjectNode stats = reply.putObject("stats");
+        stats.put("claude_utilization_updated_at", "invalid-date");
+        ObjectNode usage = stats.putObject("claude_utilization");
+        usage.putObject("five_hour").put("utilization", "0").put("resets_at", "invalid-date");
+        usage.putObject("seven_day").put("utilization", 101);
+        return reply.toString();
+      }
+      return original.apply(request, input);
+    });
+    ObjectNode local = nativeResource(supplier);
+    String id = local.path("id").asText();
+    write("/api/resources/" + id + "/upstream-account", store.object().put("version", 0)
+        .put("targetId", target.path("id").asText()).put("accountId", "native-148"), admin, 200);
+    ObjectNode result = write("/api/resources/" + id + "/usage", store.object()
+        .put("requestKey", UUID.randomUUID().toString()), supplier, 200);
+    assertFalse(result.path("resourceData").has("usage"));
+    assertEquals("0", result.path("dailyConsumption").path("amount").asText());
+    assertEquals("UPDATED", result.path("state").asText());
+  }
+
+  @Test
+  void quotaOverviewUsesValidSnapshotsAndKeepsStateSeparateFromMissingWindows() throws Exception {
+    Client supplier = supplier(), other = supplier();
+    String project = UUID.randomUUID().toString();
+    ObjectNode a = intakeResource(supplier, supplier.uid, "DELIVERED", "SUCCESS");
+    ObjectNode b = intakeResource(supplier, supplier.uid, "DELIVERED", "SUCCESS");
+    ObjectNode gone = intakeResource(supplier, supplier.uid, "DELIVERED", "SUCCESS");
+    for (ObjectNode resource : List.of(a, b, gone)) {
+      ObjectNode patch = store.object().put("projectId", project).put("operationalState", "ACTIVE");
+      patch.putObject("resourceData").putObject("usage").put("fiveHourPercent", 100).put("sevenDayPercent", 25)
+          .put("fiveHourResetsAt", "2027-01-01T05:00:00Z");
+      patch.putObject("dailyConsumption").put("businessDate", BusinessSupport.today())
+          .put("currency", "USD").put("amount", "0.10");
+      if (resource == b) {
+        patch.put("operationalState", "MISSING_USAGE");
+        ((ObjectNode) patch.path("resourceData").path("usage"))
+            .put("fiveHourPercent", 50).put("sevenDayPercent", "invalid");
+        ((ObjectNode) patch.path("dailyConsumption")).put("businessDate", "2000-01-01");
+      }
+      if (resource == gone) patch.put("operationalState", "GONE");
+      store.update("resource", resource.path("id").asText(), supplier.owner, patch);
+    }
+    ObjectNode foreign = intakeResource(other, other.uid, "DELIVERED", "SUCCESS");
+    store.update("resource", foreign.path("id").asText(), other.owner,
+        store.object().put("projectId", project).put("operationalState", "ACTIVE"));
+    mvc.perform(get("/api/resources/overview").session(supplier.session)
+            .param("resourceType", "CCMAX").param("projectId", project))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.counts.total").value(3))
+        .andExpect(jsonPath("$.counts.active").value(1)).andExpect(jsonPath("$.counts.missingUsage").value(1))
+        .andExpect(jsonPath("$.counts.gone").value(1))
+        .andExpect(jsonPath("$.fiveHour.reportedCount").value(2))
+        .andExpect(jsonPath("$.fiveHour.averageUsedPercent").value(75))
+        .andExpect(jsonPath("$.fiveHour.exhaustedCount").value(1))
+        .andExpect(jsonPath("$.fiveHour.remainingEquivalent").value(0.5))
+        .andExpect(jsonPath("$.sevenDay.missingCount").value(1))
+        .andExpect(jsonPath("$.dailyConsumption.amount").value("0.20"));
+    mvc.perform(get("/api/resources").session(supplier.session).param("resourceType", "CCMAX")
+            .param("projectId", project).param("operationalStatus", "FIVE_HOUR_EXHAUSTED"))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1))
+        .andExpect(jsonPath("$.items[0].id").value(a.path("id").asText()));
   }
 
   ObjectNode intakeResource(Client supplier, String creator, String resourceState, String dispatch) {
