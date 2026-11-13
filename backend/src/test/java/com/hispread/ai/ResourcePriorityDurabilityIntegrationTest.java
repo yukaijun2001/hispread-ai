@@ -633,6 +633,32 @@ class ResourcePriorityDurabilityIntegrationTest {
   }
 
   @Test
+  void legacyCreationRecoveryRequiresFinishedReceiptBeforeReleasingCapacity() throws Exception {
+    intakeControls(1, 7);
+    store.update("resource", first, owner, store.object().put("dispatchState", "UNKNOWN"));
+    ObjectNode legacy = store.create("resource-operation", owner, store.object().put("supplierId", owner).put("resourceId", first)
+        .put("protocol", "CCMAX_NATIVE").put("type", "OAUTH_COMPLETE").put("state", "UNKNOWN"));
+    var tx = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+    ApiException blocked = assertThrows(ApiException.class, () -> tx.execute(status -> intakeControlService.admit(owner)));
+    assertEquals("CCMAX_INTAKE_CONCURRENCY_LIMIT", blocked.code);
+    ObjectNode recovery = store.object().put("confirmedNotCreated", true).put("action", "EDIT")
+        .put("version", store.get("resource", first, owner).path("version").asLong());
+    assertEquals("RESOURCE_OPERATION_UNCERTAIN", postJson("/api/resources/" + first + "/creation-recovery",
+        recovery, 409).path("code").asText());
+    assertFalse(store.get("resource-operation", legacy.path("id").asText(), owner)
+        .path("creationConfirmedNotCreated").asBoolean());
+    assertEquals("UNKNOWN", store.get("resource", first, owner).path("dispatchState").asText());
+    assertThrows(ApiException.class, () -> tx.execute(status -> intakeControlService.admit(owner)));
+    store.update("resource-operation", legacy.path("id").asText(), owner,
+        store.object().put("finishedAt", java.time.Instant.now().toString()));
+    postJson("/api/resources/" + first + "/creation-recovery", store.object()
+        .put("confirmedNotCreated", true).put("action", "EDIT")
+        .put("version", store.get("resource", first, owner).path("version").asLong()), 200);
+    Integer available = tx.execute(status -> intakeControlService.admit(owner));
+    assertEquals(7, available.intValue());
+  }
+
+  @Test
   void creationDeadlineAlsoBoundsSlowResponseBodyAfterHeaders() throws Exception {
     intakeControls(1, 1);
     release.countDown(); accountBodyDelayMs.set(2200);

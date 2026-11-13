@@ -929,6 +929,139 @@ class ResourceIntegrationTest {
   }
 
   @Test
+  void nativePriorityLegacyLaneMappingSurvivesPreviewExecutionAndProjection() throws Exception {
+    nativeTarget();
+    Client supplier = supplier(), admin = administrator();
+    AtomicInteger weight = new AtomicInteger(10), writes = new AtomicInteger();
+    nativeResponder(new AtomicInteger(), new AtomicInteger(1), weight);
+    var original = responder.get();
+    responder.set((request, body) -> {
+      if (request.equals("PATCH /api/admin/oauth-accounts/native-148")) writes.incrementAndGet();
+      return original.apply(request, body);
+    });
+    ObjectNode resource = nativeResource(supplier);
+    String resourceId = resource.path("id").asText();
+    store.update("resource", resourceId, supplier.owner, store.object()
+        .put("targetId", target.path("id").asText())
+        .put("upstreamProtocol", "CCMAX_NATIVE")
+        .put("laneId", "native-148")
+        .put("state", "DELIVERED")
+        .put("dispatchState", "SUCCESS")
+        .put("operationalState", "ACTIVE"));
+
+    ObjectNode supplierScope = store.object().put("priority", 11).put("requestKey", UUID.randomUUID().toString());
+    supplierScope.putArray("supplierIds").add(supplier.owner);
+    ObjectNode preview = write("/api/cc-intake/admin/priority/jobs", supplierScope, admin, 200);
+    assertEquals(1, preview.path("total").asInt());
+    assertEquals("native-148", preview.path("items").path(0).path("laneId").asText());
+
+    ObjectNode laneScope = store.object().put("priority", 11).put("requestKey", UUID.randomUUID().toString());
+    laneScope.putArray("laneIds").add("native-148");
+    ObjectNode lanePreview = write("/api/cc-intake/admin/priority/jobs", laneScope, admin, 200);
+    assertEquals("CCMAX_NATIVE", lanePreview.path("protocol").asText());
+    assertEquals(resourceId, lanePreview.path("items").path(0).path("resourceId").asText());
+
+    ObjectNode completed = write("/api/cc-intake/admin/priority/jobs/" + preview.path("id").asText() + "/start",
+        store.object(), admin, 200);
+    assertEquals("COMPLETED", completed.path("state").asText());
+    assertEquals(1, writes.get());
+    assertEquals(11, weight.get());
+    assertEquals(11, store.get("resource", resourceId, supplier.owner).path("upstreamPriority").asInt());
+  }
+
+  @Test
+  void nativePriorityBroadScopesExcludeRemovedAndUseCcmaxTargetInsteadOfNewApiDefault() throws Exception {
+    nativeTarget();
+    Client supplier = supplier(), admin = administrator();
+    String tid = target.path("id").asText();
+    store.update("resource-target", tid, "GLOBAL", store.object().put("defaultTarget", false));
+    store.create("resource-target", "GLOBAL", store.object().put("protocol", "NEWAPI").put("enabled", true)
+        .put("defaultTarget", true).put("baseUrl", "http://127.0.0.1:" + server.getAddress().getPort()).put("newApiUserId", "2").put("timeoutMs", 15000));
+    ObjectNode active = nativeResource(supplier), removed = nativeResource(supplier), draining = nativeResource(supplier);
+    for (ObjectNode row : List.of(active, removed, draining))
+      store.update("resource", row.path("id").asText(), supplier.owner, store.object()
+          .put("targetId", tid).put("upstreamProtocol", "CCMAX_NATIVE").put("laneId", row.path("id").asText())
+          .put("state", "DELIVERED").put("dispatchState", "SUCCESS")
+          .put("operationalState", row == active ? "ACTIVE" : row == removed ? "GONE" : "DRAINING"));
+    ObjectNode scoped = store.object().put("priority", 10).put("requestKey", UUID.randomUUID().toString());
+    scoped.putArray("supplierIds").add(supplier.owner);
+    ObjectNode preview = write("/api/cc-intake/admin/priority/jobs", scoped, admin, 200);
+    assertEquals("CCMAX_NATIVE", preview.path("protocol").asText());
+    assertEquals(1, preview.path("total").asInt());
+    assertEquals(active.path("id"), preview.path("items").path(0).path("resourceId"));
+    assertEquals(0, calls.get());
+    scoped.put("targetId", tid).put("requestKey", UUID.randomUUID().toString());
+    assertEquals(1, write("/api/cc-intake/admin/priority/jobs", scoped, admin, 200).path("total").asInt());
+    ObjectNode selected = store.object().put("priority", 10).put("targetId", tid).put("requestKey", UUID.randomUUID().toString());
+    selected.putArray("resourceIds").add(removed.path("id").asText());
+    write("/api/cc-intake/admin/priority/jobs", selected, admin, 409);
+    assertEquals(0, calls.get());
+  }
+
+  @Test
+  void nativePriorityFiltersUseCanonicalAllQuotaAndFailureReasonStates() throws Exception {
+    nativeTarget();
+    Client supplier = supplier(), admin = administrator();
+    ObjectNode exhausted = nativeResource(supplier), healthy = nativeResource(supplier);
+    for (ObjectNode row : List.of(exhausted, healthy)) {
+      ObjectNode patch = store.object().put("targetId", target.path("id").asText())
+          .put("upstreamProtocol", "CCMAX_NATIVE").put("laneId", row.path("id").asText())
+          .put("state", "DELIVERED").put("dispatchState", "SUCCESS").put("operationalState", "ACTIVE");
+      patch.putObject("resourceData").putObject("usage").put("fiveHourPercent", row == exhausted ? 100 : 4);
+      if (row == exhausted) patch.with("resourceData").putObject("health").put("credentialFailureReason", "FIXTURE_REASON");
+      store.update("resource", row.path("id").asText(), supplier.owner, patch);
+    }
+    ObjectNode request = store.object().put("targetId", target.path("id").asText()).put("priority", 10)
+        .put("requestKey", UUID.randomUUID().toString());
+    request.putObject("filters").put("operationalStatus", "ALL");
+    ObjectNode all = write("/api/cc-intake/admin/priority/jobs", request, admin, 200);
+    assertEquals(2, all.path("total").asInt());
+    request.put("requestKey", UUID.randomUUID().toString());
+    ((ObjectNode) request.path("filters")).put("operationalStatus", "FIVE_HOUR_EXHAUSTED");
+    ObjectNode quota = write("/api/cc-intake/admin/priority/jobs", request, admin, 200);
+    assertEquals(1, quota.path("total").asInt());
+    assertEquals(exhausted.path("id"), quota.path("items").path(0).path("resourceId"));
+    request.put("requestKey", UUID.randomUUID().toString());
+    ((ObjectNode) request.path("filters")).put("operationalStatus", "ALL").put("failureReason", "FIXTURE_REASON");
+    ObjectNode reason = write("/api/cc-intake/admin/priority/jobs", request, admin, 200);
+    assertEquals(1, reason.path("total").asInt());
+    assertEquals(exhausted.path("id"), reason.path("items").path(0).path("resourceId"));
+    assertEquals(0, calls.get());
+  }
+
+  @Test
+  void priorityLaneScopeResolvesItsMappingAndAmbiguousNativeScopesFailWithoutRemoteCalls() throws Exception {
+    nativeTarget();
+    Client supplier = supplier(), admin = administrator();
+    String nativeId = target.path("id").asText();
+    store.update("resource-target", nativeId, "GLOBAL", store.object().put("defaultTarget", false));
+    ObjectNode channelTarget = store.create("resource-target", "GLOBAL", store.object().put("protocol", "NEWAPI")
+        .put("enabled", true).put("defaultTarget", true)
+        .put("baseUrl", "http://127.0.0.1:" + server.getAddress().getPort()).put("newApiUserId", "2").put("timeoutMs", 15000));
+    ObjectNode account = nativeResource(supplier), channel = nativeResource(supplier);
+    store.update("resource", account.path("id").asText(), supplier.owner, store.object()
+        .put("targetId", nativeId).put("upstreamProtocol", "CCMAX_NATIVE").put("upstreamAccountId", "native-scope")
+        .put("operationalState", "ACTIVE"));
+    store.update("resource", channel.path("id").asText(), supplier.owner, store.object()
+        .put("targetId", channelTarget.path("id").asText()).put("upstreamProtocol", "NEWAPI")
+        .put("upstreamChannelId", "148").put("operationalState", "ACTIVE"));
+    for (String[] expected : List.of(new String[] {"native-scope", "CCMAX_NATIVE"}, new String[] {"148", "NEWAPI"})) {
+      ObjectNode request = store.object().put("priority", 10).put("requestKey", UUID.randomUUID().toString());
+      request.putArray("laneIds").add(expected[0]);
+      assertEquals(expected[1], write("/api/cc-intake/admin/priority/jobs", request, admin, 200).path("protocol").asText());
+    }
+    store.create("resource-target", "GLOBAL", store.object().put("protocol", "CCMAX_NATIVE").put("enabled", true)
+        .put("baseUrl", "http://127.0.0.1:" + server.getAddress().getPort()));
+    ObjectNode broad = store.object().put("priority", 10).put("requestKey", UUID.randomUUID().toString());
+    broad.putArray("supplierIds").add(supplier.owner);
+    assertEquals("RESOURCE_TARGET_AMBIGUOUS", write("/api/cc-intake/admin/priority/jobs", broad, admin, 409).path("code").asText());
+    ObjectNode mixed = store.object().put("priority", 10).put("requestKey", UUID.randomUUID().toString());
+    mixed.putArray("laneIds").add("native-scope").add("148");
+    assertEquals("RESOURCE_TARGET_AMBIGUOUS", write("/api/cc-intake/admin/priority/jobs", mixed, admin, 409).path("code").asText());
+    assertEquals(0, calls.get());
+  }
+
+  @Test
   void nativePriorityReadbackFailureStaysUnknownAndReconcilesWithoutWriting() throws Exception {
     nativeTarget(); Client supplier = supplier(), admin = administrator();
     AtomicInteger writes = new AtomicInteger(), weight = new AtomicInteger(10);

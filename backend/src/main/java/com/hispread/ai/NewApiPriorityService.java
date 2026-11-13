@@ -26,15 +26,9 @@ public class NewApiPriorityService {
   }
 
   ObjectNode preview(ObjectNode body, HttpServletRequest req) {
-    String targetId = text(body, "targetId");
-    if (targetId.isBlank()) {
-      String first = body.path("resourceIds").path(0).asText(body.path("items").path(0).path("resourceId").asText());
-      if (!first.isBlank()) targetId = text(business.resource(first, req), "targetId");
-    }
-    ObjectNode config = gateway.requireConfigured(targetId);
+    ObjectNode config = previewTarget(body, req);
     String protocol = text(config, "protocol");
     if (!Set.of("NEWAPI", "CCMAX_NATIVE").contains(protocol)) return null;
-    String mappingField = protocol.equals("CCMAX_NATIVE") ? "upstreamAccountId" : "upstreamChannelId";
     String key = text(body, "requestKey");
     if (key.isBlank()) key = UUID.randomUUID().toString();
     store.jdbc.queryForObject("select pg_advisory_xact_lock(hashtext(?),hashtext(?))", (rs, row) -> true, "newapi-priority", key);
@@ -52,28 +46,37 @@ public class NewApiPriorityService {
     List<ObjectNode> selected = new ArrayList<>();
     for (ObjectNode resource : business.scopedResources(req)) {
       if (!ids.isEmpty() && !ids.contains(text(resource, "id"))) continue;
-      if (!lanes.isEmpty() && !lanes.contains(text(resource, mappingField))) continue;
+      if (!lanes.isEmpty() && !lanes.contains(mapped(resource, protocol))) continue;
       if (!suppliers.isEmpty() && !suppliers.contains(text(resource, "supplierId"))) continue;
-      if (body.path("filters").isObject() && !matches(resource, body.path("filters"))) continue;
-      if (ids.isEmpty() && !eq(resource, "targetId", text(config, "id"))) continue;
-      if (ids.isEmpty() && text(resource, mappingField).isBlank()) continue;
-      if (!text(body, "operationalStatus").isBlank() && !eq(resource, "operationalState", text(body, "operationalStatus"))) continue;
-      if (!eq(resource, "targetId", text(config, "id"))) throw new ApiException(409, "一批操作仅支持同一上游目标");
-      String mapped = text(resource, mappingField);
-      if (!(protocol.equals("NEWAPI") ? mapped.matches("[1-9][0-9]{0,17}") : mapped.matches("[A-Za-z0-9_-]{1,100}")) || eq(resource, "operationalState", "GONE"))
-        throw new ApiException(409, "请先关联有效上游账号或渠道");
-      if (selected.stream().anyMatch(other -> eq(other, mappingField, mapped)))
+      if (body.path("filters").isObject() && !matches(resource, body.path("filters"), protocol)) continue;
+      if (ids.isEmpty() && mapped(resource, protocol).isBlank()) continue;
+      if (!ResourceTelemetry.matches(resource, text(body, "operationalStatus"))) continue;
+      if (!eq(resource, "targetId", text(config, "id"))) {
+        if (!ids.isEmpty() || !lanes.isEmpty()) throw new ApiException(409, "所选账号或Lane ID不属于指定上游目标");
+        continue;
+      }
+      if (resource.path("readOnly").asBoolean()
+          || Set.of("GONE", "DRAINING", "REMOVED", "DELETED").contains(ResourceTelemetry.state(resource))) {
+        if (!ids.isEmpty()) throw new ApiException(409, "所选账号已移除、退出中或不可调整");
+        continue;
+      }
+      String mappedId = mapped(resource, protocol);
+      if (!(protocol.equals("NEWAPI") ? mappedId.matches("[1-9][0-9]{0,17}") : mappedId.matches("[A-Za-z0-9_-]{1,100}"))) {
+        if (!ids.isEmpty() || !lanes.isEmpty()) throw new ApiException(409, "请先关联有效上游账号或渠道");
+        continue;
+      }
+      if (selected.stream().anyMatch(other -> mapped(other, protocol).equals(mappedId)))
         throw new ApiException(409, "同一渠道存在重复关联，请先核对本地记录");
       selected.add(resource);
     }
     if (!ids.isEmpty() && selected.size() != ids.size()) throw new ApiException(409, "选择范围已变化，请刷新后重新选择");
-    if (!lanes.isEmpty() && selected.stream().map(row -> text(row, mappingField)).distinct().count() != lanes.size())
+    if (!lanes.isEmpty() && selected.stream().map(row -> mapped(row, protocol)).distinct().count() != lanes.size())
       throw new ApiException(409, "部分Lane ID未关联至所选目标");
     if (selected.isEmpty() || selected.size() > 100) throw new ApiException(400, "每批请选择1至100个已关联渠道");
     ObjectNode request = store.object().put("priority", body.path("priority").asInt());
     ArrayNode items = request.putArray("items");
     for (ObjectNode resource : selected) items.addObject().put("resourceId", text(resource, "id"))
-        .put("resourceName", text(resource, "name")).put("laneId", text(resource, mappingField))
+        .put("resourceName", text(resource, "name")).put("laneId", mapped(resource, protocol))
         .put("resourceVersion", resource.path("version").asLong()).put("priority", body.path("priority").asInt()).put("state", "PENDING");
     ObjectNode op = store.object().put("type", "PRIORITY").put("protocol", protocol).put("supplierId", "GLOBAL")
         .put("targetId", text(config, "id")).put("requestKey", key).put("state", "PREVIEW")
@@ -82,6 +85,33 @@ public class NewApiPriorityService {
     ObjectNode result = request.deepCopy().put("state", "PREVIEW"); result.putObject("counts").put("PENDING", selected.size());
     op.set("result", result);
     return view(store.create("resource-operation", "GLOBAL", op));
+  }
+
+  private ObjectNode previewTarget(ObjectNode body, HttpServletRequest req) {
+    String targetId = text(body, "targetId");
+    if (!targetId.isBlank()) return gateway.requireConfigured(targetId);
+    String first = body.path("resourceIds").path(0).asText(body.path("items").path(0).path("resourceId").asText());
+    if (!first.isBlank()) return gateway.requireConfigured(text(business.resource(first, req), "targetId"));
+    Set<String> lanes = strings(body.path("laneIds"));
+    if (!lanes.isEmpty()) {
+      Set<String> targets = new LinkedHashSet<>();
+      for (ObjectNode resource : business.scopedResources(req)) {
+        String lane = text(resource, "upstreamProtocol").equals("NEWAPI") || !text(resource, "upstreamChannelId").isBlank()
+            ? mapped(resource, "NEWAPI") : mapped(resource, "CCMAX_NATIVE");
+        if (lanes.contains(lane) && !text(resource, "targetId").isBlank()) targets.add(text(resource, "targetId"));
+      }
+      if (targets.size() > 1) throw new ApiException(409, "Lane ID涉及多个上游目标，请指定一个目标", "RESOURCE_TARGET_AMBIGUOUS");
+      if (targets.size() == 1) return gateway.requireConfigured(targets.iterator().next());
+    }
+    try {
+      // Supplier/filter controls describe CCMAX accounts; an unrelated NEWAPI default must
+      // not capture them. NEWAPI-only installations retain their channel compatibility.
+      return gateway.requireCcmaxConfigured(null);
+    } catch (ApiException unavailable) {
+      if (!Set.of("RESOURCE_OPERATION_UNSUPPORTED", "RESOURCE_UPSTREAM_NOT_CONFIGURED")
+          .contains(Objects.toString(unavailable.code, ""))) throw unavailable;
+      return gateway.requireConfigured(null);
+    }
   }
 
   ObjectNode action(ObjectNode op, String action, HttpServletRequest req) {
@@ -144,14 +174,14 @@ public class NewApiPriorityService {
     if (action.equals("reconcile") && eq(op, "state", "PREVIEW")) return new Attempt(op, null, null);
     ObjectNode config = gateway.requireConfigured(text(op, "targetId"));
     if (!eq(config, "protocol", text(op, "protocol"))) throw new ApiException(409, "目标协议已变化");
-    String mappingField = eq(config, "protocol", "CCMAX_NATIVE") ? "upstreamAccountId" : "upstreamChannelId";
     ObjectNode request = ((ObjectNode) op.path("request")).deepCopy();
     ArrayNode items = store.json.createArrayNode();
     for (JsonNode item : request.path("items")) {
       ObjectNode resource = business.resource(text(item, "resourceId"), req);
-      if (eq(resource, "operationalState", "GONE"))
-        throw new ApiException(409, "渠道已移除，不可再操作", "RESOURCE_CHANNEL_REMOVED");
-      if (!eq(resource, "targetId", text(config, "id")) || !eq(resource, mappingField, text(item, "laneId")))
+      if (Set.of("GONE", "DRAINING", "REMOVED", "DELETED").contains(ResourceTelemetry.state(resource)))
+        throw new ApiException(409, "账号或渠道已移除或退出中，不可再操作", "RESOURCE_CHANNEL_REMOVED");
+      if (!eq(resource, "targetId", text(config, "id"))
+          || !mapped(resource, text(config, "protocol")).equals(text(item, "laneId")))
         throw new ApiException(409, "渠道关联已变化，请重新建立任务");
       if (action.equals("start") && item.path("resourceVersion").asLong() != resource.path("version").asLong()) throw new ApiException(409, "资源版本已变化，请重新建立任务");
       if (action.equals("retry")) {
@@ -185,7 +215,6 @@ public class NewApiPriorityService {
   private ObjectNode complete(Attempt attempt, ObjectNode result, HttpServletRequest req) {
     ObjectNode op = store.get("resource-operation", text(attempt.operation(), "id"), "GLOBAL");
     ObjectNode config = attempt.config(), request = attempt.request();
-    String mappingField = eq(config, "protocol", "CCMAX_NATIVE") ? "upstreamAccountId" : "upstreamChannelId";
     Map<String, JsonNode> changed = new LinkedHashMap<>();
     for (JsonNode item : result.path("items")) changed.put(text(item, "resourceId"), item);
     ArrayNode merged = store.json.createArrayNode();
@@ -198,7 +227,8 @@ public class NewApiPriorityService {
       if (eq(finalItem, "state", "SUCCESS") && changed.containsKey(text(item, "resourceId"))) {
         ObjectNode resource = business.resource(text(item, "resourceId"), req);
         if (!eq(resource, "targetId", text(config, "id"))
-            || !eq(resource, mappingField, text(item, "laneId")) || eq(resource, "operationalState", "GONE"))
+            || !mapped(resource, text(config, "protocol")).equals(text(item, "laneId"))
+            || Set.of("GONE", "DRAINING", "REMOVED", "DELETED").contains(ResourceTelemetry.state(resource)))
           finalItem.put("state", "UNKNOWN").put("errorCode", "RESOURCE_MAPPING_CHANGED")
               .put("errorMessage", "执行期间资源关联已变化，请核对原账号");
         else business.update("resource", text(item, "resourceId"), req,
@@ -238,14 +268,25 @@ public class NewApiPriorityService {
     return result;
   }
 
-  private boolean matches(ObjectNode row, JsonNode filters) {
-    Map<String, String> fields = Map.of("state", "state", "projectId", "projectId", "credentialMode", "credentialMode", "supplierSearch", "supplierId", "creatorSearch", "createdBy", "operationalStatus", "operationalState");
+  private boolean matches(ObjectNode row, JsonNode filters, String protocol) {
+    Map<String, String> fields = Map.of("state", "state", "projectId", "projectId", "credentialMode", "credentialMode", "supplierSearch", "supplierId", "creatorSearch", "createdBy");
     for (var field : fields.entrySet()) if (!text(filters, field.getKey()).isBlank() && !eq(row, field.getValue(), text(filters, field.getKey()))) return false;
+    if (!ResourceTelemetry.matches(row, text(filters, "operationalStatus"))) return false;
     if (!business.contains(row, text(filters, "search"), "name", "accountName", "laneId")) return false;
     if (!business.contains(row, text(filters, "accountSearch"), "accountName")) return false;
-    if (!text(filters, "failureReason").isBlank()) throw new ApiException(400, "New API优先级不支持按CCMAX失效原因筛选");
+    if (!text(filters, "failureReason").isBlank()) {
+      if (!protocol.equals("CCMAX_NATIVE")) throw new ApiException(400, "New API优先级不支持按CCMAX失效原因筛选");
+      String reason = text(row, "dispatchFailureReason");
+      if (reason.isBlank()) reason = text(row.path("resourceData").path("health"), "credentialFailureReason");
+      if (!reason.equals(text(filters, "failureReason"))) return false;
+    }
     String created = datePart(row, "createdAt");
     return (text(filters, "createdFrom").isBlank() || created.compareTo(text(filters, "createdFrom")) >= 0)
         && (text(filters, "createdTo").isBlank() || created.compareTo(text(filters, "createdTo")) <= 0);
+  }
+
+  private String mapped(ObjectNode resource, String protocol) {
+    String id = text(resource, protocol.equals("CCMAX_NATIVE") ? "upstreamAccountId" : "upstreamChannelId");
+    return id.isBlank() ? text(resource, "laneId") : id;
   }
 }
