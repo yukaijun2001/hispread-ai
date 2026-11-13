@@ -41,6 +41,7 @@ class ResourcePriorityDurabilityIntegrationTest {
   Map<String, Integer> exchanges;
   Map<String, String> accountStates;
   AtomicReference<String> blockedAccount;
+  AtomicReference<String> blockedReadAccount;
   AtomicBoolean rejectSecond;
   AtomicBoolean denyAccountRead;
   AtomicLong loginDelayMs, exchangeDelayMs;
@@ -63,6 +64,7 @@ class ResourcePriorityDurabilityIntegrationTest {
     exchanges = new ConcurrentHashMap<>();
     accountStates = new ConcurrentHashMap<>(Map.of("first", "active", "second", "active"));
     blockedAccount = new AtomicReference<>("first");
+    blockedReadAccount = new AtomicReference<>("");
     rejectSecond = new AtomicBoolean(false);
     denyAccountRead = new AtomicBoolean(false);
     loginDelayMs = new AtomicLong();
@@ -87,6 +89,8 @@ class ResourcePriorityDurabilityIntegrationTest {
           catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
         }
         response.put("access_token", "FIXTURE-PRIVATE").putObject("user").put("role", "admin");
+      } else if (path.equals("/api/admin/request-logs")) {
+        response.putArray("logs"); response.putNull("cursor");
       } else if (path.equals("/api/admin/oauth-accounts/auth-url")) {
         response.put("url", "https://claude.ai/oauth/authorize?state=fixture-state")
             .put("state", "fixture-state").put("expires_in", 600);
@@ -145,6 +149,11 @@ class ResourcePriorityDurabilityIntegrationTest {
           status = 403;
           response.put("error", "fixture read denied");
         } else {
+          if (account.equals(blockedReadAccount.get())) {
+            received.countDown();
+            try { release.await(10, TimeUnit.SECONDS); }
+            catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
+          }
           response.putObject("account").put("id", account).put("status", accountStates.get(account))
               .put("weight", weights.get(account));
         }
@@ -649,5 +658,26 @@ class ResourcePriorityDurabilityIntegrationTest {
     assertEquals("SUCCESS", postJson(path + "/" + authorization.path("id").asText(), input, 200).path("state").asText());
     assertFalse(findLifecycle(input).has("creationTimeoutSeconds"));
     assertEquals(1, exchanges.get("second"));
+  }
+
+  @Test
+  void manualTargetSyncRejectsWholeBatchWhenMappingChangesWhileReadingUpstream() throws Exception {
+    blockedReadAccount.set("first");
+    long otherVersion = store.get("resource", second, owner).path("version").asLong();
+    CompletableFuture<ObjectNode> running = CompletableFuture.supplyAsync(() -> {
+      try { return postJson("/api/resource-targets/" + targetId + "/sync", store.object(), 409); }
+      catch (Exception failure) { throw new CompletionException(failure); }
+    }, executor);
+    try {
+      assertTrue(received.await(5, TimeUnit.SECONDS));
+      store.update("resource", first, owner, store.object().put("upstreamAccountId", "replacement"));
+    } finally { release.countDown(); }
+    assertEquals("RESOURCE_SYNC_RESOURCE_CHANGED", running.get(10, TimeUnit.SECONDS).path("code").asText());
+    assertEquals(otherVersion, store.get("resource", second, owner).path("version").asLong());
+    assertFalse(store.get("resource", first, owner).has("statusSyncedAt"));
+    assertFalse(store.get("resource", second, owner).has("statusSyncedAt"));
+    assertTrue(writes.isEmpty());
+    assertTrue(refreshes.isEmpty());
+    assertTrue(exchanges.isEmpty());
   }
 }

@@ -30,7 +30,7 @@ class NativePaymentConfigTest {
     });
     NativePaymentGateway nativeGateway = new NativePaymentGateway(factory, r -> { throw new AssertionError("must not send"); }, java.time.Clock.systemUTC());
     PaymentExecutionGateway execution = new PaymentExecutionGateway(factory, new MockEnvironment(), nativeGateway);
-    PlatformConfigController controller = new PlatformConfigController(s, auth, null, null, null, null, null, execution, null);
+    PlatformConfigController controller = new PlatformConfigController(s, auth, null, null, null, null, null, execution, null, null);
     ObjectNode body = factory.object().put("enabled", true).put("apiKey", "native-api-key-value")
         .put("secretKey", "native-secret-value").put("passphrase", "native-passphrase-value").put("regionCode", "GLOBAL");
     body.putObject("executionAdapter").put("enabled", true).put("protocol", "NATIVE_OKX");

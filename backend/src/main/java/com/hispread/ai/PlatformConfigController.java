@@ -23,6 +23,7 @@ public class PlatformConfigController {
   private final PayoutProviderGateway payouts;
   private final PaymentExecutionGateway execution;
   private final MonitoringService monitoring;
+  private final BackgroundResourceJobService resourceJobs;
 
   public PlatformConfigController(
       Store s,
@@ -33,7 +34,8 @@ public class PlatformConfigController {
       ResourceIntegrationGateway resources,
       PayoutProviderGateway payouts,
       PaymentExecutionGateway execution,
-      MonitoringService monitoring) {
+      MonitoringService monitoring,
+      BackgroundResourceJobService resourceJobs) {
     this.s = s;
     this.a = a;
     this.b = b;
@@ -43,6 +45,7 @@ public class PlatformConfigController {
     this.payouts = payouts;
     this.execution = execution;
     this.monitoring = monitoring;
+    this.resourceJobs = resourceJobs;
   }
 
   private void guard(HttpServletRequest r, String permission) {
@@ -462,6 +465,8 @@ public class PlatformConfigController {
       return sourceView(monitoring.refresh(id));
     }
     ObjectNode config = s.get("resource-target", id, null);
+    if (r.getRequestURI().endsWith("/sync") && eq(config, "protocol", "CCMAX_NATIVE"))
+      return resourceJobs.syncNativeTarget(id);
     if (r.getRequestURI().endsWith("/sync"))
       return resources.exchange(
           config, "POST", "/resources/sync", s.object(), UUID.randomUUID().toString());

@@ -1385,6 +1385,63 @@ class ResourceIntegrationTest {
   }
 
   @Test
+  void manualNativeTargetSyncPersistsExistingAccountObservationsAndRejectsDisabledTargets() throws Exception {
+    nativeTarget();
+    Client supplier = supplier(), admin = administrator();
+    nativeResponder(new AtomicInteger(), new AtomicInteger(1), new AtomicInteger(10));
+    var healthy = responder.get();
+    AtomicBoolean failLogs = new AtomicBoolean(false);
+    responder.set((request, input) -> {
+      httpStatus.set(200);
+      if (request.equals("GET /api/admin/request-logs") && failLogs.get()) {
+        httpStatus.set(503); return "{}";
+      }
+      String reply = healthy.apply(request, input);
+      if (request.equals("GET /api/admin/oauth-accounts/native-148")) {
+        ObjectNode account = store.parse(reply);
+        ObjectNode stats = account.putObject("stats");
+        stats.put("claude_utilization_updated_at", "2026-11-13T07:00:00Z");
+        stats.putObject("claude_utilization").putObject("five_hour").put("utilization", 12);
+        return account.toString();
+      }
+      return reply;
+    });
+    ObjectNode local = nativeResource(supplier);
+    String rid = local.path("id").asText(), tid = target.path("id").asText();
+    store.update("resource", rid, supplier.owner, store.object().put("targetId", tid)
+        .put("upstreamAccountId", "native-148").put("upstreamProtocol", "CCMAX_NATIVE")
+        .put("state", "DELIVERED").put("dispatchState", "SUCCESS").put("operationalState", "PAUSED"));
+    ObjectNode archived = nativeResource(supplier);
+    store.update("resource", archived.path("id").asText(), supplier.owner, store.object().put("targetId", tid)
+        .put("upstreamAccountId", "archived-existing").put("upstreamProtocol", "CCMAX_NATIVE").put("operationalState", "GONE"));
+    long archivedVersion = store.get("resource", archived.path("id").asText(), supplier.owner).path("version").asLong();
+    long initialVersion = store.get("resource", rid, supplier.owner).path("version").asLong();
+    ObjectNode response = write("/api/resource-targets/" + tid + "/sync", store.object(), admin, 200);
+    ObjectNode saved = store.get("resource", rid, supplier.owner);
+    assertEquals("SUCCESS", response.path("state").asText());
+    assertEquals(1, response.path("processedCount").asInt());
+    assertEquals(initialVersion + 1, saved.path("version").asLong());
+    assertEquals("ACTIVE", saved.path("operationalState").asText());
+    assertEquals(12, saved.path("resourceData").path("usage").path("fiveHourPercent").asInt());
+    assertEquals(10, saved.path("upstreamPriority").asInt());
+    assertEquals("0", saved.path("dailyConsumption").path("amount").asText());
+    assertFalse(saved.path("statusSyncedAt").asText().isBlank());
+    assertEquals(archivedVersion, store.get("resource", archived.path("id").asText(), supplier.owner).path("version").asLong());
+    assertFalse(response.toString().contains("PRIVATE"));
+    assertEquals(0, store.list("bill", supplier.owner).size());
+    mvc.perform(get("/api/resources/" + rid).session(supplier.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.resourceData.usage.fiveHourPercent").value(12));
+    failLogs.set(true);
+    write("/api/resource-targets/" + tid + "/sync", store.object(), admin, 503);
+    assertEquals(saved.path("version"), store.get("resource", rid, supplier.owner).path("version"));
+    int beforeDisable = calls.get();
+    store.update("resource-target", tid, "GLOBAL", store.object().put("enabled", false));
+    write("/api/resource-targets/" + tid + "/sync", store.object(), admin, 503);
+    assertEquals(beforeDisable, calls.get());
+    assertEquals(saved.path("version"), store.get("resource", rid, supplier.owner).path("version"));
+  }
+
+  @Test
   void quotaOverviewUsesValidSnapshotsAndKeepsStateSeparateFromMissingWindows() throws Exception {
     Client supplier = supplier(), other = supplier();
     String project = UUID.randomUUID().toString();
