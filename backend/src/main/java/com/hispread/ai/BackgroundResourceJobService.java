@@ -121,7 +121,7 @@ public class BackgroundResourceJobService {
         .filter(r -> eq(r, "resourceType", "CCMAX"))
         .filter(
             r ->
-                r.path("enabled").asBoolean(true)
+                !r.path("deleted").asBoolean() && r.path("enabled").asBoolean(true)
                     && !Set.of("REMOVED", "DELETED").contains(text(r, "state"))
                     && (!eq(r, "state", "DRAFT") || !text(r, "upstreamAccountId").isBlank())
                     && !eq(r, "operationalState", "GONE"))
@@ -168,6 +168,23 @@ public class BackgroundResourceJobService {
     if (resource == null || !eq(resource, "supplierId", text(row, "supplierId")))
       throw new ApiException(502, "上游返回未请求的资源或供应商归属不符", "RESOURCE_UPSTREAM_SCOPE_MISMATCH");
     return resource;
+  }
+
+  public ObjectNode syncNativeTarget(String targetId) {
+    ObjectNode target = gateway.requireConfigured(targetId);
+    if (!eq(target, "protocol", "CCMAX_NATIVE"))
+      throw new ApiException(400, "请选择CCMAX原生目标");
+    ObjectNode result = sync(s.object().put("type", "CCMAX_STATUS_SYNC").put("targetId", targetId), UUID.randomUUID().toString());
+    ArrayNode rows = result.putArray("resources");
+    for (ObjectNode resource : resources(target)) {
+      ObjectNode row = s.object().put("resourceId", text(resource, "id")).put("supplierId", text(resource, "supplierId"))
+          .put("operationalState", text(resource, "operationalState"));
+      for (String field : List.of("usage", "resourceData", "dailyConsumption"))
+        if (resource.has(field)) row.set(field, resource.get(field));
+      if (resource.has("upstreamPriority")) row.set("priority", resource.get("upstreamPriority"));
+      rows.add(row);
+    }
+    return result.put("state", "SUCCESS");
   }
 
   public ObjectNode sync(ObjectNode task, String runId) {
@@ -217,6 +234,17 @@ public class BackgroundResourceJobService {
       processed +=
           tx.execute(
               status -> {
+                if (!daily)
+                  for (ObjectNode original : requested.values().stream()
+                      .sorted(Comparator.comparing(resource -> text(resource, "id"))).toList()) {
+                    s.jdbc.queryForObject("select version from hub_entity where kind='resource' and id=? and owner_id=? for update",
+                        Long.class, text(original, "id"), text(original, "supplierId"));
+                    ObjectNode current = s.get("resource", text(original, "id"), text(original, "supplierId"));
+                    if (current.path("version").asLong() != original.path("version").asLong()
+                        || !eq(current, "targetId", text(original, "targetId"))
+                        || !eq(current, "upstreamAccountId", text(original, "upstreamAccountId")))
+                      throw new ApiException(409, "同步期间资源已变化，请重新同步", "RESOURCE_SYNC_RESOURCE_CHANGED");
+                  }
                 int count = 0;
                 for (ObjectNode row : prepared) {
                   if (daily) {
@@ -267,6 +295,7 @@ public class BackgroundResourceJobService {
     }
     // Only the provider-owned native adapter produces these allowlisted runtime snapshots.
     if (eq(resource, "upstreamProtocol", "CCMAX_NATIVE")) {
+      patch.put("laneState", state);
       if (row.path("resourceData").isObject()) patch.set("resourceData", row.path("resourceData"));
       if (row.path("dailyConsumption").isObject()) patch.set("dailyConsumption", row.path("dailyConsumption"));
     }
