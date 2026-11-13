@@ -548,14 +548,15 @@ public class ResourcesController {
             "unknownState")) counts.put(key, 0);
     for (ObjectNode r : rows) {
       String key =
-          switch (text(r, "operationalState")) {
+          switch (ResourceTelemetry.state(r)) {
             case "READY" -> "ready";
             case "ACTIVE" -> "active";
             case "PROVISIONING" -> "provisioning";
             case "INVALID" -> "invalid";
             case "DEAD" -> "dead";
-            case "COOLING" -> "cooling";
+            case "COOLING", "RATE_LIMITED" -> "cooling";
             case "GONE" -> "gone";
+            case "MISSING_USAGE" -> "missingUsage";
             case "DRAINING" -> "draining";
             case "PAUSED" -> "paused";
             default -> "unknownState";
@@ -564,18 +565,9 @@ public class ResourcesController {
     }
     out.set("counts", counts);
     for (String window : List.of("fiveHour", "sevenDay"))
-      out.set(
-          window,
-          b.obj()
-              .putNull("averageUsedPercent")
-              .put("reportedCount", 0)
-              .put("exhaustedCount", 0)
-              .put("missingCount", rows.size())
-              .putNull("remainingEquivalent")
-              .putNull("nextResetAt"));
-    out.set(
-        "dailyConsumption",
-        b.obj().put("businessDate", today()).putNull("amount").put("reportedResourceCount", 0));
+      out.set(window, ResourceTelemetry.quota(store, rows, window));
+    if (!b.access.operator(req) && !b.member(req))
+      out.set("dailyConsumption", ResourceTelemetry.daily(store, rows));
     return out;
   }
 
@@ -607,10 +599,7 @@ public class ResourcesController {
   }
 
   private boolean matchesOperationalStatus(JsonNode resource, String status) {
-    if (status.isBlank()) return true;
-    if (status.equals("ALL"))
-      return eq(resource, "state", "DELIVERED") && eq(resource, "dispatchState", "SUCCESS");
-    return eq(resource, "operationalState", status);
+    return ResourceTelemetry.matches(resource, status);
   }
 
   @GetMapping("/cc-intake/mine")

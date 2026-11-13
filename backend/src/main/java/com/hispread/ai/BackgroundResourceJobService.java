@@ -265,6 +265,11 @@ public class BackgroundResourceJobService {
           .put("currency", text(usage, "currency"))
           .put("queriedAt", Instant.now().toString());
     }
+    // Only the provider-owned native adapter produces these allowlisted runtime snapshots.
+    if (eq(resource, "upstreamProtocol", "CCMAX_NATIVE")) {
+      if (row.path("resourceData").isObject()) patch.set("resourceData", row.path("resourceData"));
+      if (row.path("dailyConsumption").isObject()) patch.set("dailyConsumption", row.path("dailyConsumption"));
+    }
     return patch;
   }
 

@@ -364,6 +364,7 @@ public class ResourceOperations {
             "operationalState",
             "upstreamPriority",
             "usage",
+            "dailyConsumption",
             "resourceData",
             "credentialConfigured",
             "creationAttempts",
