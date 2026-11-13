@@ -25,6 +25,7 @@ class SystemSupplierContractTest {
   @Autowired AuthService a;
   @Autowired ObjectMapper json;
   @Autowired SystemJobService jobs;
+  @Autowired RolePolicy rolePolicy;
 
   record C(String id, MockHttpSession session, String csrf) {}
 
@@ -235,6 +236,42 @@ class SystemSupplierContractTest {
         s.object().put("enabled", true),
         c,
         503);
+  }
+
+  @Test
+  void backgroundAdministrationDeniesEveryNonAdministratorRole() throws Exception {
+    jobs.tasks();
+    for (String role : List.of("OPERATOR", "FINANCE", "SUPPLIER", "SUPPLIER_AGENT")) {
+      String id = "job-role-" + UUID.randomUUID();
+      ObjectNode user = s.object().put("id", id).put("username", id)
+          .put("role", role).put("mustChangePassword", false).put("onboardingRequired", false);
+      if (role.startsWith("SUPPLIER")) {
+        String owner = "job-role-owner-" + UUID.randomUUID();
+        s.create("supplier", owner, s.object().put("id", owner).put("enabled", true).put("state", "APPROVED"));
+        user.put("supplierId", owner);
+      } else user.putNull("supplierId");
+      user.set("permissions", rolePolicy.defaults(role));
+      a.createUser(user, "BackgroundRole@123");
+      MockHttpSession session = new MockHttpSession();
+      session.setAttribute("uid", id);
+      session.setAttribute("sv", 0L);
+      String csrf = json.readTree(mvc.perform(get("/api/auth/csrf").session(session))
+          .andReturn().getResponse().getContentAsString()).path("token").asText();
+      for (String path : List.of("/system/scheduled-tasks",
+          "/system/scheduled-tasks/CCMAX_DAILY_SYNC/runs",
+          "/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings",
+          "/system/scheduled-tasks/unknown/rotation-settings"))
+        mvc.perform(get("/api" + path).session(session)).andExpect(status().isForbidden());
+      for (String path : List.of("/system/scheduled-tasks/CCMAX_DAILY_SYNC/run",
+          "/system/scheduled-tasks/priority-support",
+          "/system/scheduled-tasks/unknown/rotation-settings/retry-restore"))
+        mvc.perform(post("/api" + path).session(session).header("X-CSRF-TOKEN", csrf)
+            .contentType("application/json").content("{}"))
+            .andExpect(status().isForbidden());
+      mvc.perform(put("/api/system/scheduled-tasks/CCMAX_DAILY_SYNC/config").session(session)
+          .header("X-CSRF-TOKEN", csrf).contentType("application/json").content("{\"name\":\"Denied\"}"))
+          .andExpect(status().isForbidden());
+    }
   }
 
   @Test

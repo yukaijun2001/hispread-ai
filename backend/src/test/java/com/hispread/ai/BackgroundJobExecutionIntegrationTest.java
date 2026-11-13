@@ -47,6 +47,8 @@ class BackgroundJobExecutionIntegrationTest {
   AtomicBoolean failRestore;
   AtomicReference<JsonNode> seenPayload;
   AtomicReference<String> seenAuth, seenKey;
+  CountDownLatch requestEntered, releaseRequest;
+  AtomicBoolean blockStatus;
 
   @BeforeEach
   void setup() throws Exception {
@@ -66,6 +68,9 @@ class BackgroundJobExecutionIntegrationTest {
     seenPayload = new AtomicReference<>();
     seenAuth = new AtomicReference<>();
     seenKey = new AtomicReference<>();
+    requestEntered = new CountDownLatch(1);
+    releaseRequest = new CountDownLatch(1);
+    blockStatus = new AtomicBoolean();
     server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
     server.createContext(
         "/",
@@ -94,6 +99,14 @@ class BackgroundJobExecutionIntegrationTest {
                       .put("originalAmount", "20.50"));
             }
           } else if (path.endsWith("/status-sync")) {
+            if (blockStatus.get()) {
+              requestEntered.countDown();
+              try {
+                releaseRequest.await(4, TimeUnit.SECONDS);
+              } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+              }
+            }
             if (syncOverride.get() != null) raw = syncOverride.get();
             else {
               ArrayNode resources = response.putArray("resources");
@@ -499,6 +512,47 @@ class BackgroundJobExecutionIntegrationTest {
     s.update("scheduled-task", key, null, s.object().put("nextRunAt", Instant.EPOCH.toString()));
     jobs.tick();
     assertEquals(1, requests.size());
+  }
+
+  @Test
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  void concurrentRunsAndConfigurationWritesAreRejectedBeforeAnotherRequest() throws Exception {
+    ObjectNode task = task("CCMAX_STATUS_SYNC");
+    String key = task.path("key").asText();
+    ExecutorService worker = Executors.newSingleThreadExecutor();
+    blockStatus.set(true);
+    try {
+      Future<ObjectNode> running = worker.submit(() -> jobs.run(key, "MANUAL"));
+      assertTrue(requestEntered.await(3, TimeUnit.SECONDS));
+      assertEquals("JOB_ALREADY_RUNNING",
+          assertThrows(ApiException.class, () -> jobs.run(key, "MANUAL")).code);
+      assertEquals(409, assertThrows(ApiException.class,
+          () -> jobs.update(key, s.object().put("name", "Concurrent update"))).status);
+      assertEquals(1, requests.size());
+      releaseRequest.countDown();
+      assertEquals("SUCCESS", running.get(3, TimeUnit.SECONDS).path("state").asText());
+      assertFalse(s.get("scheduled-task", key, null).path("running").asBoolean());
+      assertEquals(1, s.list("scheduled-run", null).stream().filter(r -> r.path("taskKey").asText().equals(key)).count());
+    } finally {
+      releaseRequest.countDown();
+      worker.shutdownNow();
+      worker.awaitTermination(4, TimeUnit.SECONDS);
+      s.jdbc.update("delete from hub_entity where kind='scheduled-run' and data->>'taskKey'=?", key);
+      s.jdbc.update("delete from hub_entity where kind='scheduled-task' and id=?", key);
+    }
+  }
+
+  @Test
+  void abandonedRunIsMarkedTimedOutBeforeNextRun() {
+    ObjectNode task = task("CCMAX_STATUS_SYNC");
+    String key = task.path("key").asText();
+    ObjectNode abandoned = s.create("scheduled-run", "GLOBAL", s.object()
+        .put("taskKey", key).put("state", "RUNNING").put("startedAt", Instant.EPOCH.toString()));
+    assertEquals("SUCCESS", jobs.run(key, "MANUAL").path("state").asText());
+    ObjectNode recovered = s.get("scheduled-run", abandoned.path("id").asText(), null);
+    assertEquals("TIMED_OUT", recovered.path("state").asText());
+    assertEquals("LEASE_LOST", recovered.path("resultCode").asText());
+    assertFalse(recovered.path("finishedAt").asText().isBlank());
   }
 
   @Test

@@ -11,6 +11,7 @@ import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -205,6 +206,55 @@ class MonitoringContractIntegrationTest {
       assertTrue(displayed.path("stale").asBoolean());
       assertEquals("123", displayed.path("rpm").asText());
     } finally {
+      server.stop(0);
+    }
+  }
+
+  @Test
+  void collectorRespectsEnabledDueAndFailureCooldownThenRecovers() throws Exception {
+    AtomicInteger calls = new AtomicInteger();
+    AtomicReference<String> body = new AtomicReference<>("{\"rpm\":12,\"tpm\":45}");
+    HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+    server.createContext("/metrics", exchange -> {
+      calls.incrementAndGet();
+      byte[] bytes = body.get().getBytes(StandardCharsets.UTF_8);
+      exchange.sendResponseHeaders(200, bytes.length);
+      exchange.getResponseBody().write(bytes);
+      exchange.close();
+    });
+    server.start();
+    boolean previous = monitoring.schedulingEnabled;
+    try {
+      monitoring.schedulingEnabled = true;
+      ObjectNode source = s.create("monitoring-source", "GLOBAL",
+          source("due-" + UUID.randomUUID(), "0", "0", true, true)
+              .put("endpoint", "http://127.0.0.1:" + server.getAddress().getPort() + "/metrics")
+              .put("rpmPath", "rpm").put("tpmPath", "tpm").put("authType", "NONE")
+              .put("lastAttemptAt", java.time.Instant.now().toString()));
+      String id = source.path("id").asText();
+      monitoring.collectDue();
+      assertEquals(0, calls.get());
+      s.update("monitoring-source", id, null, s.object().put("lastAttemptAt", java.time.Instant.EPOCH.toString()));
+      monitoring.collectDue();
+      assertEquals(1, calls.get());
+      assertEquals("12", s.get("monitoring-source", id, null).path("rpm").asText());
+      body.set("{\"rpm\":-1,\"tpm\":45}");
+      s.update("monitoring-source", id, null, s.object().put("lastAttemptAt", java.time.Instant.EPOCH.toString()));
+      monitoring.collectDue();
+      assertEquals(2, calls.get());
+      assertEquals("ERROR", s.get("monitoring-source", id, null).path("state").asText());
+      monitoring.collectDue();
+      assertEquals(2, calls.get());
+      body.set("{\"rpm\":30,\"tpm\":60}");
+      s.update("monitoring-source", id, null, s.object().put("lastAttemptAt", java.time.Instant.EPOCH.toString()));
+      monitoring.collectDue();
+      assertEquals("READY", s.get("monitoring-source", id, null).path("state").asText());
+      assertEquals("30", s.get("monitoring-source", id, null).path("rpm").asText());
+      s.update("monitoring-source", id, null, s.object().put("enabled", false).put("lastAttemptAt", java.time.Instant.EPOCH.toString()));
+      monitoring.collectDue();
+      assertEquals(3, calls.get());
+    } finally {
+      monitoring.schedulingEnabled = previous;
       server.stop(0);
     }
   }
