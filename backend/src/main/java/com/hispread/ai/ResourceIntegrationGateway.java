@@ -166,6 +166,10 @@ public class ResourceIntegrationGateway {
       nativeCcmax.validateCallback(target, sessionId, code);
   }
 
+  public void claimNativeOAuthExchange(ObjectNode target, String sessionId, String localId, String code, String operationId) {
+    nativeCcmax.claimExchange(target, sessionId, localId, code, operationId);
+  }
+
   private ObjectNode transport(
       ObjectNode config, String method, String path, JsonNode body, String key) {
     String base = config.path("baseUrl").asText(config.path("endpoint").asText());
