@@ -9,6 +9,9 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.LongSupplier;
 
 final class NativeCcmaxAdapter {
   interface Transport {
@@ -20,10 +23,13 @@ final class NativeCcmaxAdapter {
   private final Map<String, Session> sessions = new ConcurrentHashMap<>();
   private final Store store;
   private final Transport transport;
+  private final LongSupplier remainingNanos;
+  private final ReentrantLock loginLock = new ReentrantLock();
 
-  NativeCcmaxAdapter(Store store, Transport transport) {
+  NativeCcmaxAdapter(Store store, Transport transport, LongSupplier remainingNanos) {
     this.store = store;
     this.transport = transport;
+    this.remainingNanos = remainingNanos;
   }
 
   ObjectNode exchange(ObjectNode config, String method, String path, JsonNode body, String key) {
@@ -164,7 +170,22 @@ final class NativeCcmaxAdapter {
     throw rejected();
   }
 
-  private synchronized Session login(ObjectNode config) {
+  private Session login(ObjectNode config) {
+    boolean acquired = false;
+    try {
+      acquired = loginLock.tryLock(remainingNanos.getAsLong(), TimeUnit.NANOSECONDS);
+      if (!acquired) throw new ApiException(504, "上号单次超时，请查询原操作，勿重复提交", "CCMAX_CREATION_TIMEOUT");
+      return loginWithLock(config);
+    } catch (InterruptedException interrupted) {
+      Thread.currentThread().interrupt();
+      throw new ApiException(503, "上游登录等待已中断", "RESOURCE_UPSTREAM_INTERRUPTED");
+    } finally {
+      if (acquired) loginLock.unlock();
+    }
+  }
+
+  private Session loginWithLock(ObjectNode config) {
+    remainingNanos.getAsLong();
     String id = text(config, "id");
     Session existing = sessions.get(id);
     long version = config.path("version").asLong();
@@ -329,6 +350,7 @@ final class NativeCcmaxAdapter {
       for (ObjectNode operation : store.list("resource-operation", null))
         if (eq(operation, "resourceId", localId) && eq(operation, "protocol", "CCMAX_NATIVE")
             && operation.has("oauthAuthorizationId")
+            && !operation.path("creationConfirmedNotCreated").asBoolean()
             && Set.of("UNKNOWN", "SUBMITTING", "RUNNING", "PENDING").contains(text(operation, "state")))
           throw new ApiException(409, "原授权兑换结果未确认，请查询原操作，勿生成新授权", "RESOURCE_OPERATION_UNCERTAIN");
       if (!text(resource, "laneId").isBlank()) bound = mapped(config, resource);

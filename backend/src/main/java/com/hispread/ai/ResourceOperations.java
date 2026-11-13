@@ -25,17 +25,19 @@ public class ResourceOperations {
   private final ResourceIntegrationGateway gateway;
   private final NewApiPriorityService newApiPriority;
   private final CcmaxAccessPolicy ccmaxPolicy;
+  private final CcmaxIntakeControls intakeControls;
   private final TransactionTemplate transactions;
 
   public ResourceOperations(
       Store store, AuthService auth, BusinessSupport b, ResourceIntegrationGateway gateway, NewApiPriorityService newApiPriority,
-      CcmaxAccessPolicy ccmaxPolicy, PlatformTransactionManager transactionManager) {
+      CcmaxAccessPolicy ccmaxPolicy, CcmaxIntakeControls intakeControls, PlatformTransactionManager transactionManager) {
     this.store = store;
     this.auth = auth;
     this.b = b;
     this.gateway = gateway;
     this.newApiPriority = newApiPriority;
     this.ccmaxPolicy = ccmaxPolicy;
+    this.intakeControls = intakeControls;
     this.transactions = new TransactionTemplate(transactionManager);
   }
 
@@ -775,6 +777,8 @@ public class ResourceOperations {
         }
         ObjectNode config = gateway.requireConfigured(text(authorization, "targetId"));
         if (!eq(config, "protocol", "CCMAX_NATIVE")) throw new ApiException(409, "目标协议已变化，请核对原授权");
+        ObjectNode nativeSession = store.get("native-oauth", nativeSessionId, "GLOBAL");
+        int creationTimeout = text(nativeSession, "accountId").isBlank() ? intakeControls.admit(owner) : 0;
         String operationId = UUID.randomUUID().toString();
         gateway.claimNativeOAuthExchange(config, nativeSessionId, rid, text(body, "code"), operationId);
         String path = session ? "/resources/oauth/supplier-submit"
@@ -785,6 +789,7 @@ public class ResourceOperations {
             .put("upstreamPath", path).put("method", method).put("state", "UNKNOWN").put("status", "UNKNOWN")
             .put("writeIntentVersion", 1).put("startedAt", Instant.now().toString()).put("createdBy", auth.userId(req))
             .put("oauthAuthorizationId", authorizationId).put("oauthNativeSessionId", nativeSessionId);
+        if (creationTimeout > 0) op.put("creationTimeoutSeconds", creationTimeout);
         op.set("request", payload);
         op.set("oauthBinding", store.object().put("targetId", text(local, "targetId"))
             .put("accountId", local.path("upstreamAccountId").asText(local.path("laneId").asText())));
@@ -804,14 +809,16 @@ public class ResourceOperations {
     ObjectNode op = attempt.operation();
     ObjectNode response;
     try {
-      response = gateway.exchange(attempt.config(), text(op, "method"), text(op, "upstreamPath"), attempt.wire(), text(op, "requestKey"));
+      response = gateway.withCreationDeadline(op.path("creationTimeoutSeconds").asInt(),
+          () -> gateway.exchange(attempt.config(), text(op, "method"), text(op, "upstreamPath"), attempt.wire(), text(op, "requestKey")));
       validateIdentity(text(op, "resourceId"), text(op, "supplierId"), response);
       ResourceResponseValidator.validate(text(op, "type"), response, op.path("request"));
     } catch (ApiException failure) {
       transactions.execute(status -> {
         ObjectNode patch = store.object().put("state", "UNKNOWN").put("status", "UNKNOWN")
             .put("errorCode", Objects.toString(failure.code, "RESOURCE_UPSTREAM_ERROR"))
-            .put("error", "授权兑换结果未确认，请查询原操作，勿重复提交");
+            .put("error", "授权兑换结果未确认，请查询原操作，勿重复提交")
+            .put("finishedAt", Instant.now().toString());
         patch.set("result", store.object().put("state", "UNKNOWN")
             .put("message", "授权兑换结果未确认，未再次发送兑换请求"));
         store.update("resource-operation", text(op, "id"), text(op, "supplierId"), patch);
@@ -1333,6 +1340,28 @@ public class ResourceOperations {
     if (!body.path("confirmedNotCreated").asBoolean()
         || !Set.of("FAILED", "UNKNOWN").contains(text(resource, "dispatchState")))
       throw new ApiException(409, "请先核实上游未创建该资源");
+    String owner = b.entityOwner("resource", id, req);
+    store.jdbc.queryForObject("select pg_advisory_xact_lock(hashtext(?),hashtext(?))",
+        (row, index) -> true, "ccmax-intake-admission", owner);
+    for (ObjectNode op : store.list("resource-operation", owner))
+      if (eq(op, "resourceId", id) && eq(op, "protocol", "CCMAX_NATIVE")
+          && (eq(op, "type", "OAUTH_COMPLETE") || op.path("creationTimeoutSeconds").asInt() > 0)
+          && Set.of("UNKNOWN", "PENDING", "RUNNING", "SUBMITTING").contains(text(op, "state"))) {
+        Supplier<ObjectNode> reviewed = () -> {
+          ObjectNode current = getOperation(text(op, "id"), req);
+          ObjectNode latestResource = b.resource(id, req);
+          if (!Set.of("UNKNOWN", "PENDING", "RUNNING", "SUBMITTING").contains(text(current, "state"))
+              || !Set.of("UNKNOWN", "FAILED").contains(text(latestResource, "dispatchState")))
+            throw new ApiException(409, "原创建结果已变化，请刷新后重新核对", "RESOURCE_OPERATION_CONFIRMED");
+          return store.update("resource-operation", text(op, "id"), owner,
+              store.object().put("creationConfirmedNotCreated", true).put("creationReviewedBy", auth.userId(req))
+                  .put("creationReviewedAt", Instant.now().toString()));
+        };
+        if (!text(op, "oauthNativeSessionId").isBlank())
+          operationLocked("resource-oauth:" + text(op, "targetId"), text(op, "oauthNativeSessionId"), reviewed);
+        else if (!text(op, "finishedAt").isBlank()) reviewed.get();
+        else throw new ApiException(409, "原创建是否结束尚未确认，不能释放并发名额", "RESOURCE_OPERATION_UNCERTAIN");
+      }
     ObjectNode patch = b.pick(body, "version");
     patch.put("dispatchState", "FAILED").put("creationFinished", true);
     if (eq(body, "action", "DELETE")) patch.put("deleted", true);

@@ -139,6 +139,22 @@ class AdminIntegrationTest {
   }
 
   @Test
+  void intakeLimitsRequireWholeNumbersAndRejectMalformedSettings() throws Exception {
+    Client admin = client(true);
+    for (String field : List.of("ccmaxIntakeConcurrencyLimit", "ccmaxCreationTimeoutSeconds")) {
+      for (JsonNode invalid : List.of(json.readTree("0"), json.readTree("1.5"), json.readTree("\"2\""), json.readTree("null"))) {
+        ObjectNode input = s.object(); input.set(field, invalid);
+        mvc.perform(put("/api/system/settings").session(admin.session).header("X-CSRF-TOKEN", admin.csrf)
+            .contentType("application/json").content(input.toString())).andExpect(status().isBadRequest());
+      }
+    }
+    JsonNode saved = write("PUT", "/api/system/settings", s.object()
+        .put("ccmaxIntakeConcurrencyLimit", 2).put("ccmaxCreationTimeoutSeconds", 3), admin);
+    assertEquals(2, saved.path("ccmaxIntakeConcurrencyLimit").asInt());
+    assertEquals(3, saved.path("ccmaxCreationTimeoutSeconds").asInt());
+  }
+
+  @Test
   void workbenchUsesRoleAndActualSettlementTotals() throws Exception {
     Client admin = client(true), supplier = client(false);
     String owner = a.findUser(supplier.uid).path("supplierId").asText();
