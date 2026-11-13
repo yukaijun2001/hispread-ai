@@ -24,12 +24,14 @@ final class NativeCcmaxAdapter {
   private final Store store;
   private final Transport transport;
   private final LongSupplier remainingNanos;
+  private final CcmaxIntakeLedger intakeLedger;
   private final ReentrantLock loginLock = new ReentrantLock();
 
-  NativeCcmaxAdapter(Store store, Transport transport, LongSupplier remainingNanos) {
+  NativeCcmaxAdapter(Store store, Transport transport, LongSupplier remainingNanos, CcmaxIntakeLedger intakeLedger) {
     this.store = store;
     this.transport = transport;
     this.remainingNanos = remainingNanos;
+    this.intakeLedger = intakeLedger;
   }
 
   ObjectNode exchange(ObjectNode config, String method, String path, JsonNode body, String key) {
@@ -284,6 +286,10 @@ final class NativeCcmaxAdapter {
     data.putObject("health")
         .put("paused", status.equals("disabled"))
         .put("status", text(account, "health_status"));
+    if (Set.of("token_error", "revoked", "identity_verification_required").contains(text(account, "health_status"))) {
+      ((ObjectNode) data.path("health")).put("credentialFailureReason", text(account, "health_status"));
+      result.put("operationalState", "INVALID").put("laneState", "INVALID");
+    }
     data.put("upstreamProtocol", "CCMAX_NATIVE");
     ObjectNode quota = data.putObject("usage");
     JsonNode stats = account.path("stats"), utilization = stats.path("claude_utilization");
@@ -449,6 +455,8 @@ final class NativeCcmaxAdapter {
             .put("outbound_proxy_mode", "direct")
             .put("overwrite_existing", false);
     String bound = text(session, "accountId");
+    JsonNode decision = input.path("intakeDecision");
+    if (bound.isBlank() && decision.isObject()) payload.put("status", "disabled").put("weight", decision.path("priority").asInt());
     String path =
         bound.isBlank()
             ? "/admin/oauth-accounts/exchange"
@@ -468,6 +476,28 @@ final class NativeCcmaxAdapter {
                 .anyMatch(id -> id.asText().equals(accountId))))
       throw new ApiException(409, "上游返回已有账号更新，未记为新增交付，请核对原账号", "RESOURCE_EXISTING_ACCOUNT_UPDATED");
     ObjectNode observed = account(config, accountId, key);
+    String intakeCategory = "";
+    if (bound.isBlank() && decision.isObject()) {
+      String plan = text(observed.path("subscription_info"), "plan").toLowerCase(Locale.ROOT);
+      intakeCategory = plan.equals("pro") ? "PRO" : Set.of("max", "team", "enterprise", "free").contains(plan) ? "NON_PRO" : "UNKNOWN";
+      // Exchange creates disabled: verify that contract before trusting admission or enabling.
+      if (!eq(observed, "status", "disabled")) {
+        call(config, "PATCH", accountPath(accountId), store.object().put("status", "disabled"), key);
+        observed = account(config, accountId, key);
+        if (!eq(observed, "status", "disabled")) throw invalid();
+      }
+      try {
+        intakeLedger.classify(text(decision, "supplierId"), text(decision, "id"), intakeCategory);
+      } catch (ApiException denied) {
+        store.update("native-oauth", sessionId, "GLOBAL", store.object().put("state", "REJECTED").put("accountId", accountId)
+            .put("failureCode", denied.code).put("failureMessage", denied.getMessage()));
+        return observation(observed).put("state", "FAILED").put("intakeCategory", intakeCategory)
+            .put("failureCode", denied.code).put("message", denied.getMessage());
+      }
+      call(config, "PATCH", accountPath(accountId), store.object().put("weight", decision.path("priority").asInt()).put("status", "active"), key);
+      observed = account(config, accountId, key);
+      if (!eq(observed, "status", "active") || observed.path("weight").asInt(-1) != decision.path("priority").asInt()) throw invalid();
+    }
     if (bound.isBlank() && !eq(observed, "status", "active"))
       throw new ApiException(502, "新账号未处于可用状态，未确认交付成功", "RESOURCE_UPSTREAM_INVALID_RESPONSE");
     if (!bound.isBlank() && !eq(observed, "status", text(session, "originalStatus")))
@@ -477,10 +507,12 @@ final class NativeCcmaxAdapter {
         sessionId,
         "GLOBAL",
         store.object().put("state", "SUCCESS").put("accountId", accountId));
-    return observation(observed)
+    ObjectNode completion = observation(observed)
         .put("state", "SUCCESS")
         .put("credentialConfigured", true)
         .put("existingAccountUpdated", reply.path("overwritten").asBoolean());
+    if (!intakeCategory.isBlank()) completion.put("intakeCategory", intakeCategory);
+    return completion;
   }
 
   void claimExchange(ObjectNode config, String sessionId, String localId, String code, String operationId) {
@@ -534,47 +566,7 @@ final class NativeCcmaxAdapter {
   }
 
   private ObjectNode submit(ObjectNode config, JsonNode body, String key) {
-    JsonNode input = body.path("input").isObject() ? body.path("input") : body;
-    if (!text(input, "proxyUrl").isBlank()) throw proxyUnsupported();
-    if (!text(body, "localResourceId").isBlank()) {
-      ObjectNode local = store.get("resource", text(body, "localResourceId"), null);
-      if (!text(local, "laneId").isBlank()) throw new ApiException(409, "已有账号关联不可作为新增交付再次提交");
-    }
-    Set<String> existingIds = existingAccountIds(config, key);
-    ObjectNode payload =
-        store
-            .object()
-            .put("name", text(input, "accountName"))
-            .put("inference_backend", "native")
-            .put("outbound_proxy_mode", "direct")
-            .put("overwrite_existing", false);
-    String mode = text(input, "credentialMode"), path;
-    if (Set.of("REFRESH_TOKEN", "ACCESS_TOKEN").contains(mode)) {
-      if (mode.equals("REFRESH_TOKEN")) payload.put("refresh_token", text(input, "refreshToken"));
-      else payload.put("access_token", text(input, "accessToken"));
-      path = "/admin/oauth-accounts/import-rt";
-    } else if (mode.equals("SESSION_KEY")) {
-      payload.putArray("session_keys").add(text(input, "sessionKey"));
-      payload.putObject("proxy_source").put("mode", "direct");
-      path = "/admin/oauth-accounts/import-by-session-key/batch";
-    } else throw unsupported();
-    ObjectNode reply = call(config, "POST", path, payload, key);
-    JsonNode imported = reply;
-    if (mode.equals("SESSION_KEY")) {
-      if (reply.path("ok").asInt() != 1 || reply.path("results").size() != 1) throw rejected();
-      imported = reply.path("results").get(0);
-      if (!imported.path("ok").asBoolean()) throw rejected();
-    }
-    String id = imported.path("id").asText(imported.path("account_id").asText());
-    if (imported.path("overwritten").asBoolean() || existingIds.contains(id))
-      throw new ApiException(409, "上游更新了已有账号，未记为新增交付", "RESOURCE_EXISTING_ACCOUNT_UPDATED");
-    ObjectNode observed = account(config, id, key);
-    if (!eq(observed, "status", "active"))
-      throw new ApiException(502, "导入账号未处于可用状态，未确认交付成功", "RESOURCE_UPSTREAM_INVALID_RESPONSE");
-    return observation(observed)
-        .put("state", "SUCCESS")
-        .put("credentialConfigured", true)
-        .put("existingAccountUpdated", imported.path("overwritten").asBoolean());
+    throw new ApiException(400, "原生上号仅支持 OAuth，RT/AT/SK 导入已停用", "CCMAX_RAW_IMPORT_DISABLED");
   }
 
   private ObjectNode lifecycle(ObjectNode config, JsonNode body, String key, boolean readOnly) {
@@ -790,6 +782,21 @@ final class NativeCcmaxAdapter {
     if (type.equals("OAUTH_COMPLETE")) {
       String sessionId = text(operation.path("request"), "sessionId");
       ObjectNode saved = session(config, sessionId);
+      if (!text(operation, "intakeLedgerId").isBlank() && !text(saved, "observedAccountId").isBlank()) {
+        ObjectNode quota = store.get("intake-ledger", text(operation, "intakeLedgerId"), text(operation, "supplierId"));
+        ObjectNode observed = account(config, text(saved, "observedAccountId"), key);
+        String category = text(quota, "category");
+        if (Set.of("CLASSIFIED", "SUCCESS").contains(text(quota, "state"))
+            && Set.of("PRO", "NON_PRO").contains(category) && eq(observed, "status", "active")
+            && observed.path("weight").asInt(-1) == quota.path("priority").asInt()) {
+          store.update("native-oauth", sessionId, "GLOBAL", store.object().put("state", "SUCCESS").put("accountId", text(observed, "id")));
+          return observation(observed).put("state", "SUCCESS").put("intakeCategory", category);
+        }
+        if (eq(saved, "state", "REJECTED") && eq(observed, "status", "disabled"))
+          return observation(observed).put("state", "FAILED").put("intakeCategory", category)
+              .put("failureCode", text(saved, "failureCode")).put("message", text(saved, "failureMessage"));
+        return store.object().put("state", "UNKNOWN").put("message", "已保留账号及额度预留，启用结果未确认；未重复兑换或写入上游");
+      }
       if (eq(saved, "state", "SUCCESS"))
         return observation(account(config, text(saved, "accountId"), key)).put("state", "SUCCESS");
     }

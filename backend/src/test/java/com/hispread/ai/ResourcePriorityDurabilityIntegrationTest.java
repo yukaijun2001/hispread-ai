@@ -46,6 +46,7 @@ class ResourcePriorityDurabilityIntegrationTest {
   AtomicBoolean denyAccountRead;
   AtomicLong loginDelayMs, exchangeDelayMs;
   AtomicLong accountBodyDelayMs;
+  AtomicReference<String> fixturePlan;
   List<ObjectNode> originalSettings;
   CountDownLatch received, release, loginReceived;
 
@@ -70,6 +71,7 @@ class ResourcePriorityDurabilityIntegrationTest {
     loginDelayMs = new AtomicLong();
     exchangeDelayMs = new AtomicLong();
     accountBodyDelayMs = new AtomicLong();
+    fixturePlan = new AtomicReference<>("max");
     originalSettings = store.list("settings", null);
     received = new CountDownLatch(1);
     release = new CountDownLatch(1);
@@ -101,6 +103,8 @@ class ResourcePriorityDurabilityIntegrationTest {
         JsonNode input = store.json.readTree(exchange.getRequestBody());
         String account = input.path("code").asText().startsWith("second") ? "second" : "first";
         exchanges.merge(account, 1, Integer::sum);
+        accountStates.put(account, input.path("status").asText("active"));
+        weights.put(account, input.path("weight").asInt(10));
         received.countDown();
         try { release.await(exchangeDelayMs.get() > 0 ? exchangeDelayMs.get() : 10000, TimeUnit.MILLISECONDS); }
         catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
@@ -154,8 +158,9 @@ class ResourcePriorityDurabilityIntegrationTest {
             try { release.await(10, TimeUnit.SECONDS); }
             catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
           }
-          response.putObject("account").put("id", account).put("status", accountStates.get(account))
+          ObjectNode observed = response.putObject("account").put("id", account).put("status", accountStates.get(account))
               .put("weight", weights.get(account));
+          observed.putObject("subscription_info").put("plan", fixturePlan.get());
         }
       } else {
         status = 404;
@@ -540,6 +545,10 @@ class ResourcePriorityDurabilityIntegrationTest {
     store.jdbc.update("delete from hub_entity where kind='settings'");
     store.create("settings", "GLOBAL", store.object().put("ccmaxIntakeConcurrencyLimit", limit)
         .put("ccmaxCreationTimeoutSeconds", seconds).put("allowAllSuppliersCcmax", true));
+    ObjectNode policy = store.object().put("nonProOpen", true);
+    policy.putObject("nonPro").put("mode", "UNLIMITED");
+    policy.putObject("ranges").putObject("NORMAL").put("min", 10).put("max", 10);
+    store.create("intake-policy", "GLOBAL", store.object().put("id", owner).set("policy", policy));
   }
 
   CompletableFuture<ObjectNode> submitIntake(String authorization, String code, int status) {
@@ -571,6 +580,93 @@ class ResourcePriorityDurabilityIntegrationTest {
     assertEquals("SUCCESS", submitIntake(secondAuthorization, "second-code", 200).get(10, TimeUnit.SECONDS).path("state").asText());
     assertEquals(1, exchanges.get("first"));
     assertEquals(1, exchanges.get("second"));
+  }
+
+  @Test
+  void dailyQuotaReservesBeforeExchangeAndAppliesFrozenPriorityExactlyOnce() throws Exception {
+    intakeControls(5, 30);
+    ObjectNode policy = store.get("intake-policy", owner, null);
+    ((ObjectNode) policy.path("policy").path("nonPro")).put("mode", "LIMITED").put("quantity", 1);
+    store.update("intake-policy", owner, null, store.object().set("policy", policy.path("policy")));
+    String a = intakeSession(first), b = intakeSession(second);
+    var running = submitIntake(a, "first-code", 200);
+    try {
+      assertTrue(received.await(5, TimeUnit.SECONDS));
+      assertEquals("CCMAX_INTAKE_QUOTA_EXHAUSTED", postJson("/api/resources/oauth/supplier-submit",
+          store.object().put("sessionId", b).put("code", "second-code#fixture-state"), 409).path("code").asText());
+      assertFalse(exchanges.containsKey("second"));
+      ObjectNode receipt = store.list("intake-ledger", owner).get(0);
+      assertEquals("RESERVED", receipt.path("state").asText());
+      assertEquals("disabled", accountStates.get("first"));
+    } finally { release.countDown(); }
+    ObjectNode complete = running.get(10, TimeUnit.SECONDS);
+    assertEquals("SUCCESS", complete.path("state").asText());
+    assertEquals("NON_PRO", complete.path("intakeCategory").asText());
+    assertEquals(10, weights.get("first"));
+    assertEquals("active", accountStates.get("first"));
+    assertEquals("SUCCESS", store.list("intake-ledger", owner).get(0).path("state").asText());
+    int patches = writes.get("first");
+    submitIntake(a, "first-code", 200).get(5, TimeUnit.SECONDS);
+    assertEquals(patches, writes.get("first")); assertEquals(1, exchanges.get("first"));
+  }
+
+  @Test
+  void unallowedProOrUnknownPlanStaysDisabledAndReleasesQuotaWithoutDelivery() throws Exception {
+    intakeControls(5, 30); release.countDown(); fixturePlan.set("pro");
+    String a = intakeSession(first);
+    ObjectNode rejected = submitIntake(a, "first-code", 200).get(5, TimeUnit.SECONDS);
+    assertEquals("FAILED", rejected.path("state").asText());
+    assertEquals("PRO_PLAN_NOT_ALLOWED", rejected.path("failureCode").asText());
+    assertEquals("disabled", accountStates.get("first"));
+    assertEquals("RELEASED", store.list("intake-ledger", owner).get(0).path("state").asText());
+    assertEquals("FAILED", store.get("resource", first, owner).path("dispatchState").asText());
+    assertNotEquals("DELIVERED", store.get("resource", first, owner).path("state").asText());
+    assertFalse(writes.containsKey("first"));
+    assertTrue(store.get("resource", first, owner).path("intakeQuarantined").asBoolean());
+    ObjectNode resume = store.object().put("action", "RESUME").put("requestKey", UUID.randomUUID().toString());
+    resume.putArray("items").addObject().put("resourceId", first);
+    assertEquals("CCMAX_INTAKE_QUARANTINED", postJson("/api/resource-lifecycle-jobs", resume, 409).path("code").asText());
+    assertEquals("CCMAX_INTAKE_QUARANTINED", postJson("/api/resources/" + first + "/reauthorizations", store.object(), 409).path("code").asText());
+    fixturePlan.set("unknown");
+    ObjectNode unknown = submitIntake(intakeSession(second), "second-code", 200).get(5, TimeUnit.SECONDS);
+    assertEquals("FAILED", unknown.path("state").asText());
+    assertEquals("PLAN_CHECK_FAILED", unknown.path("failureCode").asText());
+    assertEquals("disabled", accountStates.get("second"));
+  }
+
+  @Test
+  void permittedProIntakeConsumesOnlyProPoolAndUsesServerPriority() throws Exception {
+    intakeControls(5, 30); release.countDown(); fixturePlan.set("pro");
+    store.create("supplier-settings", "GLOBAL", store.object().put("id", owner).put("allowCcmax", true).put("allowPro", true));
+    ObjectNode policy = store.get("intake-policy", owner, null);
+    ((ObjectNode) policy.path("policy")).putObject("pro").put("mode", "LIMITED").put("quantity", 1);
+    store.update("intake-policy", owner, null, store.object().set("policy", policy.path("policy")));
+    String a = intakeSession(first);
+    ObjectNode completed = submitIntake(a, "first-code", 200).get(5, TimeUnit.SECONDS);
+    assertEquals("SUCCESS", completed.path("state").asText()); assertEquals("PRO", completed.path("intakeCategory").asText());
+    assertEquals("PRO", store.list("intake-ledger", owner).get(0).path("category").asText());
+    fixturePlan.set("max");
+    assertEquals("SUCCESS", submitIntake(intakeSession(second), "second-code", 200).get(5, TimeUnit.SECONDS).path("state").asText());
+    assertEquals(2, store.list("intake-ledger", owner).stream().filter(x -> x.path("state").asText().equals("SUCCESS")).count());
+  }
+
+  @Test
+  void classifiedIntakeReadOnlyRecoverySettlesAcceptedActivationWithoutSecondExchange() throws Exception {
+    intakeControls(5, 30); release.countDown();
+    String a = intakeSession(first);
+    ObjectNode completed = submitIntake(a, "first-code", 200).get(5, TimeUnit.SECONDS);
+    String opId = completed.path("operationId").asText();
+    ObjectNode op = store.get("resource-operation", opId, owner);
+    store.update("resource-operation", opId, owner, store.object().put("state", "UNKNOWN"));
+    store.update("intake-ledger", opId, owner, store.object().put("state", "CLASSIFIED"));
+    store.update("resource", first, owner, store.object().put("state", "DRAFT").put("dispatchState", "UNKNOWN")
+        .put("upstreamAccountId", "").put("laneId", ""));
+    store.update("native-oauth", op.path("oauthNativeSessionId").asText(), "GLOBAL", store.object().put("state", "SUBMITTING"));
+    int patches = writes.get("first");
+    ObjectNode recovered = postJson("/api/resources/" + first + "/operations/" + opId + "/reconcile", store.object(), 200);
+    assertEquals("SUCCESS", recovered.path("state").asText());
+    assertEquals("SUCCESS", store.get("intake-ledger", opId, owner).path("state").asText());
+    assertEquals(1, exchanges.get("first")); assertEquals(patches, writes.get("first"));
   }
 
   @Test

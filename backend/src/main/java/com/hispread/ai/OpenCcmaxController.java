@@ -187,7 +187,6 @@ public class OpenCcmaxController {
     ObjectNode out = resources.mine(r);
     for (String k : List.of("proAllowance", "nonProAllowance")) {
       ObjectNode allowance = (ObjectNode) out.path(k);
-      allowance.putNull("groupId").put("reclaimed", false);
       allowance.remove("reservedRemaining");
     }
     out.remove(List.of("proBlockReason", "nonProBlockReason"));

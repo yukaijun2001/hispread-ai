@@ -35,13 +35,13 @@ public class ResourceIntegrationGateway {
   int timeoutMs;
 
   public ResourceIntegrationGateway(Store store, Environment environment, ProxyProbeService proxyProbe,
-      ResourceSyncSettings syncSettings) {
+      ResourceSyncSettings syncSettings, CcmaxIntakeLedger intakeLedger) {
     this.store = store;
     this.environment = environment;
     this.proxyProbe = proxyProbe;
     this.syncSettings = syncSettings;
     this.newApi = new NewApiResourceAdapter(store, this::transport);
-    this.nativeCcmax = new NativeCcmaxAdapter(store, this::transport, this::remainingCreationNanos);
+    this.nativeCcmax = new NativeCcmaxAdapter(store, this::transport, this::remainingCreationNanos, intakeLedger);
     client =
         HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
