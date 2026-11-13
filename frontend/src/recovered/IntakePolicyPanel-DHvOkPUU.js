@@ -138,7 +138,7 @@ function v({
     },
     children: [(0, _.jsx)(o, {
       tone: `amber`,
-      children: l(`注意：此处规则目前仅保存配置，尚未限制上号数量、套餐或优先级。`)
+      children: l(`规则用于后续原生 OAuth 上号。套餐由上游核验，未知套餐保持禁用；处理中及待核实的创建占用预留额度。`)
     }), (0, _.jsxs)(`div`, {
       className: `cc-intake-section-heading`,
       children: [(0, _.jsx)(`h3`, {
@@ -176,7 +176,7 @@ function v({
         })]
       }), (0, _.jsx)(`p`, {
         className: `muted`,
-        children: l(`套餐分类及每日数量限制尚未生效。`)
+        children: l(`按北京时间统计成功新增；历史未识别套餐按保守方式占用两类额度，重新授权不计新增。`)
       })]
     }), (0, _.jsxs)(`div`, {
       className: `cc-intake-priority-heading`,

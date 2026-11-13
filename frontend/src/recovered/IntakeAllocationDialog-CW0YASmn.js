@@ -91,8 +91,12 @@ function y({
         r = e === `S` ? t === `pro` ? C.proLimit : C.nonProLimit : n ? H(n, t) : null;
       if (r === null) return null;
       let i = U(e, t) ?? 0,
-        a = T.filter(n => n[t].trim() !== `` && (e === `S` ? n.parentGroupId === null : n.parentGroupId === e.substring(2))).reduce((e, n) => e + Math.max(0, (H(n, t) ?? 0) - (U(n.key, t) ?? 0)), 0);
-      return Math.max(0, r - i - a)
+        pending = C?.usage.find(n => n.source === e && n.category === (t === `pro` ? `PRO` : `NON_PRO`))?.processing ?? 0,
+        a = T.filter(n => n[t].trim() !== `` && (e === `S` ? n.parentGroupId === null : n.parentGroupId === e.substring(2))).reduce((e, n) => {
+          const childPending = C?.usage.find(row => row.source === n.key && row.category === (t === `pro` ? `PRO` : `NON_PRO`))?.processing ?? 0;
+          return e + Math.max(0, (H(n, t) ?? 0) - (U(n.key, t) ?? 0) - childPending)
+        }, 0);
+      return Math.max(0, r - i - pending - a)
     };
 
   function G(e, t, n) {
@@ -257,7 +261,7 @@ function y({
       },
       children: [(0, g.jsx)(o, {
         tone: `amber`,
-        children: l(`注意：划拨及交付组 PRO 开关目前仅保存配置，尚未限制上号；已用和剩余额度暂不可用。`)
+        children: l(`划拨及交付组 PRO 开关用于后续原生 OAuth 上号。已用和处理中预留均占额；回收只释放未用额度，个人当天回收后次日恢复共享。`)
       }), (0, g.jsx)(`div`, {
         className: `cc-intake-allocation-summary`,
         children: [`pro`, `nonPro`].map(e => (0, g.jsxs)(`div`, {
@@ -403,7 +407,7 @@ function y({
         children: T.filter(e => e.kind === `GROUP` && (e.pro !== `` || e.nonPro !== ``)).map(e => (0, g.jsxs)(`p`, {
           children: [(0, g.jsx)(`strong`, {
             children: C.groups.find(t => t.id === e.subjectId)?.name
-          }), ` `, l(`组内共享剩余`), `：PRO `, m(W(e.key, `pro`)), ` ·`, ` `, l(`非PRO`), ` `, m(W(e.key, `nonPro`))]
+              }), ` `, l(`组内共享剩余`), `：PRO `, e.pro === `` ? l(`跟随供应商共享`) : m(W(e.key, `pro`)), ` ·`, ` `, l(`非PRO`), ` `, e.nonPro === `` ? l(`跟随供应商共享`) : m(W(e.key, `nonPro`))]
         }, e.key))
       }), (0, g.jsx)(`p`, {
         className: `cc-intake-allocation-hint`,

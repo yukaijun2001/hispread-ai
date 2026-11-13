@@ -47,6 +47,13 @@ final class ResourceTelemetry {
     return state.isBlank() ? text(resource, "operationalStatus") : state;
   }
 
+  static boolean matchesFailure(JsonNode resource, String reason) {
+    if (reason == null || reason.isBlank()) return true;
+    String actual = text(resource, "dispatchFailureReason");
+    if (actual.isBlank()) actual = text(resource.path("resourceData").path("health"), "credentialFailureReason");
+    return reason.equals(actual);
+  }
+
   private static boolean delivered(JsonNode resource) {
     return eq(resource, "state", "DELIVERED") && eq(resource, "dispatchState", "SUCCESS");
   }

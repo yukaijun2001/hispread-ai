@@ -16,11 +16,13 @@ public class TeamController {
   private final Store store;
   private final AuthService auth;
   private final BusinessSupport b;
+  private final CcmaxIntakeLedger intakeLedger;
 
-  public TeamController(Store store, AuthService auth, BusinessSupport b) {
+  public TeamController(Store store, AuthService auth, BusinessSupport b, CcmaxIntakeLedger intakeLedger) {
     this.store = store;
     this.auth = auth;
     this.b = b;
+    this.intakeLedger = intakeLedger;
   }
 
   private void manage(HttpServletRequest req) {
@@ -275,7 +277,10 @@ public class TeamController {
     String admin = text(body, "adminUserId");
     if (!admin.isBlank()) ids.add(admin);
     String owner = old == null ? b.tenant(req, body) : b.entityOwner("group", text(old, "id"), req);
+    intakeLedger.lock(owner);
+    if (body.has("allowPro") && !body.path("allowPro").isBoolean()) throw new ApiException(400, "交付组PRO开关须为布尔值");
     for (String id : ids) {
+      intakeLedger.requireMovableMember(owner, id, old == null ? "" : text(old, "id"));
       ObjectNode a = store.get("agent", id, owner);
       if (id.equals(admin) && !auth.enabled(id))
         throw new ApiException(400, "请选择已启用的部门管理员");
@@ -346,6 +351,7 @@ public class TeamController {
     manage(req);
     b.mainSupplier(req);
     ObjectNode old = b.get("group", id, req);
+    intakeLedger.requireGroupRemovalWithoutAllocations(b.entityOwner("group", id, req), id);
     if (old.path("version").asLong() != body.path("version").asLong(-1))
       throw new ApiException(409, "部门已变化，请刷新");
     if (b.owned("group", req).size() < 2) throw new ApiException(409, "至少保留一个部门");
@@ -384,10 +390,7 @@ public class TeamController {
       for (String id : groupMembers(g))
         memberships.add(b.obj().put("userId", id).put("groupId", text(g, "id")));
     if (!out.has("allocations")) out.putArray("allocations");
-    out.putArray("usage");
-    out.putNull("proLimit");
-    out.putNull("nonProLimit");
-    return out;
+    return intakeLedger.allocationView(auth.owner(req), out);
   }
 
   @PutMapping("/cc-intake/allocations")
@@ -395,27 +398,12 @@ public class TeamController {
   public ObjectNode saveAllocations(@RequestBody ObjectNode body, HttpServletRequest req) {
     manage(req);
     b.mainSupplier(req);
+    if (auth.platform(req)) throw new ApiException(403, "仅供应商主账号划拨团队额度");
+    intakeLedger.lock(auth.owner(req));
+    intakeLedger.validateAllocations(auth.owner(req), body);
     if (!body.path("allocations").isArray()) throw new ApiException(400, "allocations须为数组");
-    Map<String, Integer> sums = new HashMap<>();
-    for (JsonNode item : body.path("allocations")) {
-      String kind = text(item, "kind"),
-          id = text(item, "subjectId"),
-          parent = text(item, "parentGroupId");
-      if (!Set.of("GROUP", "USER").contains(kind)) throw new ApiException(400, "无效的划拨对象");
-      b.get(kind.equals("GROUP") ? "group" : "agent", id, req);
-      if (!parent.isBlank()) b.get("group", parent, req);
-      for (String f : List.of("proBasisPoints", "nonProBasisPoints")) {
-        JsonNode v = item.path(f);
-        if (v.isNull() || v.isMissingNode()) continue;
-        if (!v.canConvertToInt() || v.asInt() < 0 || v.asInt() > 10000)
-          throw new ApiException(400, "划拨比例须在0%至100%之间");
-        String key = parent + ":" + f;
-        int sum = sums.getOrDefault(key, 0) + v.asInt();
-        if (sum > 10000) throw new ApiException(400, "同级划拨比例不能超过100%");
-        sums.put(key, sum);
-      }
-    }
     for (JsonNode g : body.path("groupPro")) {
+      if (!g.path("allowPro").isBoolean() || !g.path("version").isIntegralNumber()) throw new ApiException(400, "无效交付组开关或版本");
       ObjectNode patch =
           b.obj()
               .put("allowPro", g.path("allowPro").asBoolean())
@@ -424,6 +412,10 @@ public class TeamController {
     }
     List<ObjectNode> existing = b.owned("allocation", req);
     ObjectNode data = b.pick(body, "allocations", "version");
+    if (!existing.isEmpty() && (!body.path("version").isIntegralNumber()
+        || body.path("version").asLong() != existing.get(0).path("version").asLong()))
+      throw new ApiException(409, "划拨配置已更新，请刷新");
+    intakeLedger.saveReclaims(auth.owner(req), existing.isEmpty() ? b.obj() : existing.get(0), data);
     if (existing.isEmpty()) {
       data.put("id", UUID.randomUUID().toString());
       store.create("allocation", b.scope(req), data);

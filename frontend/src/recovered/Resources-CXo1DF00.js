@@ -1,6 +1,7 @@
 // origin: assets/Resources-CXo1DF00.js
 import { ChannelUsage, NewApiChannelDialog, NewApiLinkDialog, channelLabel, isNewApi } from '../runtime/newapi-channel.js';
 import { NativeCcmaxDialog, NativeCcmaxLinkDialog, isNativeCcmax } from '../runtime/ccmax-native.js';
+import IntakeToday from './IntakeToday-Digz-vi6.js';
 const __vite__mapDeps = (i, m = __vite__mapDeps, d = (m.f || (m.f = ["assets/ResourceLifecycleDialog-C3CIVivi.js", "assets/index-Dnr0i-H9.js", "assets/index-Co8Tabyn.css", "assets/IntakeReviewDialog-C9xZ8Ftb.js", "assets/intake-D282aV6G.css", "assets/PriorityBatchDialog-DWPDEDJI.js", "assets/labels-DaPzz6Ie.js", "assets/CcmaxResourceOverview-BpVmtOxH.js", "assets/ResourceForm-CV4-f1sb.js", "assets/useDeliveryProxies-DGHL4QCT.js", "assets/resourceHelpers-DoyalwRL.js", "assets/ResourceDetail-PGeCmPlL.js", "assets/CcmaxBatchDelivery-BSCydCTL.js", "assets/NewDelivery-CYrGthQl.js", "assets/NewDelivery-BY50kDnq.css"]))) => i.map(i => d[i]);
 import {
   $ as e,
@@ -2717,7 +2718,7 @@ function St({
       onFilter: e => {
         We(`CCMAX`), W(``), K(``), nt(e), L(1)
       }
-    }), s && V && (0, z.jsxs)(`section`, {
+    }), s && V && (0, z.jsx)(IntakeToday, {}), s && V && (0, z.jsxs)(`section`, {
       className: `panel delivery-summary`,
       "aria-label": T(`项目分类汇总`),
       children: [(0, z.jsx)(`h2`, {

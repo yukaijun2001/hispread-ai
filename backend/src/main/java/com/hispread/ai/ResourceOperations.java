@@ -26,11 +26,13 @@ public class ResourceOperations {
   private final NewApiPriorityService newApiPriority;
   private final CcmaxAccessPolicy ccmaxPolicy;
   private final CcmaxIntakeControls intakeControls;
+  private final CcmaxIntakeLedger intakeLedger;
   private final TransactionTemplate transactions;
 
   public ResourceOperations(
       Store store, AuthService auth, BusinessSupport b, ResourceIntegrationGateway gateway, NewApiPriorityService newApiPriority,
-      CcmaxAccessPolicy ccmaxPolicy, CcmaxIntakeControls intakeControls, PlatformTransactionManager transactionManager) {
+      CcmaxAccessPolicy ccmaxPolicy, CcmaxIntakeControls intakeControls, CcmaxIntakeLedger intakeLedger,
+      PlatformTransactionManager transactionManager) {
     this.store = store;
     this.auth = auth;
     this.b = b;
@@ -38,6 +40,7 @@ public class ResourceOperations {
     this.newApiPriority = newApiPriority;
     this.ccmaxPolicy = ccmaxPolicy;
     this.intakeControls = intakeControls;
+    this.intakeLedger = intakeLedger;
     this.transactions = new TransactionTemplate(transactionManager);
   }
 
@@ -91,6 +94,8 @@ public class ResourceOperations {
             "oauthBinding",
             "oauthAuthorizationId",
             "oauthNativeSessionId",
+            "intakeLedgerId",
+            "intakeDecision",
             "fingerprint",
             "proxyUrl",
             "socks5",
@@ -386,6 +391,9 @@ public class ResourceOperations {
             "dispatchFailureReason",
             "submittedAt")) if (upstream.has(f)) update.set(f, upstream.get(f));
     String state = text(response, "state"), dispatch = text(upstream, "dispatchState");
+    if (operationType.equals("OAUTH_COMPLETE") && response.has("failureCode") && state.equals("FAILED"))
+      update.put("intakeQuarantined", true).put("creationFailureHint", text(response, "message"));
+    if (operationType.equals("OAUTH_COMPLETE") && state.equals("SUCCESS")) update.put("intakeQuarantined", false);
     boolean deliveryOperation =
         Set.of("SUBMIT", "DISPATCH", "OAUTH_COMPLETE").contains(operationType);
     if (deliveryOperation
@@ -426,6 +434,7 @@ public class ResourceOperations {
         if (Set.of("PAUSED", "RESUMED", "ACTIVE", "DRAINING", "GONE", "REMOVED").contains(state)) {
           patch.put("operationalState", state.equals("RESUMED") ? "ACTIVE" : state.equals("REMOVED") ? "GONE" : state);
           patch.put("laneState", state.equals("RESUMED") ? "ACTIVE" : state);
+          if (Set.of("GONE", "REMOVED").contains(state)) intakeLedger.confirmedArchive(owner, rid);
         }
       } else if (Set.of("SUCCESS", "COMPLETED", "DONE").contains(state)) {
         for (JsonNode requestItem : op.path("request").path("items"))
@@ -483,6 +492,7 @@ public class ResourceOperations {
   @Transactional(noRollbackFor = ApiException.class)
   public ObjectNode submit(ObjectNode body, HttpServletRequest req) {
     writable(req);
+    CcmaxIntakeLedger.rejectOverrides(body);
     required(body, "requestKey");
     ObjectNode input = body.path("input").isObject() ? (ObjectNode) body.path("input") : body;
     String owner =
@@ -499,6 +509,8 @@ public class ResourceOperations {
       return result(existing, req);
     }
     ObjectNode ccmaxTarget = gateway.requireCcmaxConfigured(text(body, "targetId"));
+    if (eq(ccmaxTarget, "protocol", "CCMAX_NATIVE"))
+      throw new ApiException(400, "原生上号仅支持 OAuth，RT/AT/SK 导入已停用", "CCMAX_RAW_IMPORT_DISABLED");
     ccmaxPolicy.requireIntake(owner);
     required(input, "accountName", "credentialMode");
     String mode = text(input, "credentialMode");
@@ -524,6 +536,11 @@ public class ResourceOperations {
 
   public ObjectNode action(
       String id, String action, String method, ObjectNode body, HttpServletRequest req) {
+    if (Set.of("submit", "dispatch").contains(action) || action.startsWith("oauth/") || action.startsWith("reauthorizations"))
+      CcmaxIntakeLedger.rejectOverrides(body);
+    if ((action.startsWith("oauth/") || action.startsWith("reauthorizations"))
+        && b.resource(id, req).path("intakeQuarantined").asBoolean())
+      throw new ApiException(409, "该账号未通过首次上号规则核验，不能通过重新授权绕过；请先移除后重新交付", "CCMAX_INTAKE_QUARANTINED");
     if (action.equals("credential-refresh")) return credentialRefresh(id, method, body, req);
     if (action.startsWith("reauthorizations/") || Set.of("oauth/complete", "oauth/supplier-submit").contains(action)) {
       writable(req);
@@ -547,6 +564,9 @@ public class ResourceOperations {
     else if (action.equals("say-hi")) auth.require(req, "resource.read");
     else writable(req);
     ObjectNode resource = b.resource(id, req);
+    if (resource.path("intakeQuarantined").asBoolean()
+        && (action.startsWith("oauth/") || action.startsWith("reauthorizations")))
+      throw new ApiException(409, "该账号未通过首次上号规则核验，不能通过重新授权绕过；请先移除后重新交付", "CCMAX_INTAKE_QUARANTINED");
     String owner = b.entityOwner("resource", id, req);
     if (body.has("version") && body.path("version").asLong() != resource.path("version").asLong()
         && text(body, "requestKey").isBlank() && text(body, "requestId").isBlank())
@@ -611,6 +631,8 @@ public class ResourceOperations {
       payload.put("sessionId", text(prior, "upstreamId"));
     }
     if (action.equals("submit") || action.equals("dispatch")) {
+      if (eq(gateway.requireConfigured(actionTarget(resource, body)), "protocol", "CCMAX_NATIVE"))
+        throw new ApiException(400, "原生上号仅支持 OAuth，RT/AT/SK 导入已停用", "CCMAX_RAW_IMPORT_DISABLED");
       b.requireApprovedSupplier(req, owner);
       payload.set("input", previousOperation == null ? resourceInput(resource) : previousOperation.path("request").path("input"));
     }
@@ -647,6 +669,7 @@ public class ResourceOperations {
   @Transactional(noRollbackFor = ApiException.class)
   public ObjectNode authorize(ObjectNode input, HttpServletRequest req) {
     writable(req);
+    CcmaxIntakeLedger.rejectOverrides(input);
     String owner = b.tenant(req, input);
     String key = text(input, "requestKey");
     if (key.isBlank()) key = UUID.randomUUID().toString();
@@ -755,6 +778,7 @@ public class ResourceOperations {
 
   private ObjectNode nativeOAuthComplete(ObjectNode original, String action, String method, ObjectNode body, HttpServletRequest req) {
     writable(req);
+    CcmaxIntakeLedger.rejectOverrides(body);
     String authorizationId = text(original, "id"), nativeSessionId = text(original, "upstreamId");
     return operationLocked("resource-oauth:" + text(original, "targetId"), nativeSessionId, () -> {
       OAuthAttempt attempt = transactions.execute(status -> {
@@ -778,8 +802,10 @@ public class ResourceOperations {
         ObjectNode config = gateway.requireConfigured(text(authorization, "targetId"));
         if (!eq(config, "protocol", "CCMAX_NATIVE")) throw new ApiException(409, "目标协议已变化，请核对原授权");
         ObjectNode nativeSession = store.get("native-oauth", nativeSessionId, "GLOBAL");
+        gateway.validateNativeCallback(text(config, "id"), nativeSessionId, text(body, "code"));
         int creationTimeout = text(nativeSession, "accountId").isBlank() ? intakeControls.admit(owner) : 0;
         String operationId = UUID.randomUUID().toString();
+        ObjectNode intakeDecision = creationTimeout > 0 ? intakeLedger.reserve(local, operationId, req) : null;
         gateway.claimNativeOAuthExchange(config, nativeSessionId, rid, text(body, "code"), operationId);
         String path = session ? "/resources/oauth/supplier-submit"
             : "/resources/" + encode(rid) + "/" + (reauthorization ? "reauthorizations/" + encode(nativeSessionId) : action);
@@ -790,6 +816,7 @@ public class ResourceOperations {
             .put("writeIntentVersion", 1).put("startedAt", Instant.now().toString()).put("createdBy", auth.userId(req))
             .put("oauthAuthorizationId", authorizationId).put("oauthNativeSessionId", nativeSessionId);
         if (creationTimeout > 0) op.put("creationTimeoutSeconds", creationTimeout);
+        if (intakeDecision != null) op.put("intakeLedgerId", operationId);
         op.set("request", payload);
         op.set("oauthBinding", store.object().put("targetId", text(local, "targetId"))
             .put("accountId", local.path("upstreamAccountId").asText(local.path("laneId").asText())));
@@ -799,6 +826,7 @@ public class ResourceOperations {
         if (!reauthorization) store.update("resource", rid, owner, store.object().put("dispatchState", "UNKNOWN"));
         ObjectNode wire = payload.deepCopy().put("sessionId", nativeSessionId).put("localResourceId", rid)
             .put("expectedOAuthOperationId", operationId);
+        if (intakeDecision != null) wire.set("intakeDecision", intakeDecision);
         return new OAuthAttempt(saved, config, wire);
       });
       return attempt.config() == null ? result(attempt.operation(), req) : executeNativeOAuth(attempt, req);
@@ -838,7 +866,8 @@ public class ResourceOperations {
       ObjectNode patch = store.object().put("state", text(response, "state")).put("status", text(response, "state"))
           .put("finishedAt", Instant.now().toString());
       patch.set("result", response);
-      if (eq(response, "state", "SUCCESS"))
+      if (!text(op, "intakeLedgerId").isBlank()) intakeLedger.settle(text(op, "supplierId"), text(op, "intakeLedgerId"), text(response, "state"));
+      if (eq(response, "state", "SUCCESS") || eq(op, "type", "OAUTH_COMPLETE") && eq(response, "state", "FAILED"))
         applyResource(text(op, "resourceId"), text(op, "supplierId"), response, text(op, "type"), req);
       return result(store.update("resource-operation", text(op, "id"), text(op, "supplierId"), patch), req);
     });
@@ -866,6 +895,18 @@ public class ResourceOperations {
   public ObjectNode reconcile(String id, HttpServletRequest req) {
     writable(req);
     ObjectNode operation = getOperation(id, req);
+    if (eq(operation, "type", "OAUTH_COMPLETE") && !text(operation, "intakeLedgerId").isBlank())
+      return operationLocked("resource-oauth:" + text(operation, "targetId"), text(operation, "oauthNativeSessionId"),
+          () -> preservingApiFailure(() -> {
+            ObjectNode current = getOperation(id, req);
+            if (Set.of("SUCCESS", "FAILED").contains(text(current, "state"))) return result(current, req);
+            ObjectNode resource = b.resource(text(current, "resourceId"), req);
+            if (!eq(resource, "targetId", text(current.path("oauthBinding"), "targetId"))
+                || !resource.path("upstreamAccountId").asText(resource.path("laneId").asText())
+                    .equals(text(current.path("oauthBinding"), "accountId")))
+              throw new ApiException(409, "授权期间资源关联已变化，请核对原账号", "RESOURCE_MAPPING_CHANGED");
+            return reconcileTransactional(id, req);
+          }));
     if (eq(operation, "type", "CREDENTIAL-REFRESH") && eq(operation, "protocol", "CCMAX_NATIVE"))
       return operationLocked("resource-credential:" + text(operation, "supplierId"), text(operation, "resourceId"), () -> {
         MaintenanceAttempt attempt = transactions.execute(status -> {
@@ -921,6 +962,7 @@ public class ResourceOperations {
     ObjectNode patch = b.obj().put("state", state).put("status", state);
     patch.set("result", response);
     ObjectNode updated = store.update("resource-operation", id, text(op, "supplierId"), patch);
+    if (!text(op, "intakeLedgerId").isBlank()) intakeLedger.settle(text(op, "supplierId"), text(op, "intakeLedgerId"), state);
     applyResource(text(op, "resourceId"), text(op, "supplierId"), response, text(op, "type"), req);
     applyJob(updated, response, req);
     return result(updated, req);
@@ -1109,6 +1151,8 @@ public class ResourceOperations {
       String rid = text(item, "resourceId");
       if (!ids.add(rid)) throw new ApiException(400, "资源不能重复");
       ObjectNode resource = b.resource(rid, req);
+      if (type.equals("LIFECYCLE") && eq(body, "action", "RESUME") && resource.path("intakeQuarantined").asBoolean())
+        throw new ApiException(409, "账号未通过首次上号规则核验，不可启用，请先移除后重新交付", "CCMAX_INTAKE_QUARANTINED");
       if ((!text(resource, "upstreamChannelId").isBlank() || !text(resource, "upstreamAccountId").isBlank()) && eq(resource, "operationalState", "GONE"))
         throw new ApiException(409, "渠道已移除，不可再操作", "RESOURCE_CHANNEL_REMOVED");
       String itemTarget = actionTarget(resource, body);
@@ -1349,6 +1393,11 @@ public class ResourceOperations {
           && Set.of("UNKNOWN", "PENDING", "RUNNING", "SUBMITTING").contains(text(op, "state"))) {
         Supplier<ObjectNode> reviewed = () -> {
           ObjectNode current = getOperation(text(op, "id"), req);
+          if (!text(current, "oauthNativeSessionId").isBlank()) {
+            ObjectNode nativeSession = store.get("native-oauth", text(current, "oauthNativeSessionId"), "GLOBAL");
+            if (!text(nativeSession, "observedAccountId").isBlank())
+              throw new ApiException(409, "上游已有兑换账号记录，不能确认未创建，请核对原账号", "RESOURCE_OPERATION_UNCERTAIN");
+          }
           ObjectNode latestResource = b.resource(id, req);
           if (!Set.of("UNKNOWN", "PENDING", "RUNNING", "SUBMITTING").contains(text(current, "state"))
               || !Set.of("UNKNOWN", "FAILED").contains(text(latestResource, "dispatchState")))
@@ -1361,6 +1410,7 @@ public class ResourceOperations {
           operationLocked("resource-oauth:" + text(op, "targetId"), text(op, "oauthNativeSessionId"), reviewed);
         else if (!text(op, "finishedAt").isBlank()) reviewed.get();
         else throw new ApiException(409, "原创建是否结束尚未确认，不能释放并发名额", "RESOURCE_OPERATION_UNCERTAIN");
+        if (!text(op, "intakeLedgerId").isBlank()) intakeLedger.settle(owner, text(op, "intakeLedgerId"), "FAILED");
       }
     ObjectNode patch = b.pick(body, "version");
     patch.put("dispatchState", "FAILED").put("creationFinished", true);

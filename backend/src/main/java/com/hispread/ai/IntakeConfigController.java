@@ -17,14 +17,16 @@ public class IntakeConfigController {
   private final BusinessSupport b;
   private final AccessPolicy access;
   private final SystemJobService jobs;
+  private final CcmaxIntakeLedger intakeLedger;
 
   public IntakeConfigController(
-      Store s, AuthService a, BusinessSupport b, AccessPolicy access, SystemJobService jobs) {
+      Store s, AuthService a, BusinessSupport b, AccessPolicy access, SystemJobService jobs, CcmaxIntakeLedger intakeLedger) {
     this.s = s;
     this.a = a;
     this.b = b;
     this.access = access;
     this.jobs = jobs;
+    this.intakeLedger = intakeLedger;
   }
 
   private void guard(HttpServletRequest r, String permission) {
@@ -80,17 +82,6 @@ public class IntakeConfigController {
     return s.update("supplier-settings", id, null, body);
   }
 
-  private ObjectNode defaultPolicy() {
-    ObjectNode p = s.object().put("nonProOpen", false);
-    for (String k : List.of("pro", "nonPro"))
-      p.set(k, s.object().put("mode", "UNLIMITED").putNull("quantity"));
-    ObjectNode ranges = s.object();
-    for (String tier : List.of("FALLBACK", "NORMAL", "PAYMENT_TERM", "PARTNER", "TEMPORARY"))
-      ranges.set(tier, s.object().put("min", 0).put("max", 100));
-    p.set("ranges", ranges);
-    return p;
-  }
-
   @GetMapping({
     "/cc-intake/admin/system",
     "/cc-intake/admin/suppliers/{id}",
@@ -105,12 +96,12 @@ public class IntakeConfigController {
     if (memberId != null) s.get("agent", memberId, id);
     String key = id == null ? "system" : id + (memberId == null ? "" : ":" + memberId);
     ObjectNode d = s.object();
-    d.set("policy", defaultPolicy());
-    ObjectNode inherited = defaultPolicy();
+    d.set("policy", intakeLedger.defaults(id == null));
+    ObjectNode inherited = intakeLedger.defaults(true);
     String parent = id == null ? null : memberId == null ? "system" : id;
     if (parent != null)
       try {
-        inherited = (ObjectNode) s.get("intake-policy", parent, null).path("policy").deepCopy();
+        inherited = intakeLedger.effectivePolicy(memberId == null ? "system" : id, "");
       } catch (ApiException ignored) {
       }
     d.set("inherited", inherited);
@@ -124,12 +115,14 @@ public class IntakeConfigController {
     "/cc-intake/admin/suppliers/{id}",
     "/cc-intake/admin/suppliers/{id}/members/{memberId}"
   })
+  @Transactional
   public Object policy(
       @PathVariable(required = false) String id,
       @PathVariable(required = false) String memberId,
       @RequestBody ObjectNode body,
       HttpServletRequest r) {
     guard(r, id == null ? "system.settings" : "supplier.write");
+    if (id != null) intakeLedger.lock(id);
     ObjectNode existing = (ObjectNode) policy(id, memberId, r);
     if (!body.path("policy").isObject() || !body.path("policy").path("ranges").isObject())
       throw new ApiException(400, "规则必须包含policy.ranges");
@@ -139,7 +132,9 @@ public class IntakeConfigController {
       if (!Set.of("UNLIMITED", "LIMITED", "INHERIT").contains(mode)
           || id == null && mode.equals("INHERIT")) throw new ApiException(400, "无效数量限制规则");
       if (mode.equals("LIMITED")
-          && (policy.path(kind).path("quantity").asLong(-1) < 0
+          && (!policy.path(kind).path("quantity").isIntegralNumber()
+              || !policy.path(kind).path("quantity").canConvertToLong()
+              || policy.path(kind).path("quantity").asLong(-1) < 0
               || policy.path(kind).path("quantity").asLong() > 100000000))
         throw new ApiException(400, "数量限制超出范围");
     }
@@ -150,14 +145,23 @@ public class IntakeConfigController {
             e -> {
               if (!Set.of("FALLBACK", "NORMAL", "PAYMENT_TERM", "PARTNER", "TEMPORARY")
                   .contains(e.getKey())) throw new ApiException(400, "无效优先级档位");
+              if (!e.getValue().path("min").isIntegralNumber() || !e.getValue().path("max").isIntegralNumber()
+                  || !e.getValue().path("min").canConvertToInt() || !e.getValue().path("max").canConvertToInt())
+                throw new ApiException(400, "优先级上下限须为整数");
               int min = e.getValue().path("min").asInt(-1),
                   max = e.getValue().path("max").asInt(-1);
               if (min < 0 || max > 1000 || min > max)
                 throw new ApiException(400, "优先级范围需为0至1000且下限不大于上限");
             });
+    if (policy.hasNonNull("tier") && !Set.of("FALLBACK", "NORMAL", "PAYMENT_TERM", "PARTNER", "TEMPORARY").contains(text(policy, "tier")))
+      throw new ApiException(400, "无效优先级档位");
+    if (policy.hasNonNull("nonProOpen") && !policy.path("nonProOpen").isBoolean())
+      throw new ApiException(400, "非PRO开放状态须为布尔值");
     ObjectNode patch = s.object();
     patch.set("policy", policy);
-    if (body.has("version")) patch.set("version", body.get("version"));
+    if (!body.path("version").isIntegralNumber() || body.path("version").asLong() != existing.path("version").asLong())
+      throw new ApiException(409, "上号规则已更新，请刷新后保存");
+    patch.set("version", body.get("version"));
     return s.update("intake-policy", text(existing, "id"), null, patch);
   }
 

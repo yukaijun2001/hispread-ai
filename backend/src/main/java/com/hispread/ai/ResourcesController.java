@@ -22,6 +22,7 @@ public class ResourcesController {
   private final ResourceOperations operations;
   private final ResourceIntegrationGateway gateway;
   private final CcmaxAccessPolicy ccmaxPolicy;
+  private final CcmaxIntakeLedger intakeLedger;
 
   public ResourcesController(
       Store store,
@@ -29,13 +30,14 @@ public class ResourcesController {
       BusinessSupport b,
       ResourceOperations operations,
       ResourceIntegrationGateway gateway,
-      CcmaxAccessPolicy ccmaxPolicy) {
+      CcmaxAccessPolicy ccmaxPolicy, CcmaxIntakeLedger intakeLedger) {
     this.store = store;
     this.auth = auth;
     this.b = b;
     this.operations = operations;
     this.gateway = gateway;
     this.ccmaxPolicy = ccmaxPolicy;
+    this.intakeLedger = intakeLedger;
   }
 
   @GetMapping("/projects/{id}/intake-channel-types")
@@ -99,6 +101,7 @@ public class ResourcesController {
                         && b.match(r, q, "newApiDeliveryState", "dispatchState")
                         && b.match(r, q, "newApiResourceState", "operationalState")
                         && matchesOperationalStatus(r, q.getOrDefault("operationalStatus", ""))
+                        && ResourceTelemetry.matchesFailure(r, q.get("failureReason"))
                         && b.dates(r, q, "createdFrom", "createdTo", "createdAt", "createdAt"))
             .toList();
     return b.page(rows.stream().map(x -> resourceView(x, req)).toList(), q);
@@ -171,6 +174,7 @@ public class ResourcesController {
   @PostMapping("/resources/drafts")
   public ObjectNode draft(@RequestBody ObjectNode body, HttpServletRequest req) {
     auth.require(req, "resource.write");
+    CcmaxIntakeLedger.rejectOverrides(body);
     required(body, "projectId");
     ObjectNode project = b.eligibleProject(text(body, "projectId"), req);
     String owner = b.tenant(req, body);
@@ -215,6 +219,7 @@ public class ResourcesController {
   public ObjectNode edit(
       @PathVariable String id, @RequestBody ObjectNode body, HttpServletRequest req) {
     auth.require(req, "resource.write");
+    CcmaxIntakeLedger.rejectOverrides(body);
     ObjectNode old = b.resource(id, req);
     if (!eq(old, "state", "DRAFT")) throw new ApiException(409, "仅可编辑本地草稿");
     if (body.hasNonNull("proxyId") && !text(body, "proxyId").isBlank())
@@ -243,6 +248,8 @@ public class ResourcesController {
       @PathVariable String id, @RequestParam long version, HttpServletRequest req) {
     auth.require(req, "resource.write");
     ObjectNode old = b.resource(id, req);
+    if (!text(old, "upstreamAccountId").isBlank() || !text(old, "upstreamChannelId").isBlank())
+      throw new ApiException(409, "已关联上游账号须通过上游移除流程处理");
     if (!eq(old, "state", "DRAFT")) throw new ApiException(409, "已交付资源需通过配置的上游移除流程处理");
     return store.update(
         "resource",
@@ -376,7 +383,7 @@ public class ResourcesController {
     auth.require(req, "resource.read");
     b.resource(id, req);
     ObjectNode original = operations.getOperation(op, req);
-    if (!eq(original, "resourceId", id) || !Set.of("USAGE", "CREDENTIAL-REFRESH").contains(text(original, "type")))
+    if (!eq(original, "resourceId", id) || !Set.of("USAGE", "CREDENTIAL-REFRESH", "OAUTH_COMPLETE").contains(text(original, "type")))
       throw new ApiException(404, "维护操作不存在");
   }
 
@@ -614,6 +621,7 @@ public class ResourcesController {
                     && b.match(r, q, "state", "state")
                     && b.match(r, q, "creatorSearch", "createdBy")
                     && matchesOperationalStatus(r, q.getOrDefault("operationalStatus", ""))
+                    && ResourceTelemetry.matchesFailure(r, q.get("failureReason"))
                     && b.dates(r, q, "createdFrom", "createdTo", "createdAt", "createdAt"))
         .toList();
   }
@@ -681,7 +689,7 @@ public class ResourcesController {
     long total = firstSuccess.values().stream().filter(this::intakeToday).count();
     // Neither the native receipt nor CUSTOM's contract proves a subscription class.
     out.put("total", total).put("unknown", total).put("processing", processing.size());
-    return out;
+    return intakeLedger.decorate(out, req);
   }
 
   private Instant intakeInstant(String value) {

@@ -132,6 +132,9 @@ class ResourceIntegrationTest {
             .put("allowCcmaxReauthorization", true)
             .put("allowCcmaxPause", true)
             .put("allowCcmaxSafeRemoval", true));
+    ObjectNode intakePolicy = store.object().put("nonProOpen", true);
+    intakePolicy.putObject("nonPro").put("mode", "UNLIMITED");
+    store.create("intake-policy", "GLOBAL", store.object().put("id", owner).set("policy", intakePolicy));
     MockHttpSession session = new MockHttpSession();
     session.setAttribute("uid", id);
     session.setAttribute("sv", 0L);
@@ -800,6 +803,7 @@ class ResourceIntegrationTest {
   }
 
   void nativeResponder(AtomicInteger logins, AtomicInteger accountStatus, AtomicInteger weight) {
+    AtomicReference<String> newStatus = new AtomicReference<>("disabled");
     responder.set((request, body) -> {
       if (request.equals("POST /api/auth/admin-login")) {
         assertEquals("native-admin", body.path("identifier").asText());
@@ -827,10 +831,17 @@ class ResourceIntegrationTest {
       }
       if (request.equals("POST /api/admin/oauth-accounts/exchange")) {
         assertFalse(body.path("overwrite_existing").asBoolean(true));
+        assertEquals("disabled", body.path("status").asText());
         return "{\"id\":\"new-account\",\"status\":\"active\",\"overwritten\":false}";
       }
+      if (request.equals("PATCH /api/admin/oauth-accounts/new-account")) {
+        if (body.has("status")) newStatus.set(body.path("status").asText());
+        if (body.has("weight")) weight.set(body.path("weight").asInt());
+        return "{\"ok\":true}";
+      }
       if (request.equals("GET /api/admin/oauth-accounts/new-account"))
-        return "{\"account\":{\"id\":\"new-account\",\"status\":\"active\",\"weight\":10,\"total_cost\":\"0\"}}";
+        return "{\"account\":{\"id\":\"new-account\",\"status\":\"" + newStatus.get() + "\",\"weight\":" + weight.get()
+            + ",\"total_cost\":\"0\",\"subscription_info\":{\"plan\":\"max\"}}}";
       throw new AssertionError("Unexpected native path: " + request);
     });
   }
@@ -1095,6 +1106,79 @@ class ResourceIntegrationTest {
   }
 
   @Test
+  void positiveExhaustedAndCredentialFailureFiltersAgreeAcrossListOverviewAndPriority() throws Exception {
+    nativeTarget(); Client supplier = supplier(), admin = administrator();
+    nativeResponder(new AtomicInteger(), new AtomicInteger(1), new AtomicInteger(10));
+    var original = responder.get();
+    responder.set((request, body) -> {
+      if (request.equals("GET /api/admin/oauth-accounts/native-148")) return "{\"account\":{\"id\":\"native-148\",\"status\":\"error\",\"weight\":10,\"health_status\":\"revoked\"},\"stats\":{\"claude_utilization\":{\"five_hour\":{\"utilization\":100},\"seven_day\":{\"utilization\":100}}}}";
+      return original.apply(request, body);
+    });
+    ObjectNode failed = nativeResource(supplier), healthy = nativeResource(supplier);
+    String rid = failed.path("id").asText();
+    ObjectNode observed = write("/api/resources/" + rid + "/upstream-account", store.object()
+        .put("targetId", target.path("id").asText()).put("accountId", "native-148").put("version", 0), admin, 200);
+    assertEquals("INVALID", observed.path("operationalState").asText());
+    store.update("resource", rid, supplier.owner, store.object().put("state", "DELIVERED").put("dispatchState", "SUCCESS"));
+    store.update("resource", healthy.path("id").asText(), supplier.owner, store.object()
+        .put("targetId", target.path("id").asText()).put("laneId", "healthy-id").put("upstreamAccountId", "healthy-id")
+        .put("state", "DELIVERED").put("dispatchState", "SUCCESS").put("operationalState", "ACTIVE"));
+    for (String status : List.of("FIVE_HOUR_EXHAUSTED", "SEVEN_DAY_EXHAUSTED")) {
+      mvc.perform(get("/api/resources").session(supplier.session).param("operationalStatus", status).param("failureReason", "revoked"))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.items[0].id").value(rid));
+      mvc.perform(get("/api/resources/overview").session(supplier.session).param("failureReason", "revoked").param("operationalStatus", status))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.counts.total").value(1)).andExpect(jsonPath("$.fiveHour.exhaustedCount").value(1));
+      ObjectNode request = store.object().put("priority", 10).put("targetId", target.path("id").asText()).put("requestKey", UUID.randomUUID().toString());
+      request.putObject("filters").put("failureReason", "revoked").put("operationalStatus", status);
+      assertEquals(rid, write("/api/cc-intake/admin/priority/jobs", request, admin, 200).path("items").path(0).path("resourceId").asText());
+    }
+    mvc.perform(get("/api/resources").session(supplier.session).param("failureReason", "token_error"))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(0));
+  }
+
+  @Test
+  void independentNativeServicesKeepIdenticalAccountIdsAndSessionsIsolated() throws Exception {
+    nativeTarget(); Client supplier = supplier(), admin = administrator();
+    nativeResponder(new AtomicInteger(), new AtomicInteger(1), new AtomicInteger(10));
+    AtomicInteger secondLogins = new AtomicInteger(), secondWrites = new AtomicInteger(), secondWeight = new AtomicInteger(30);
+    HttpServer other = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+    other.createContext("/", exchange -> {
+      String path = exchange.getRequestURI().getPath(); String output;
+      JsonNode body = store.json.readTree(exchange.getRequestBody());
+      if (path.equals("/api/auth/admin-login")) {
+        secondLogins.incrementAndGet(); assertEquals("other-admin", body.path("identifier").asText());
+        output = "{\"access_token\":\"SECOND-SESSION\",\"user\":{\"role\":\"admin\"}}";
+      } else {
+        assertEquals("Bearer SECOND-SESSION", exchange.getRequestHeaders().getFirst("Authorization"));
+        if (exchange.getRequestMethod().equals("PATCH")) {
+          secondWrites.incrementAndGet(); secondWeight.set(body.path("weight").asInt()); output = "{\"ok\":true}";
+        } else output = "{\"account\":{\"id\":\"native-148\",\"status\":\"active\",\"weight\":" + secondWeight.get() + "}}";
+      }
+      byte[] bytes = output.getBytes(StandardCharsets.UTF_8); exchange.getResponseHeaders().set("Content-Type", "application/json");
+      exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes); exchange.close();
+    });
+    other.start();
+    try {
+      ObjectNode otherTarget = store.create("resource-target", "GLOBAL", store.object().put("protocol", "CCMAX_NATIVE")
+          .put("enabled", true).put("allowHttp", true).put("baseUrl", "http://127.0.0.1:" + other.getAddress().getPort())
+          .put("adminUsername", "other-admin").put("adminPassword", "SECOND-PRIVATE"));
+      ObjectNode first = nativeResource(supplier), second = nativeResource(supplier);
+      for (ObjectNode row : List.of(first, second)) write("/api/resources/" + row.path("id").asText() + "/upstream-account", store.object()
+          .put("version", 0).put("accountId", "native-148").put("targetId", row == first ? target.path("id").asText() : otherTarget.path("id").asText()), admin, 200);
+      int before = calls.get();
+      ObjectNode request = store.object().put("priority", 43).put("targetId", otherTarget.path("id").asText()).put("requestKey", UUID.randomUUID().toString());
+      request.putArray("resourceIds").add(second.path("id").asText());
+      ObjectNode preview = write("/api/cc-intake/admin/priority/jobs", request, admin, 200);
+      assertEquals("COMPLETED", write("/api/cc-intake/admin/priority/jobs/" + preview.path("id").asText() + "/start", store.object(), admin, 200).path("state").asText());
+      assertEquals(before, calls.get()); assertEquals(1, secondWrites.get()); assertEquals(1, secondLogins.get());
+      assertEquals(10, store.get("resource", first.path("id").asText(), supplier.owner).path("upstreamPriority").asInt());
+      assertEquals(43, store.get("resource", second.path("id").asText(), supplier.owner).path("upstreamPriority").asInt());
+      request.remove("targetId"); request.remove("resourceIds"); request.put("requestKey", UUID.randomUUID().toString()); request.putArray("laneIds").add("native-148");
+      assertEquals("RESOURCE_TARGET_AMBIGUOUS", write("/api/cc-intake/admin/priority/jobs", request, admin, 409).path("code").asText());
+    } finally { other.stop(0); }
+  }
+
+  @Test
   void acceptedNativePauseWithRejectedReadbackStaysUnknownUntilReadOnlyRecovery() throws Exception {
     nativeTarget();
     Client supplier = supplier(), admin = administrator();
@@ -1184,9 +1268,9 @@ class ResourceIntegrationTest {
     mvc.perform(get("/api/cc-intake/mine").session(supplier.session))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.total").value(1))
-        .andExpect(jsonPath("$.unknown").value(1))
+        .andExpect(jsonPath("$.unknown").value(0))
         .andExpect(jsonPath("$.pro").value(0))
-        .andExpect(jsonPath("$.nonPro").value(0));
+        .andExpect(jsonPath("$.nonPro").value(1));
   }
 
   @Test
@@ -1871,39 +1955,12 @@ class ResourceIntegrationTest {
   }
 
   @Test
-  void nativeCredentialImportRefreshAndArchivePreserveReceiptsAndAvoidDuplicates() throws Exception {
-    nativeTarget(); Client supplier = supplier(), admin = administrator();
-    nativeResponder(new AtomicInteger(),new AtomicInteger(1),new AtomicInteger(10));
-    var previous = responder.get(); AtomicInteger imports = new AtomicInteger(),archives = new AtomicInteger();
-    responder.set((request,body)->{
-      if(request.equals("POST /api/admin/oauth-accounts/import-rt")){
-        imports.incrementAndGet();assertEquals("PRIVATE-REFRESH",body.path("refresh_token").asText());
-        assertFalse(body.path("overwrite_existing").asBoolean(true));
-        return "{\"ok\":true,\"id\":\"new-account\",\"overwritten\":false}";
-      }
-      if(request.equals("POST /api/admin/oauth-accounts/new-account/refresh"))
-        return "{\"access_token\":{\"masked\":\"MASKED\"},\"refresh_token\":{\"masked\":\"MASKED\"}}";
-      if(request.equals("DELETE /api/admin/oauth-accounts/new-account")){
-        archives.incrementAndGet();assertFalse(body.path("release_proxy").asBoolean(true));return "{\"ok\":true}";
-      }
-      if(request.equals("GET /api/admin/archived-accounts/new-account")) return "{\"account\":{\"id\":\"new-account\"}}";
-      return previous.apply(request,body);
-    });
-    ObjectNode input = submission(supplier);
-    ObjectNode submitted = write("/api/resources/supplier-submit",input,supplier,200);
-    String rid = submitted.path("resourceId").asText();
-    assertEquals("DELIVERED",store.get("resource",rid,supplier.owner).path("state").asText());
-    write("/api/resources/supplier-submit",input,supplier,200);assertEquals(1,imports.get());
-    ObjectNode refreshed = write("/api/resources/"+rid+"/credential-refresh",store.object().put("requestKey",UUID.randomUUID().toString()),supplier,200);
-    assertEquals("UPDATED",refreshed.path("state").asText());assertFalse(refreshed.toString().contains("MASKED"));
-    ObjectNode removal = store.object().put("action","REMOVE").put("requestKey",UUID.randomUUID().toString());
-    removal.putArray("items").add(store.object().put("resourceId",rid));
-    ObjectNode removed = write("/api/resource-lifecycle-jobs",removal,admin,200);
-    assertEquals("GONE",removed.path("items").get(0).path("state").asText());
-    int before = calls.get();
-    write("/api/resource-lifecycle-jobs/"+removed.path("id").asText()+"/reconcile",store.object(),admin,200);
-    assertEquals(before,calls.get());assertEquals(1,archives.get());
-    write("/api/resources/"+rid+"/usage",store.object(),supplier,409);
+  void nativeCredentialImportsAreDisabledBeforeProviderCall() throws Exception {
+    nativeTarget(); Client supplier = supplier();
+    ObjectNode rejected = write("/api/resources/supplier-submit", submission(supplier), supplier, 400);
+    assertEquals("CCMAX_RAW_IMPORT_DISABLED", rejected.path("code").asText());
+    assertEquals(0, calls.get());
+    assertTrue(store.list("resource", supplier.owner).stream().noneMatch(x -> x.path("state").asText().equals("DELIVERED")));
   }
 
   @Test
