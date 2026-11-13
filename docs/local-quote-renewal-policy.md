@@ -2,7 +2,7 @@
 
 这套规则是本地新增的管理员配置协议，不是从原站恢复出的生产续期算法。原前端只展示续期历史和定时任务；证据没有确定自动延长期、提前天数和批准规则，因此系统默认不启用。
 
-管理员可在现有任务配置接口显式选择已通过报价。`autoRenewEnabled=true`、`renewalDays`为1–365天、`renewBeforeDays`为0–30天时，`QUOTE_AUTO_RENEWAL`才变为ready。`quoteIds`最多500项，只接受存在的APPROVED报价；此管理员入口同时将所选原报价的`autoRenewEnabled`设为指定值。供应商或运营不能通过普通报价保存注入这个开关。
+管理员可在任务列表的「报价自动续期 → 任务配置」选择已通过报价、设置续期天数和提前窗口。`autoRenewEnabled=true`、整数`renewalDays`为1–365天、整数`renewBeforeDays`为0–30天，且`quoteIds`明确非空时，`QUOTE_AUTO_RENEWAL`才变为ready。`quoteIds`最多500项，只接受不重复且存在的APPROVED报价，更新选择必须带当前任务version；此管理员入口同时更新所选原报价的`autoRenewEnabled`，移除的报价清除该标记。空范围不能扫描历史标记报价。供应商或运营不能通过普通报价保存注入这个开关。
 
 ```sh
 curl -X PUT "$BASE/api/system/scheduled-tasks/QUOTE_AUTO_RENEWAL/config" \

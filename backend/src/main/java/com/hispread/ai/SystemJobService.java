@@ -47,12 +47,16 @@ public class SystemJobService {
 
   private boolean renewalConfigured(ObjectNode task) {
     return task.path("autoRenewEnabled").asBoolean()
+        && task.path("renewalDays").isIntegralNumber()
         && task.path("renewalDays").canConvertToInt()
         && task.path("renewalDays").asInt() >= 1
         && task.path("renewalDays").asInt() <= 365
+        && task.path("renewBeforeDays").isIntegralNumber()
         && task.path("renewBeforeDays").canConvertToInt()
         && task.path("renewBeforeDays").asInt() >= 0
-        && task.path("renewBeforeDays").asInt() <= 30;
+        && task.path("renewBeforeDays").asInt() <= 30
+        && task.path("quoteIds").isArray()
+        && !task.path("quoteIds").isEmpty();
   }
 
   private boolean ready(ObjectNode task) {
@@ -119,26 +123,47 @@ public class SystemJobService {
     ObjectNode task = s.get("scheduled-task", key, null), patch = s.object();
     if (body.has("version")) patch.set("version", body.get("version"));
     if (eq(task, "type", "QUOTE_AUTO_RENEWAL")) {
+      if (body.has("autoRenewEnabled") && !body.path("autoRenewEnabled").isBoolean())
+        throw new ApiException(400, "续期规则开关须为布尔值");
       for (String field :
           List.of("autoRenewEnabled", "renewalDays", "renewBeforeDays", "requestKey"))
         if (body.has(field)) patch.set(field, body.get(field));
       if (body.has("renewalDays")
-              && (body.path("renewalDays").asInt() < 1 || body.path("renewalDays").asInt() > 365)
+              && (!body.path("renewalDays").isIntegralNumber()
+                  || !body.path("renewalDays").canConvertToInt()
+                  || body.path("renewalDays").asInt() < 1 || body.path("renewalDays").asInt() > 365)
           || body.has("renewBeforeDays")
-              && (body.path("renewBeforeDays").asInt(-1) < 0
+              && (!body.path("renewBeforeDays").isIntegralNumber()
+                  || !body.path("renewBeforeDays").canConvertToInt()
+                  || body.path("renewBeforeDays").asInt(-1) < 0
                   || body.path("renewBeforeDays").asInt() > 30))
         throw new ApiException(400, "续期天数须1–365天，提前天数须0–30天");
       if (body.has("quoteIds")
-          && body.has("version")
-          && body.path("version").asLong() != task.path("version").asLong())
+          && (!body.path("version").isIntegralNumber()
+              || body.path("version").asLong() != task.path("version").asLong()))
         throw new ApiException(409, "任务配置已变化");
       if (body.has("quoteIds")) {
         if (!body.path("quoteIds").isArray() || body.path("quoteIds").size() > 500)
           throw new ApiException(400, "quoteIds须为最多500项的数组");
-        for (var id : body.path("quoteIds"))
+        Set<String> selected = new HashSet<>();
+        for (var id : body.path("quoteIds")) {
+          if (!id.isTextual() || id.asText().isBlank() || !selected.add(id.asText()))
+            throw new ApiException(400, "报价编号须为不重复的非空字符串");
           if (!eq(s.get("quote", id.asText(), null), "state", "APPROVED"))
             throw new ApiException(400, "只能为已通过报价配置自动续期");
+        }
         patch.set("quoteIds", body.path("quoteIds"));
+        ObjectNode candidate = task.deepCopy();
+        candidate.setAll(patch);
+        if (candidate.path("autoRenewEnabled").asBoolean() && !renewalConfigured(candidate))
+          throw new ApiException(400, "启用续期规则须选择至少一条报价并填写有效天数");
+        for (var id : task.path("quoteIds")) {
+          if (selected.contains(id.asText())) continue;
+          for (ObjectNode quote : s.list("quote", null))
+            if (eq(quote, "id", id.asText()))
+              s.update("quote", id.asText(), text(quote, "supplierId"),
+                  s.object().put("version", quote.path("version").asLong()).put("autoRenewEnabled", false));
+        }
         for (var id : body.path("quoteIds")) {
           ObjectNode quote = s.get("quote", id.asText(), null);
           String owner = text(quote, "supplierId");
@@ -154,6 +179,10 @@ public class SystemJobService {
                           .asBoolean(task.path("autoRenewEnabled").asBoolean())));
         }
       }
+      ObjectNode candidate = task.deepCopy();
+      candidate.setAll(patch);
+      if (body.path("autoRenewEnabled").asBoolean() && !renewalConfigured(candidate))
+        throw new ApiException(400, "启用续期规则须选择至少一条报价并填写有效天数");
     }
     if (body.has("targetId")) {
       if (!body.path("targetId").isNull() && !body.path("targetId").isTextual())
@@ -342,11 +371,12 @@ public class SystemJobService {
     int generated = 0;
     Set<String> selected = new HashSet<>();
     for (var id : task.path("quoteIds")) selected.add(id.asText());
+    if (selected.isEmpty()) return 0;
     for (ObjectNode quote : s.list("quote", null)) {
       String id = text(quote, "id");
       if (!eq(quote, "state", "APPROVED")
           || !quote.path("autoRenewEnabled").asBoolean()
-          || !selected.isEmpty() && !selected.contains(id)) continue;
+          || !selected.contains(id)) continue;
       String owner = text(quote, "supplierId"), project = text(quote, "projectId");
       ObjectNode supplier;
       try {

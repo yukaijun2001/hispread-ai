@@ -13,6 +13,7 @@ import {
   h as l,
   i as u,
   it as d,
+  j as today,
   m as f,
   mt as p,
   ot as m,
@@ -35,12 +36,24 @@ function C(e) {
   return e.running ? e.enabled ? p(`运行中`) : p(`已停用，本轮收尾中`) : e.enabled && !e.ready ? p(`已暂停`) : e.ready ? e.enabled ? p(`已启用`) : p(`已停用`) : p(`暂不可启用`)
 }
 
+function isResourceSync(task) {
+  return [`CCMAX_DAILY_SYNC`, `CCMAX_STATUS_SYNC`].includes(task.type)
+}
+
+function taskDescription(task) {
+  if (task.type === `CCMAX_PRIORITY_ROTATION`) return p(`无消费扶持或按比例轮换，规则与周期可配置`);
+  if (task.type === `QUOTE_AUTO_RENEWAL`) return p(`按规则生成待审核续期报价，不直接延长或批准`);
+  if (task.type === `WORKBENCH_WECOM_REMINDER`) return p(`仅发送待办分类数量`);
+  if ([`SETTLEMENT_AUTO_CONFIRM`, `SETTLEMENT_DEADLINE_CONFIRM`].includes(task.type)) return p(`按截止规则确认无异议且来源未变化的结算单`);
+  return p(`{0} · 待核对观测同步`, [S(task.type)])
+}
+
 function w() {
   let {
     notify: a,
     refresh: o,
     has: u
-  } = t(), [_, w] = (0, y.useState)(null), T = u(`resource.read`) && u(`resource.dispatch`), E = i(`/system/scheduled-tasks`), [D, O] = (0, y.useState)(null), [k, A] = (0, y.useState)(null), [j, M] = (0, y.useState)(null), [N, P] = (0, y.useState)(!1), [F, I] = (0, y.useState)(``), L = E.data?.filter(e => !e.ready) || [];
+  } = t(), [_, w] = (0, y.useState)(null), T = u(`resource.read`) && u(`resource.dispatch`), E = i(`/system/scheduled-tasks`), [D, O] = (0, y.useState)(null), [k, A] = (0, y.useState)(null), [j, M] = (0, y.useState)(null), [N, P] = (0, y.useState)(!1), [F, I] = (0, y.useState)(``), [targetOptions, setTargetOptions] = (0, y.useState)([]), [renewalQuotes, setRenewalQuotes] = (0, y.useState)([]), [selectedQuotes, setSelectedQuotes] = (0, y.useState)([]), L = E.data?.filter(e => !e.ready) || [];
   async function R(e) {
     if (!(N || !e.enabled && !e.ready)) {
       P(!0), I(``);
@@ -62,14 +75,32 @@ function w() {
         w(t.key);
         return
       }
-      if (t.type !== `WORKBENCH_WECOM_REMINDER`) {
+      if (![ `WORKBENCH_WECOM_REMINDER`, `QUOTE_AUTO_RENEWAL` ].includes(t.type) && !isResourceSync(t)) {
         M(null), A(t);
         return
       }
       P(!0);
       try {
-        let n = await e(`/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings`);
-        M(n), A(t)
+        if (t.type === `WORKBENCH_WECOM_REMINDER`) {
+          M(await e(`/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings`));
+        } else if (t.type === `QUOTE_AUTO_RENEWAL`) {
+          let quotes = [], page = 1, total = 0;
+          do {
+            const response = await e(`/quotes?state=APPROVED&page=${page}&size=100`);
+            if (!Array.isArray(response.items) || !response.items.length && quotes.length < response.total) throw Error(p(`报价列表未完整加载，请重试`));
+            quotes.push(...response.items);
+            total = response.total;
+            page++;
+          } while (quotes.length < total);
+          setRenewalQuotes(quotes.filter(quote => quote.effectiveTo >= today()));
+          setSelectedQuotes(Array.isArray(t.quoteIds) ? t.quoteIds : []);
+          M(null);
+        } else {
+          const targets = await e(`/resource-targets`);
+          setTargetOptions(targets.filter(target => [`CUSTOM`, `CCMAX_NATIVE`].includes(target.protocol || `CUSTOM`)));
+          M(null);
+        }
+        A(t)
       } catch (e) {
         I(e.message)
       } finally {
@@ -89,12 +120,22 @@ function w() {
         }), a(p(`机器人配置已保存，下一轮执行使用新配置`)), o();
         return
       }
-      await d(`/system/scheduled-tasks/${encodeURIComponent(k.key)}/config`, {
+      const config = {
         name: e.name.trim(),
-        targetId: null,
-        intervalMinutes: k.intervalMinutes,
         version: k.version
-      }), a(p(`任务配置已保存，下一轮执行使用新配置`)), o()
+      };
+      if (isResourceSync(k)) config.targetId = e.targetId === `ALL_COMPATIBLE` ? null : e.targetId;
+      if (k.type === `QUOTE_AUTO_RENEWAL`) {
+        if (e.autoRenewEnabled === `true` && !selectedQuotes.length) throw Error(p(`请至少选择一条已通过报价`));
+        if (selectedQuotes.length > 500) throw Error(p(`最多选择 500 条报价`));
+        Object.assign(config, {
+          autoRenewEnabled: e.autoRenewEnabled === `true`,
+          renewalDays: Number(e.renewalDays),
+          renewBeforeDays: Number(e.renewBeforeDays),
+          quoteIds: selectedQuotes
+        });
+      }
+      await d(`/system/scheduled-tasks/${encodeURIComponent(k.key)}/config`, config), a(p(`任务配置已保存，下一轮执行使用新配置`)), o()
     }
   }
   return (0, b.jsxs)(`div`, {
@@ -160,7 +201,7 @@ function w() {
               children: [(0, b.jsx)(`strong`, {
                 children: v(e)
               }), (0, b.jsx)(`span`, {
-                children: e.type === `CCMAX_PRIORITY_ROTATION` ? p(`无消费扶持或按比例轮换，规则与周期可配置`) : e.type === `QUOTE_AUTO_RENEWAL` ? p(`原价延长原报价周期，遇待审报价跳过并提示`) : e.type === `WORKBENCH_WECOM_REMINDER` ? p(`仅发送待办分类数量`) : p(`{0} · 待核对观测同步`, [S(e.type)])
+                children: taskDescription(e)
               })]
             })
           }, {
@@ -176,7 +217,7 @@ function w() {
             render: e => p(`每 {0} 分钟`, [e.intervalMinutes])
           }, {
             label: p(`执行范围`),
-            render: e => e.type === `CCMAX_PRIORITY_ROTATION` ? p(`指定供应商或档位范围的就绪账号`) : e.type === `WORKBENCH_WECOM_REMINDER` ? p(`平台全部待办`) : p(`该服务全部已启用目标`)
+            render: e => e.type === `CCMAX_PRIORITY_ROTATION` ? p(`指定供应商或档位范围的就绪账号`) : e.type === `WORKBENCH_WECOM_REMINDER` ? p(`平台全部待办`) : e.type === `QUOTE_AUTO_RENEWAL` ? p(`已选 {0} 条报价`, [e.quoteIds?.length || 0]) : isResourceSync(e) ? e.targetId ? p(`指定目标：{0}`, [e.targetId]) : p(`全部已启用的兼容资源目标`) : p(`平台到期且无异议的待确认结算单`)
           }, {
             label: p(`下次执行`),
             render: e => e.nextRunAt ? r(e.nextRunAt) : p(`未安排`)
@@ -188,7 +229,7 @@ function w() {
                 disabled: N,
                 onClick: () => O(e),
                 children: p(`编辑周期 `)
-              }), e.type !== `QUOTE_AUTO_RENEWAL` && (0, b.jsx)(g, {
+              }), (0, b.jsx)(g, {
                 disabled: N || e.type === `CCMAX_PRIORITY_ROTATION` && !T,
                 title: p(`可在启用或运行时修改，下一轮执行生效`),
                 onClick: () => void z(e),
@@ -274,12 +315,12 @@ function w() {
         type: `url`,
         required: !1,
         full: !0,
-        hint: p(`可选，提醒中展示的工作台链接。`)
+        hint: p(`可选，须为 HTTPS 地址；没有 HTTPS 地址时请留空。`)
       }],
       initial: {
         clearWebhook: `false`,
         webhookUrl: ``,
-        workbenchUrl: j.workbenchUrl || `${window.location.origin}/#/workbench`
+        workbenchUrl: j.workbenchUrl || (window.location.protocol === `https:` ? `${window.location.origin}/#/workbench` : ``)
       },
       extra: e => e.clearWebhook === `true` ? (0, b.jsx)(c, {
         tone: `red`,
@@ -290,17 +331,52 @@ function w() {
         A(null), M(null)
       }
     }), k && k.type !== `WORKBENCH_WECOM_REMINDER` && (0, b.jsx)(h, {
-      title: p(`编辑定时任务`),
+      title: k.type === `QUOTE_AUTO_RENEWAL` ? p(`配置报价自动续期`) : p(`编辑定时任务`),
       subtitle: p(`{0} · 保存后下一轮执行生效，当前执行继续完成。`, [S(k.type)]),
       fields: [{
         name: `name`,
         label: p(`任务名称`),
         max: `128`,
         minLength: 1
-      }],
+      }, ...(isResourceSync(k) ? [{
+        name: `targetId`, label: p(`执行目标`), type: `select`, full: true,
+        options: [
+          {value:`ALL_COMPATIBLE`,label:p(`全部已启用的兼容资源目标`)},
+          ...(k.targetId && !targetOptions.some(target => target.id === k.targetId) ? [{value:k.targetId,label:p(`当前目标：{0}`, [k.targetId])}] : []),
+          ...targetOptions.map(target => ({value:target.id,label:`${target.name || target.id}${target.enabled ? `` : p(`（已停用）`)}`}))
+        ],
+        hint: p(`指定后仅处理该目标；选择全部会扩大执行范围，停用的目标不会执行。`)
+      }] : []), ...(k.type === `QUOTE_AUTO_RENEWAL` ? [{
+        name: `autoRenewEnabled`, label: p(`续期规则`), type: `select`, full: true,
+        options: [{value:`false`,label:p(`停用续期规则`)},{value:`true`,label:p(`生成待审核续期申请`)}]
+      }, {
+        name: `renewalDays`, label: p(`续期天数`), type: `number`, min: `1`, max: `365`, step: `1`,
+        hint: p(`1–365 天，不自动批准新报价。`)
+      }, {
+        name: `renewBeforeDays`, label: p(`提前天数`), type: `number`, min: `0`, max: `30`, step: `1`,
+        hint: p(`0–30 天，到期窗口内才生成申请。`)
+      }] : [])],
       initial: {
-        name: k.name
+        name: k.name,
+        targetId: k.targetId || `ALL_COMPATIBLE`,
+        autoRenewEnabled: String(!!k.autoRenewEnabled),
+        renewalDays: String(k.renewalDays ?? 30),
+        renewBeforeDays: String(k.renewBeforeDays ?? 2)
       },
+      extra: k.type === `QUOTE_AUTO_RENEWAL` ? () => (0, b.jsxs)(`fieldset`, {
+        className: `form-section`,
+        children: [(0, b.jsx)(`legend`, {children:p(`选择已通过报价（最多 500 条）`)}),
+          !renewalQuotes.length && !selectedQuotes.length && (0, b.jsx)(`p`, {children:p(`没有可续期的已通过报价`)}),
+          ...[...renewalQuotes, ...selectedQuotes.filter(id => !renewalQuotes.some(quote => quote.id === id)).map(id => ({id,code:id,unavailable:true}))].map(quote => (0, b.jsxs)(`label`, {
+            className: `policy-check`,
+            children:[(0, b.jsx)(`input`, {
+              type:`checkbox`, name:`renewalQuote`, value:quote.id,
+              checked:selectedQuotes.includes(quote.id),
+              onChange:event => setSelectedQuotes(selected => event.target.checked ? [...selected,quote.id] : selected.filter(id => id !== quote.id))
+            }), (0,b.jsx)(`span`, {children:`${quote.code || quote.id} · ${quote.supplierName || ``} · ${quote.projectName || ``} ${quote.unavailable ? p(`（已失效，请取消选择）`) : ``}`})]
+          },quote.id)),
+          (0, b.jsx)(`p`, {children:p(`已选 {0} 条；保存规则不立即执行，启用任务后按周期生成待审报价。`,[selectedQuotes.length])})]
+      }) : undefined,
       onSubmit: B,
       onClose: () => A(null)
     })]

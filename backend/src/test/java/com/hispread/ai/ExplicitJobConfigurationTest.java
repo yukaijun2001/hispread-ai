@@ -95,6 +95,12 @@ class ExplicitJobConfigurationTest {
         "APPROVED", s.get("quote", original.path("id").asText(), owner).path("state").asText());
     assertEquals(0, jobs.run(key, "MANUAL").path("processedCount").asInt());
     assertEquals(2, s.list("quote", owner).size());
+    ObjectNode disabled = s.object().put("version", s.get("scheduled-task", key, null).path("version").asLong())
+        .put("autoRenewEnabled", false);
+    disabled.putArray("quoteIds");
+    assertFalse(jobs.update(key, disabled).path("ready").asBoolean());
+    assertFalse(s.get("quote", original.path("id").asText(), owner).path("autoRenewEnabled").asBoolean());
+    assertEquals(503, assertThrows(ApiException.class, () -> jobs.run(key, "MANUAL")).status);
   }
 
   @Test
@@ -114,5 +120,34 @@ class ExplicitJobConfigurationTest {
     ApiException error = assertThrows(ApiException.class, () -> jobs.run(key, "MANUAL"));
     assertEquals(503, error.status);
     assertThrows(ApiException.class, () -> jobs.update(key, s.object().put("renewalDays", 366)));
+  }
+
+  @Test
+  void renewalRequiresExplicitNonemptySelectionAndTypedRules() {
+    String key = "selection-" + UUID.randomUUID();
+    ObjectNode task = s.create("scheduled-task", "GLOBAL", s.object().put("id", key)
+        .put("key", key).put("type", "QUOTE_AUTO_RENEWAL").put("enabled", false));
+    ObjectNode empty = s.object().put("version", 0).put("autoRenewEnabled", true)
+        .put("renewalDays", 30).put("renewBeforeDays", 2);
+    empty.putArray("quoteIds");
+    assertEquals(400, assertThrows(ApiException.class, () -> jobs.update(key, empty)).status);
+    assertEquals(0, s.get("scheduled-task", key, null).path("version").asLong());
+    assertEquals(400, assertThrows(ApiException.class, () -> jobs.update(key,
+        s.object().put("version", 0).put("renewalDays", 1.5))).status);
+    assertEquals(400, assertThrows(ApiException.class, () -> jobs.update(key,
+        s.object().put("version", 0).put("autoRenewEnabled", "true"))).status);
+    assertFalse(jobs.describe(task).path("ready").asBoolean());
+  }
+
+  @Test
+  void nameOnlyUpdatePreservesTargetAndSchedule() {
+    String key = "target-" + UUID.randomUUID();
+    s.create("scheduled-task", "GLOBAL", s.object().put("id", key).put("key", key)
+        .put("type", "CCMAX_DAILY_SYNC").put("enabled", false)
+        .put("intervalMinutes", 12).put("targetId", "selected-target"));
+    ObjectNode updated = jobs.update(key, s.object().put("version", 0).put("name", "Renamed"));
+    assertEquals("selected-target", updated.path("targetId").asText());
+    assertEquals(12, updated.path("intervalMinutes").asInt());
+    assertFalse(updated.path("enabled").asBoolean());
   }
 }
