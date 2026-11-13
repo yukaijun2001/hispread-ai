@@ -27,6 +27,15 @@ var h = p(a(), 1),
   _ = `/cc-intake/admin/priority/jobs`,
   v = [`search`, `state`, `projectId`, `credentialMode`, `createdFrom`, `createdTo`, `supplierSearch`, `creatorSearch`, `accountSearch`, `operationalStatus`, `failureReason`];
 
+function normalizeJob(job) {
+  if (!job) return null;
+  return {
+    ...job,
+    items: Array.isArray(job.items) ? job.items : [],
+    counts: job.counts && typeof job.counts === 'object' && !Array.isArray(job.counts) ? job.counts : {}
+  };
+}
+
 function y({
   selectedIds: i,
   filterQuery: a,
@@ -42,7 +51,7 @@ function y({
     return () => window.clearTimeout(e)
   }, [P]);
   let F = r(S && C === `SUPPLIER` ? `/deliveries/filter-options?supplierSearch=${encodeURIComponent(re)}` : null),
-    [I, L] = (0, h.useState)(null),
+    [I, setJob] = (0, h.useState)(null),
     [R, z] = (0, h.useState)(``),
     [B, V] = (0, h.useState)(!1),
     [H, U] = (0, h.useState)(1),
@@ -52,7 +61,8 @@ function y({
     requestKey = (0, h.useRef)(crypto.randomUUID()),
     Y = I?.state === `RUNNING` || I?.state === `PREPARING` || I?.items.some(e => e.state === `UNKNOWN` || e.state === `VERIFYING`),
     X = r(S && R && !W ? `${_}/${encodeURIComponent(R)}` : null, Y ? 3e3 : 0),
-    Z = r(S && B ? _ : null);
+    Z = r(S && B ? _ : null),
+    L = job => setJob(normalizeJob(job));
   (0, h.useEffect)(() => {
     X.data && L(X.data)
   }, [X.data]);
@@ -160,6 +170,12 @@ function y({
           }), Object.entries(I.counts).map(([e, t]) => t ? (0, g.jsxs)(`span`, {
             children: [m[e] || e, ` `, t]
           }, e) : null)]
+        }), I.error && (0, g.jsx)(`div`, {
+          role: `alert`,
+          children: (0, g.jsx)(s, { tone: `red`, children: ee(I.error) })
+        }), !Object.keys(I.counts).length && (0, g.jsx)(s, {
+          tone: `amber`,
+          children: l(`此历史任务未提供逐项结果，请保留原任务状态并人工核对。`)
         }), I.state === `PREPARING` && (0, g.jsx)(s, {
           tone: `blue`,
           children: l(`正在整理旧任务的本地账号范围，不会查询原优先级。`)
@@ -186,10 +202,10 @@ function y({
             })
           }, {
             label: l(`拟调整值`),
-            render: e => e.priority
+            render: e => e.priority ?? `—`
           }, {
             label: l(`状态`),
-            render: e => e.state === `SUCCESS` ? l(`已更新`) : m[e.state] || e.state
+            render: e => e.state === `SUCCESS` ? l(`已更新`) : m[e.state] || e.state || `—`
           }, {
             label: l(`说明`),
             render: e => e.errorMessage ? (0, g.jsx)(`span`, {
@@ -302,6 +318,8 @@ function y({
             }), (0, g.jsx)(`input`, {
               required: !0,
               type: `number`,
+              autofocus: !0,
+              "aria-label": l(`设置优先级`),
               step: `1`,
               min: `0`,
               max: `1000`,

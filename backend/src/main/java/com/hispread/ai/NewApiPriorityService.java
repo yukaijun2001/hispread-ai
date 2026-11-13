@@ -226,7 +226,9 @@ public class NewApiPriorityService {
   ObjectNode view(ObjectNode op) {
     ObjectNode out = store.object().put("id", text(op, "id")).put("state", text(op, "state")).put("protocol", text(op, "protocol"))
         .put("total", op.path("total").asInt()).put("createdAt", text(op, "createdAt"));
-    out.set("items", op.path("result").path("items")); out.set("counts", op.path("result").path("counts"));
+    JsonNode items = op.path("result").path("items"), counts = op.path("result").path("counts");
+    if (items.isArray()) out.set("items", items); else out.putArray("items");
+    if (counts.isObject()) out.set("counts", counts); else out.putObject("counts");
     return out;
   }
 
