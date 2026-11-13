@@ -37,7 +37,10 @@ function v({
   }, [C]);
 
   function F(e) {
-    E(e), O(structuredClone(e.policy)), A(Object.fromEntries(Object.entries(e.policy.ranges).map(([e, t]) => [e, {
+    const policy = structuredClone(e.policy);
+    // Historical system rows predate the tier field; use the server's effective default.
+    if (!n && !policy.tier) policy.tier = e.inherited?.tier || `NORMAL`;
+    E(e), O(policy), A(Object.fromEntries(Object.entries(e.policy.ranges).map(([e, t]) => [e, {
       min: String(t.min),
       max: String(t.max)
     }]))), P(``)

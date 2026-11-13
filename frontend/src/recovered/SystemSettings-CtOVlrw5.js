@@ -283,7 +283,7 @@ function x() {
           children: [(0, _.jsx)(`h2`, {
             children: f(`CCMAX 上号`)
           }), (0, _.jsx)(`p`, {
-            children: f(`统一开通供应商上号资格，仍需通过强制停止与项目权限校验；关闭后按各供应商配置判断。套餐分类和每日额度规则目前仅保存配置。`)
+            children: f(`统一开通供应商上号资格，仍需通过强制停止与项目权限校验；关闭后按各供应商配置判断。原生 OAuth 新增上号同时执行套餐分类、每日额度及优先级规则。`)
           })]
         }), (0, _.jsxs)(`div`, {
           className: `settings-switch-list`,
@@ -410,7 +410,7 @@ function x() {
               children: [(0, _.jsx)(`strong`, {
                 children: f(`全部供应商允许推送 PRO`)
               }), (0, _.jsx)(`small`, {
-                children: f(`当前仅保存配置，PRO 套餐限制尚未生效。`)
+                children: f(`原生 OAuth 新增上号按上游套餐信息核验 PRO 资格，并检查交付组开关和每日可用额度。已有账号不因修改此开关自动启停。`)
               })]
             }), (0, _.jsx)(`input`, {
               type: `checkbox`,
