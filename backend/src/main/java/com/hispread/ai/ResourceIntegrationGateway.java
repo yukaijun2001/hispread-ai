@@ -7,6 +7,11 @@ import java.net.http.*;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
@@ -21,6 +26,7 @@ public class ResourceIntegrationGateway {
   private final NewApiResourceAdapter newApi;
   private final NativeCcmaxAdapter nativeCcmax;
   private final ResourceSyncSettings syncSettings;
+  private final ThreadLocal<Long> creationDeadline = new ThreadLocal<>();
 
   @Value("${app.integrations.allow-private-targets:false}")
   boolean allowPrivateTargets;
@@ -35,7 +41,7 @@ public class ResourceIntegrationGateway {
     this.proxyProbe = proxyProbe;
     this.syncSettings = syncSettings;
     this.newApi = new NewApiResourceAdapter(store, this::transport);
-    this.nativeCcmax = new NativeCcmaxAdapter(store, this::transport);
+    this.nativeCcmax = new NativeCcmaxAdapter(store, this::transport, this::remainingCreationNanos);
     client =
         HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
@@ -170,6 +176,32 @@ public class ResourceIntegrationGateway {
     nativeCcmax.claimExchange(target, sessionId, localId, code, operationId);
   }
 
+  <T> T withCreationDeadline(int seconds, Supplier<T> work) {
+    if (seconds <= 0) return work.get();
+    Long previous = creationDeadline.get();
+    long deadline = System.nanoTime() + Math.min(300, seconds) * 1_000_000_000L;
+    creationDeadline.set(previous == null ? deadline : Math.min(previous, deadline));
+    try {
+      T result = work.get();
+      remainingCreationNanos();
+      return result;
+    } finally {
+      if (previous == null) creationDeadline.remove(); else creationDeadline.set(previous);
+    }
+  }
+
+  private long remainingCreationNanos() {
+    Long deadline = creationDeadline.get();
+    if (deadline == null) return Long.MAX_VALUE;
+    long remaining = deadline - System.nanoTime();
+    if (remaining <= 0) throw creationTimeout();
+    return remaining;
+  }
+
+  private ApiException creationTimeout() {
+    return new ApiException(504, "上号单次超时，创建结果未确认，请查询原操作，勿重复提交", "CCMAX_CREATION_TIMEOUT");
+  }
+
   private ObjectNode transport(
       ObjectNode config, String method, String path, JsonNode body, String key) {
     String base = config.path("baseUrl").asText(config.path("endpoint").asText());
@@ -203,8 +235,8 @@ public class ResourceIntegrationGateway {
     HttpRequest.Builder request =
         HttpRequest.newBuilder(uri)
             .timeout(
-                Duration.ofMillis(
-                    Math.max(1000, Math.min(120000, config.path("timeoutMs").asInt(timeoutMs)))))
+                Duration.ofNanos(Math.min(remainingCreationNanos(),
+                    Math.max(1000, Math.min(120000, config.path("timeoutMs").asInt(timeoutMs))) * 1_000_000L)))
             .header("Accept", "application/json");
     String authType = config.path("authType").asText("BEARER");
     if (!config.path("newApiUserId").asText().isBlank()) {
@@ -235,7 +267,8 @@ public class ResourceIntegrationGateway {
               HttpRequest.BodyPublishers.ofString(
                   body == null ? "{}" : body.toString(), StandardCharsets.UTF_8));
     try {
-      HttpResponse<byte[]> response = client.send(request.build(), info -> new LimitedBodySubscriber(2_000_000));
+      HttpResponse<byte[]> response = send(request.build());
+      remainingCreationNanos();
       if (response.statusCode() < 200 || response.statusCode() >= 300) {
         int status = response.statusCode();
         throw new ApiException(
@@ -253,12 +286,37 @@ public class ResourceIntegrationGateway {
         throw new ApiException(502, "上游响应须为JSON对象", "RESOURCE_UPSTREAM_INVALID_RESPONSE");
       return (ObjectNode) parsed;
     } catch (java.net.http.HttpTimeoutException e) {
+      Long deadline = creationDeadline.get();
+      if (deadline != null && deadline - System.nanoTime() < 5_000_000L) throw creationTimeout();
       throw new ApiException(504, "资源上游请求超时，请查询原操作结果", "RESOURCE_UPSTREAM_TIMEOUT");
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new ApiException(503, "资源上游请求已中断", "RESOURCE_UPSTREAM_INTERRUPTED");
     } catch (java.io.IOException e) {
       throw new ApiException(502, "资源上游连接失败，请查询原操作结果", "RESOURCE_UPSTREAM_CONNECTION_FAILED");
+    }
+  }
+
+  private HttpResponse<byte[]> send(HttpRequest request) throws java.io.IOException, InterruptedException {
+    if (creationDeadline.get() == null)
+      return client.send(request, info -> new LimitedBodySubscriber(2_000_000));
+    CompletableFuture<HttpResponse<byte[]>> pending = client.sendAsync(request, info -> new LimitedBodySubscriber(2_000_000));
+    try {
+      return pending.get(remainingCreationNanos(), TimeUnit.NANOSECONDS);
+    } catch (TimeoutException timeout) {
+      pending.cancel(true);
+      throw creationTimeout();
+    } catch (InterruptedException interrupted) {
+      pending.cancel(true);
+      throw interrupted;
+    } catch (ExecutionException failed) {
+      Throwable cause = failed.getCause();
+      if (cause instanceof java.io.IOException io) throw io;
+      if (cause instanceof RuntimeException runtime) throw runtime;
+      throw new java.io.IOException("upstream request failed", cause);
+    } catch (ApiException expired) {
+      pending.cancel(true);
+      throw expired;
     }
   }
 

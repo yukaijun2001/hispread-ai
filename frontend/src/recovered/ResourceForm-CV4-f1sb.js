@@ -345,6 +345,10 @@ function y({
         }
         x(l(t.message || c(`CCMAX资源已创建（{0}）`, [t.laneId]))), f()
       } catch (e) {
+        if (e instanceof ApiError && e.details?.code === `CCMAX_INTAKE_CONCURRENCY_LIMIT`) {
+          keepOauthSession = !0, Q(null), q(!1), X(e.message);
+          return
+        }
         if (e instanceof ApiError && e.details?.code === `OAUTH_STATE_MISMATCH`) {
           keepOauthSession = !0, Q(null), q(!1), P(``), X(e.message);
           return

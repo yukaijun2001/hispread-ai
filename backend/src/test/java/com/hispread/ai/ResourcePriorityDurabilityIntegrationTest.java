@@ -28,6 +28,9 @@ class ResourcePriorityDurabilityIntegrationTest {
   @Autowired Store store;
   @Autowired AuthService auth;
   @Autowired MockMvc mvc;
+  @Autowired ResourceIntegrationGateway gateway;
+  @Autowired CcmaxIntakeControls intakeControlService;
+  @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
   HttpServer upstream;
   ExecutorService executor;
   MockHttpSession session;
@@ -40,7 +43,10 @@ class ResourcePriorityDurabilityIntegrationTest {
   AtomicReference<String> blockedAccount;
   AtomicBoolean rejectSecond;
   AtomicBoolean denyAccountRead;
-  CountDownLatch received, release;
+  AtomicLong loginDelayMs, exchangeDelayMs;
+  AtomicLong accountBodyDelayMs;
+  List<ObjectNode> originalSettings;
+  CountDownLatch received, release, loginReceived;
 
   @BeforeEach
   void setup() throws Exception {
@@ -59,8 +65,13 @@ class ResourcePriorityDurabilityIntegrationTest {
     blockedAccount = new AtomicReference<>("first");
     rejectSecond = new AtomicBoolean(false);
     denyAccountRead = new AtomicBoolean(false);
+    loginDelayMs = new AtomicLong();
+    exchangeDelayMs = new AtomicLong();
+    accountBodyDelayMs = new AtomicLong();
+    originalSettings = store.list("settings", null);
     received = new CountDownLatch(1);
     release = new CountDownLatch(1);
+    loginReceived = new CountDownLatch(1);
     executor = Executors.newCachedThreadPool();
     upstream = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
     upstream.setExecutor(executor);
@@ -70,7 +81,26 @@ class ResourcePriorityDurabilityIntegrationTest {
       ObjectNode response = store.object();
       int status = 200;
       if (path.equals("/api/auth/admin-login")) {
+        loginReceived.countDown();
+        if (loginDelayMs.get() > 0) {
+          try { Thread.sleep(loginDelayMs.get()); }
+          catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
+        }
         response.put("access_token", "FIXTURE-PRIVATE").putObject("user").put("role", "admin");
+      } else if (path.equals("/api/admin/oauth-accounts/auth-url")) {
+        response.put("url", "https://claude.ai/oauth/authorize?state=fixture-state")
+            .put("state", "fixture-state").put("expires_in", 600);
+      } else if (path.equals("/api/admin/oauth-accounts")) {
+        response.putArray("accounts");
+        response.putObject("pagination").put("total_pages", 1);
+      } else if (path.equals("/api/admin/oauth-accounts/exchange")) {
+        JsonNode input = store.json.readTree(exchange.getRequestBody());
+        String account = input.path("code").asText().startsWith("second") ? "second" : "first";
+        exchanges.merge(account, 1, Integer::sum);
+        received.countDown();
+        try { release.await(exchangeDelayMs.get() > 0 ? exchangeDelayMs.get() : 10000, TimeUnit.MILLISECONDS); }
+        catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
+        response.putObject("account").put("id", account).put("status", "active");
       } else if (path.startsWith("/api/admin/oauth-accounts/")) {
         String account = path.substring("/api/admin/oauth-accounts/".length());
         if (method.equals("POST") && account.endsWith("/reauthorize")) {
@@ -124,6 +154,10 @@ class ResourcePriorityDurabilityIntegrationTest {
       byte[] bytes = response.toString().getBytes(StandardCharsets.UTF_8);
       exchange.getResponseHeaders().set("Content-Type", "application/json");
       exchange.sendResponseHeaders(status, bytes.length);
+      if (method.equals("GET") && path.equals("/api/admin/oauth-accounts/first") && accountBodyDelayMs.get() > 0) {
+        try { Thread.sleep(accountBodyDelayMs.get()); }
+        catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
+      }
       exchange.getResponseBody().write(bytes);
       exchange.close();
     });
@@ -160,6 +194,10 @@ class ResourcePriorityDurabilityIntegrationTest {
     for (String id : jobs) store.jdbc.update("delete from hub_entity where kind='resource-operation' and id=?", id);
     store.jdbc.update("delete from hub_entity where owner_id=? or id=?", owner, targetId);
     store.jdbc.update("delete from hub_user where id=?", userId);
+    store.jdbc.update("delete from hub_entity where kind='settings'");
+    for (ObjectNode settings : originalSettings)
+      store.jdbc.update("insert into hub_entity(id,kind,owner_id,data,version) values(?,'settings','GLOBAL',cast(? as jsonb),?)",
+          settings.path("id").asText(), settings.toString(), settings.path("version").asLong());
   }
 
   ObjectNode postJson(String path, ObjectNode input, int status) throws Exception {
@@ -472,5 +510,144 @@ class ResourcePriorityDurabilityIntegrationTest {
     mvc.perform(get(path + "/current").session(session)).andExpect(status().isOk())
         .andExpect(jsonPath("$.state").value("UNKNOWN"));
     assertEquals(1, exchanges.get("first"));
+  }
+
+  String intakeSession(String rid) {
+    store.update("resource", rid, owner, store.object().put("upstreamAccountId", "").put("laneId", "")
+        .put("state", "DRAFT").put("dispatchState", "NOT_SUBMITTED"));
+    String nativeId = UUID.randomUUID().toString();
+    ObjectNode nativeSession = store.object().put("id", nativeId).put("targetId", targetId)
+        .put("localResourceId", rid).put("state", "READY").put("pendingState", "fixture-state")
+        .put("expiresAt", "2099-01-01T00:00:00Z").put("accountId", "");
+    nativeSession.putArray("existingAccountIds");
+    store.create("native-oauth", "GLOBAL", nativeSession);
+    return store.create("resource-operation", owner, store.object().put("type", "OAUTH_AUTHORIZE")
+        .put("supplierId", owner).put("resourceId", rid).put("targetId", targetId)
+        .put("protocol", "CCMAX_NATIVE").put("upstreamId", nativeId).put("state", "READY")
+        .put("requestKey", UUID.randomUUID().toString())).path("id").asText();
+  }
+
+  void intakeControls(int limit, int seconds) {
+    store.jdbc.update("delete from hub_entity where kind='settings'");
+    store.create("settings", "GLOBAL", store.object().put("ccmaxIntakeConcurrencyLimit", limit)
+        .put("ccmaxCreationTimeoutSeconds", seconds).put("allowAllSuppliersCcmax", true));
+  }
+
+  CompletableFuture<ObjectNode> submitIntake(String authorization, String code, int status) {
+    return CompletableFuture.supplyAsync(() -> {
+      try { return postJson("/api/resources/oauth/supplier-submit", store.object()
+          .put("sessionId", authorization).put("code", code + "#fixture-state"), status); }
+      catch (Exception failure) { throw new CompletionException(failure); }
+    }, executor);
+  }
+
+  @Test
+  void supplierIntakeLimitRejectsSecondSessionBeforeExchangeAndReleasesConfirmedSlot() throws Exception {
+    intakeControls(1, 30);
+    String firstAuthorization = intakeSession(first), secondAuthorization = intakeSession(second);
+    CompletableFuture<ObjectNode> running = submitIntake(firstAuthorization, "first-code", 200);
+    try {
+      assertTrue(received.await(5, TimeUnit.SECONDS));
+      ObjectNode denied = postJson("/api/resources/oauth/supplier-submit", store.object()
+          .put("sessionId", secondAuthorization).put("code", "second-code#fixture-state"), 409);
+      assertEquals("CCMAX_INTAKE_CONCURRENCY_LIMIT", denied.path("code").asText());
+      assertFalse(exchanges.containsKey("second"));
+      String nativeId = store.get("resource-operation", secondAuthorization, owner).path("upstreamId").asText();
+      assertEquals("READY", store.get("native-oauth", nativeId, "GLOBAL").path("state").asText());
+      assertEquals("RESOURCE_JOB_ALREADY_RUNNING", postJson("/api/resources/" + first + "/creation-recovery",
+          store.object().put("confirmedNotCreated", true).put("action", "EDIT")
+              .put("version", store.get("resource", first, owner).path("version").asLong()), 409).path("code").asText());
+    } finally { release.countDown(); }
+    assertEquals("SUCCESS", running.get(10, TimeUnit.SECONDS).path("state").asText());
+    assertEquals("SUCCESS", submitIntake(secondAuthorization, "second-code", 200).get(10, TimeUnit.SECONDS).path("state").asText());
+    assertEquals(1, exchanges.get("first"));
+    assertEquals(1, exchanges.get("second"));
+  }
+
+  @Test
+  void creationTimeoutCoversLoginAndExchangeAndPreservesUnknownWithoutResending() throws Exception {
+    intakeControls(1, 1);
+    loginDelayMs.set(650); exchangeDelayMs.set(650);
+    String authorization = intakeSession(first);
+    long began = System.nanoTime();
+    ObjectNode failure = submitIntake(authorization, "first-code", 504).get(5, TimeUnit.SECONDS);
+    assertEquals("CCMAX_CREATION_TIMEOUT", failure.path("code").asText());
+    assertTrue(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - began) < 2500);
+    ObjectNode replay = submitIntake(authorization, "first-code", 200).get(5, TimeUnit.SECONDS);
+    assertEquals("UNKNOWN", replay.path("state").asText());
+    assertEquals("UNKNOWN", store.get("resource", first, owner).path("dispatchState").asText());
+    assertEquals(1, exchanges.get("first"));
+    String next = intakeSession(second);
+    assertEquals("CCMAX_INTAKE_CONCURRENCY_LIMIT", postJson("/api/resources/oauth/supplier-submit",
+        store.object().put("sessionId", next).put("code", "second-code#fixture-state"), 409).path("code").asText());
+    assertFalse(exchanges.containsKey("second"));
+    postJson("/api/resources/" + first + "/creation-recovery", store.object()
+        .put("confirmedNotCreated", true).put("action", "EDIT")
+        .put("version", store.get("resource", first, owner).path("version").asLong()), 200);
+    loginDelayMs.set(0); exchangeDelayMs.set(0); release.countDown();
+    assertEquals("READY", postJson("/api/resources/" + first + "/oauth/authorize",
+        store.object().put("requestKey", UUID.randomUUID().toString()), 200).path("state").asText());
+    assertEquals("UNKNOWN", submitIntake(authorization, "first-code", 200).get(5, TimeUnit.SECONDS).path("state").asText());
+    assertEquals("SUCCESS", submitIntake(next, "second-code", 200).get(5, TimeUnit.SECONDS).path("state").asText());
+    assertEquals(1, exchanges.get("first"));
+  }
+
+  @Test
+  void waitingForSharedLoginLockCannotExceedCreationDeadline() throws Exception {
+    intakeControls(2, 1);
+    loginDelayMs.set(1800);
+    String authorization = intakeSession(first);
+    ObjectNode config = store.get("resource-target", targetId, "GLOBAL");
+    CompletableFuture<ObjectNode> other = CompletableFuture.supplyAsync(() -> {
+      return gateway.exchange(config, "GET", "/resources/" + second + "/account-bind",
+          store.object().put("accountId", "second"), "unrelated-read");
+    }, executor);
+    assertTrue(loginReceived.await(5, TimeUnit.SECONDS));
+    long began = System.nanoTime();
+    ObjectNode failure = submitIntake(authorization, "first-code", 504).get(3, TimeUnit.SECONDS);
+    assertEquals("CCMAX_CREATION_TIMEOUT", failure.path("code").asText());
+    assertTrue(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - began) < 1600);
+    assertTrue(exchanges.isEmpty());
+    assertEquals("UPDATED", other.get(4, TimeUnit.SECONDS).path("state").asText());
+  }
+
+  @Test
+  void durableUnknownIntakeKeepsSlotPerSupplierAcrossControlInstances() {
+    intakeControls(1, 7);
+    store.create("resource-operation", owner, store.object().put("supplierId", owner).put("resourceId", first)
+        .put("protocol", "CCMAX_NATIVE").put("type", "OAUTH_COMPLETE").put("state", "UNKNOWN"));
+    var tx = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+    ApiException denied = assertThrows(ApiException.class, () -> tx.execute(status -> new CcmaxIntakeControls(store).admit(owner)));
+    assertEquals("CCMAX_INTAKE_CONCURRENCY_LIMIT", denied.code);
+    Integer independentTimeout = tx.execute(status -> intakeControlService.admit(owner + "-independent"));
+    assertEquals(7, independentTimeout.intValue());
+  }
+
+  @Test
+  void creationDeadlineAlsoBoundsSlowResponseBodyAfterHeaders() throws Exception {
+    intakeControls(1, 1);
+    release.countDown(); accountBodyDelayMs.set(2200);
+    String authorization = intakeSession(first);
+    long began = System.nanoTime();
+    ObjectNode failure = submitIntake(authorization, "first-code", 504).get(4, TimeUnit.SECONDS);
+    assertEquals("CCMAX_CREATION_TIMEOUT", failure.path("code").asText());
+    assertTrue(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - began) < 1700);
+    assertEquals("UNKNOWN", submitIntake(authorization, "first-code", 200).get(4, TimeUnit.SECONDS).path("state").asText());
+    assertEquals(1, exchanges.get("first"));
+  }
+
+  @Test
+  void existingAccountReauthorizationIsIndependentOfFullNewIntakeSlots() throws Exception {
+    intakeControls(1, 1);
+    store.create("resource-operation", owner, store.object().put("supplierId", owner).put("resourceId", first)
+        .put("protocol", "CCMAX_NATIVE").put("type", "OAUTH_COMPLETE").put("state", "UNKNOWN"));
+    store.update("resource", second, owner, store.object().put("laneId", "second"));
+    release.countDown();
+    String path = "/api/resources/" + second + "/reauthorizations";
+    ObjectNode authorization = postJson(path, store.object().put("requestKey", UUID.randomUUID().toString()), 200);
+    ObjectNode input = store.object().put("requestKey", UUID.randomUUID().toString()).put("code", "second-code#fixture-state");
+    assertEquals("SUCCESS", postJson(path + "/" + authorization.path("id").asText(), input, 200).path("state").asText());
+    assertFalse(findLifecycle(input).has("creationTimeoutSeconds"));
+    assertEquals(1, exchanges.get("second"));
   }
 }

@@ -283,7 +283,7 @@ function x() {
           children: [(0, _.jsx)(`h2`, {
             children: f(`CCMAX 上号`)
           }), (0, _.jsx)(`p`, {
-            children: f(`统一开通供应商上号资格，仍受强制停止、项目权限及每日额度限制；关闭后按各供应商配置判断。`)
+            children: f(`统一开通供应商上号资格，仍需通过强制停止与项目权限校验；关闭后按各供应商配置判断。套餐分类和每日额度规则目前仅保存配置。`)
           })]
         }), (0, _.jsxs)(`div`, {
           className: `settings-switch-list`,
@@ -327,7 +327,8 @@ function x() {
               children: [(0, _.jsx)(`strong`, {
                 children: f(`每供应商同时上号数`)
               }), (0, _.jsx)(`small`, {
-                children: f(`当前仅保存配置，并发限制尚未生效。`)
+                id: `ccmax-intake-concurrency-help`,
+                children: f(`限制同一供应商同时进行的 CCMAX 原生 OAuth 新增上号；待核对的创建继续占用名额，已生成但未提交的授权链接不占用。`)
               })]
             }), (0, _.jsx)(`input`, {
               type: `number`,
@@ -336,6 +337,7 @@ function x() {
               max: `1000`,
               step: `1`,
               "aria-label": f(`每供应商同时上号数`),
+              "aria-describedby": `ccmax-intake-concurrency-help`,
               value: O,
               disabled: P,
               onChange: e => k(e.target.value)
@@ -346,7 +348,8 @@ function x() {
               children: [(0, _.jsx)(`strong`, {
                 children: f(`上号单次超时（秒）`)
               }), (0, _.jsx)(`small`, {
-                children: f(`当前仅保存配置，上号单次超时尚未生效。`)
+                id: `ccmax-creation-timeout-help`,
+                children: f(`CCMAX 原生 OAuth 新增上号从兑换开始共用此时间预算，包含上游登录和回读；超时后保留待核对结果，不自动重复创建。已有账号重新授权不受此项限制。`)
               })]
             }), (0, _.jsx)(`input`, {
               type: `number`,
@@ -355,6 +358,7 @@ function x() {
               max: `300`,
               step: `1`,
               "aria-label": f(`上号单次超时（秒）`),
+              "aria-describedby": `ccmax-creation-timeout-help`,
               value: A,
               disabled: P,
               onChange: e => j(e.target.value)

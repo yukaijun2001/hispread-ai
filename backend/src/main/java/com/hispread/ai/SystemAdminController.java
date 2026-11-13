@@ -380,11 +380,12 @@ public class SystemAdminController {
   @PutMapping("/system/settings")
   public Object settings(@RequestBody ObjectNode body, HttpServletRequest r) {
     guard(r, "system.settings");
-    if (body.path("ccmaxIntakeConcurrencyLimit").asInt(10) < 1
-        || body.path("ccmaxIntakeConcurrencyLimit").asInt(10) > 1000
-        || body.path("ccmaxCreationTimeoutSeconds").asInt(120) < 1
-        || body.path("ccmaxCreationTimeoutSeconds").asInt(120) > 300)
-      throw new ApiException(400, "上号并发与超时超出范围");
+    for (String field : List.of("ccmaxIntakeConcurrencyLimit", "ccmaxCreationTimeoutSeconds")) {
+      JsonNode value = body.path(field);
+      if (body.has(field) && (!value.isIntegralNumber() || !value.canConvertToInt()
+          || value.asInt() < 1 || value.asInt() > (field.equals("ccmaxIntakeConcurrencyLimit") ? 1000 : 300)))
+        throw new ApiException(400, "上号并发与超时须为范围内的整数");
+    }
     JsonNode policy = body.path("policy");
     if (policy.isObject()) {
       int min = policy.path("passwordMinLength").asInt(8),
