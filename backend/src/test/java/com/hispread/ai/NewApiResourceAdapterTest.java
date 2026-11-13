@@ -91,6 +91,29 @@ class NewApiResourceAdapterTest {
     assertEquals("COMPLETED", adapter.exchange(config(), "GET", "/priority-batch/reconcile", request, "priority").path("state").asText());
     assertEquals(1, writes.get());
   }
+
+  @Test void acceptedStatusWriteWithRejectedReadbackRemainsUnknown() {
+    Store store = mock(Store.class); when(store.object()).thenAnswer(call -> obj());
+    when(store.get("resource", "local", null)).thenReturn(obj().put("upstreamChannelId", "148"));
+    AtomicInteger writes = new AtomicInteger();
+    AtomicBoolean denyRead = new AtomicBoolean(true);
+    NewApiResourceAdapter adapter = new NewApiResourceAdapter(store, (config, method, path, body, key) -> {
+      if (method.equals("POST")) { writes.incrementAndGet(); return obj().put("success", true); }
+      if (denyRead.get()) throw new ApiException(403, "fixture read denied");
+      ObjectNode response = obj().put("success", true);
+      response.putObject("data").put("id", 148).put("status", 2);
+      return response;
+    });
+    ObjectNode input = obj().put("action", "PAUSE");
+    input.putArray("items").addObject().put("resourceId", "local");
+    ObjectNode uncertain = adapter.exchange(config(), "POST", "/resource-lifecycle-jobs", input, "original");
+    assertEquals("UNKNOWN", uncertain.path("state").asText());
+    assertEquals(0, uncertain.path("failedCount").asInt());
+    assertEquals("UNKNOWN", adapter.exchange(config(), "GET", "/resource-lifecycle-jobs/reconcile", input, "original").path("state").asText());
+    denyRead.set(false);
+    assertEquals("COMPLETED", adapter.exchange(config(), "GET", "/resource-lifecycle-jobs/reconcile", input, "original").path("state").asText());
+    assertEquals(1, writes.get());
+  }
   @Test void rejectedStatusDoesNotFallbackAndUnconfirmedWriteStaysUnknown() {
     Store store = mock(Store.class); when(store.object()).thenAnswer(call -> obj());
     when(store.get("resource", "local", null)).thenReturn(obj().put("upstreamChannelId", "148"));

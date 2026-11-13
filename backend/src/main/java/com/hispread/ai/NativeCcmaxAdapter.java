@@ -535,10 +535,12 @@ final class NativeCcmaxAdapter {
         || body.path("items").size() > 100
         || !Set.of("PAUSE", "RESUME", "REMOVE").contains(text(body, "action")))
       throw new ApiException(400, "生命周期参数无效");
+    LifecycleBindings.validate(store, config, body);
     Map<String, String> mapped = new LinkedHashMap<>();
     for (JsonNode item : body.path("items")) {
       String id = text(item, "resourceId");
-      String accountId = mapped(config, store.get("resource", id, null));
+      String accountId = LifecycleBindings.frozenId(body, id, mapped(config, store.get("resource", id, null)));
+      validateId(accountId);
       if (mapped.containsValue(accountId) || mapped.putIfAbsent(id, accountId) != null)
         throw new ApiException(400, "账号不可重复");
     }
@@ -556,15 +558,18 @@ final class NativeCcmaxAdapter {
         item.put("state", "GONE");
         continue;
       }
+      boolean writeAccepted = false;
       try {
         if (action.equals("REMOVE")) {
-          if (!readOnly)
+          if (!readOnly) {
             call(
                 config,
                 "DELETE",
                 accountPath(entry.getValue()),
                 store.object().put("release_proxy", false),
                 key);
+            writeAccepted = true;
+          }
           ObjectNode archived =
               call(config, "GET", "/admin/archived-accounts/" + entry.getValue(), null, key);
           JsonNode record =
@@ -573,18 +578,20 @@ final class NativeCcmaxAdapter {
           item.put("state", "GONE");
         } else {
           String desired = action.equals("PAUSE") ? "disabled" : "active";
-          if (!readOnly)
+          if (!readOnly) {
             call(
                 config,
                 "PATCH",
                 accountPath(entry.getValue()),
                 store.object().put("status", desired),
                 key);
+            writeAccepted = true;
+          }
           if (!eq(account(config, entry.getValue(), key), "status", desired)) throw invalid();
           item.put("state", action.equals("PAUSE") ? "PAUSED" : "RESUMED");
         }
       } catch (ApiException error) {
-        boolean uncertain = readOnly || error.status >= 500 || error.status == 408;
+        boolean uncertain = readOnly || writeAccepted || error.status >= 500 || error.status == 408;
         if (uncertain) unknown++;
         else failed++;
         item.put("state", uncertain ? "UNKNOWN" : "FAILED")

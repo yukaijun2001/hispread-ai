@@ -962,6 +962,41 @@ class ResourceIntegrationTest {
   }
 
   @Test
+  void acceptedNativePauseWithRejectedReadbackStaysUnknownUntilReadOnlyRecovery() throws Exception {
+    nativeTarget();
+    Client supplier = supplier(), admin = administrator();
+    AtomicInteger status = new AtomicInteger(1), patches = new AtomicInteger();
+    nativeResponder(new AtomicInteger(), status, new AtomicInteger(10));
+    var healthy = responder.get();
+    AtomicBoolean denyRead = new AtomicBoolean(true);
+    responder.set((request, input) -> {
+      httpStatus.set(200);
+      if (request.equals("PATCH /api/admin/oauth-accounts/native-148")) patches.incrementAndGet();
+      if (request.equals("GET /api/admin/oauth-accounts/native-148") && denyRead.get()) {
+        httpStatus.set(403);
+        return "{\"error\":\"fixture read denied\"}";
+      }
+      return healthy.apply(request, input);
+    });
+    ObjectNode local = nativeResource(supplier);
+    String id = local.path("id").asText();
+    store.update("resource", id, supplier.owner, store.object().put("targetId", target.path("id").asText())
+        .put("upstreamAccountId", "native-148").put("upstreamProtocol", "CCMAX_NATIVE").put("operationalState", "ACTIVE"));
+    ObjectNode input = store.object().put("requestKey", UUID.randomUUID().toString()).put("action", "PAUSE");
+    input.putArray("items").addObject().put("resourceId", id);
+    ObjectNode uncertain = write("/api/resource-lifecycle-jobs", input, admin, 200);
+    assertEquals("UNKNOWN", uncertain.path("state").asText());
+    assertEquals(0, uncertain.path("failedCount").asInt());
+    write("/api/resource-lifecycle-jobs", input, admin, 200);
+    assertEquals(1, patches.get());
+    denyRead.set(false);
+    ObjectNode recovered = write("/api/resource-lifecycle-jobs/" + uncertain.path("id").asText() + "/reconcile", store.object(), admin, 200);
+    assertEquals("COMPLETED", recovered.path("state").asText());
+    assertEquals(1, patches.get());
+    assertEquals("PAUSED", store.get("resource", id, supplier.owner).path("operationalState").asText());
+  }
+
+  @Test
   void historicalFailedPriorityHasStableDetailShapeWithoutInventedItemCounts() throws Exception {
     Client admin = administrator();
     ObjectNode operation = store.object().put("supplierId", "GLOBAL").put("type", "PRIORITY")
