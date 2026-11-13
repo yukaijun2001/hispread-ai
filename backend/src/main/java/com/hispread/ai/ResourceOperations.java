@@ -85,6 +85,7 @@ public class ResourceOperations {
         List.of(
             "request",
             "lifecycleBindings",
+            "maintenanceBinding",
             "fingerprint",
             "proxyUrl",
             "socks5",
@@ -516,8 +517,13 @@ public class ResourceOperations {
         req);
   }
 
-  @Transactional(noRollbackFor = ApiException.class)
   public ObjectNode action(
+      String id, String action, String method, ObjectNode body, HttpServletRequest req) {
+    if (action.equals("credential-refresh")) return credentialRefresh(id, method, body, req);
+    return preservingApiFailure(() -> actionTransactional(id, action, method, body, req));
+  }
+
+  private ObjectNode actionTransactional(
       String id, String action, String method, ObjectNode body, HttpServletRequest req) {
     if (action.equals("usage")) auth.require(req, "resource.usage");
     else if (action.equals("say-hi")) auth.require(req, "resource.read");
@@ -712,6 +718,19 @@ public class ResourceOperations {
   public ObjectNode reconcile(String id, HttpServletRequest req) {
     writable(req);
     ObjectNode operation = getOperation(id, req);
+    if (eq(operation, "type", "CREDENTIAL-REFRESH") && eq(operation, "protocol", "CCMAX_NATIVE"))
+      return operationLocked("resource-credential:" + text(operation, "supplierId"), text(operation, "resourceId"), () -> {
+        MaintenanceAttempt attempt = transactions.execute(status -> {
+          ObjectNode op = getOperation(id, req);
+          if (Set.of("UPDATED", "SUCCESS", "COMPLETED", "FAILED").contains(text(op, "state")))
+            return new MaintenanceAttempt(op, null, null, false);
+          ObjectNode config = gateway.requireConfigured(text(op, "targetId"));
+          if (!eq(config, "protocol", "CCMAX_NATIVE")) throw new ApiException(409, "目标协议已变化，请核对原操作");
+          NativeMaintenanceBinding.validate(config, b.resource(text(op, "resourceId"), req), op.path("maintenanceBinding"));
+          return new MaintenanceAttempt(op, config, null, false);
+        });
+        return attempt.config() == null ? result(attempt.operation(), req) : executeMaintenance(attempt, true, req);
+      });
     if (eq(operation, "type", "LIFECYCLE")
         && Set.of("NEWAPI", "CCMAX_NATIVE").contains(text(operation, "protocol"))) {
       return lifecycleLocked(text(operation, "supplierId"), text(operation, "requestKey"), () -> {
@@ -811,6 +830,101 @@ public class ResourceOperations {
 
   private record LifecycleAttempt(ObjectNode operation, ObjectNode config, ObjectNode wire, boolean fallback) {}
   private record JobSelection(String owner, String target) {}
+  private record MaintenanceAttempt(ObjectNode operation, ObjectNode config, ObjectNode wire, boolean fallback) {}
+
+  private ObjectNode credentialRefresh(String rid, String method, ObjectNode body, HttpServletRequest req) {
+    writable(req);
+    b.resource(rid, req);
+    String owner = b.entityOwner("resource", rid, req);
+    return operationLocked("resource-credential:" + owner, rid, () -> {
+      MaintenanceAttempt attempt = transactions.execute(status -> {
+        ObjectNode resource = b.resource(rid, req);
+        String key = text(body, "requestKey");
+        if (key.isBlank()) key = text(body, "requestId");
+        if (key.isBlank()) key = rid + ":credential-refresh:" + resource.path("version").asLong();
+        store.jdbc.queryForObject("select pg_advisory_xact_lock(hashtext(?),hashtext(?))",
+            (row, index) -> true, owner, key);
+        ObjectNode prior = findRequest(owner, key, "CREDENTIAL-REFRESH", req);
+        if (prior != null) {
+          if (!eq(prior, "resourceId", rid) || !eq(prior, "fingerprint", digest(body)))
+            throw new ApiException(409, "提交编号已用于不同资料", "IDEMPOTENCY_CONFLICT");
+          return new MaintenanceAttempt(prior, null, null, false);
+        }
+        if (isCcmax(resource)) ccmaxPolicy.requireReauthorization(owner, req);
+        if (eq(resource, "operationalState", "GONE"))
+          throw new ApiException(409, "账号已移除，不可再操作", "RESOURCE_CHANNEL_REMOVED");
+        if (body.has("version") && body.path("version").asLong() != resource.path("version").asLong())
+          throw new ApiException(409, "资源版本已变化");
+        ObjectNode config = gateway.requireConfigured(actionTarget(resource, body));
+        if (!eq(config, "protocol", "CCMAX_NATIVE")) return new MaintenanceAttempt(null, null, null, true);
+        for (ObjectNode existing : store.list("resource-operation", owner))
+          if (eq(existing, "resourceId", rid) && eq(existing, "type", "CREDENTIAL-REFRESH")
+              && Set.of("UNKNOWN", "SUBMITTING", "RUNNING", "PENDING").contains(text(existing, "state")))
+            throw new ApiException(409, "原凭据刷新结果尚未确认，请查询原操作，勿重新刷新", "RESOURCE_OPERATION_UNCERTAIN");
+        ObjectNode binding = store.object().put("targetId", text(config, "id"))
+            .put("accountId", resource.path("upstreamAccountId").asText(resource.path("laneId").asText()));
+        NativeMaintenanceBinding.validate(config, resource, binding);
+        ObjectNode op = store.object().put("type", "CREDENTIAL-REFRESH").put("supplierId", owner)
+            .put("resourceId", rid).put("requestKey", key).put("fingerprint", digest(body))
+            .put("targetId", text(config, "id")).put("protocol", "CCMAX_NATIVE")
+            .put("upstreamPath", "/resources/" + encode(rid) + "/credential-refresh").put("method", method)
+            .put("state", "UNKNOWN").put("status", "UNKNOWN").put("writeIntentVersion", 1)
+            .put("startedAt", Instant.now().toString()).put("createdBy", auth.userId(req));
+        op.set("request", body.deepCopy());
+        op.set("maintenanceBinding", binding);
+        op.set("result", store.object().put("state", "UNKNOWN")
+            .put("message", "原凭据刷新结果待核对，未再次发送刷新请求"));
+        ObjectNode wire = body.deepCopy();
+        wire.set("expectedMaintenanceBinding", binding.deepCopy());
+        return new MaintenanceAttempt(store.create("resource-operation", owner, op), config, wire, false);
+      });
+      if (attempt.fallback()) return preservingApiFailure(() -> actionTransactional(rid, "credential-refresh", method, body, req));
+      if (attempt.config() == null) return result(attempt.operation(), req);
+      return executeMaintenance(attempt, false, req);
+    });
+  }
+
+  private ObjectNode executeMaintenance(MaintenanceAttempt attempt, boolean readOnly, HttpServletRequest req) {
+    ObjectNode original = attempt.operation();
+    String path = text(original, "upstreamPath");
+    ObjectNode response;
+    try {
+      response = gateway.exchange(attempt.config(), readOnly ? "GET" : text(original, "method"),
+          readOnly ? path + "/operations/" + encode(text(original, "requestKey")) : path,
+          readOnly ? null : attempt.wire(), text(original, "requestKey"));
+      validateIdentity(text(original, "resourceId"), text(original, "supplierId"), response);
+      ResourceResponseValidator.validate("CREDENTIAL-REFRESH", response, original.path("request"));
+    } catch (ApiException error) {
+      transactions.execute(status -> {
+        boolean unknown = readOnly || error.status >= 500 || error.status == 408 || "RESOURCE_MAPPING_CHANGED".equals(error.code);
+        ObjectNode patch = store.object().put("state", unknown ? "UNKNOWN" : "FAILED")
+            .put("status", unknown ? "UNKNOWN" : "FAILED").put("errorCode", Objects.toString(error.code, "RESOURCE_UPSTREAM_ERROR"))
+            .put("error", "上游凭据刷新未确认，请查询原操作");
+        patch.set("result", store.object().put("state", unknown ? "UNKNOWN" : "FAILED")
+            .put("message", "上游凭据刷新未确认，未再次发送刷新请求"));
+        store.update("resource-operation", text(original, "id"), text(original, "supplierId"), patch);
+        return null;
+      });
+      throw error;
+    }
+    return transactions.execute(status -> {
+      ObjectNode op = getOperation(text(original, "id"), req);
+      try { NativeMaintenanceBinding.validate(attempt.config(), b.resource(text(op, "resourceId"), req), op.path("maintenanceBinding")); }
+      catch (ApiException changed) {
+        response.removeAll();
+        response.put("state", "UNKNOWN").put("errorCode", "RESOURCE_MAPPING_CHANGED")
+            .put("message", "执行期间资源关联已变化，请核对原账号");
+      }
+      String state = text(response, "state");
+      ObjectNode patch = store.object().put("state", state).put("status", state).put("finishedAt", Instant.now().toString());
+      patch.set("result", response);
+      if (Set.of("UPDATED", "SUCCESS", "COMPLETED").contains(state)) {
+        patch.putNull("error").putNull("errorCode");
+        applyResource(text(op, "resourceId"), text(op, "supplierId"), response, "CREDENTIAL-REFRESH", req);
+      }
+      return result(store.update("resource-operation", text(op, "id"), text(op, "supplierId"), patch), req);
+    });
+  }
 
   private void requireJobItems(ObjectNode body) {
     if (!body.path("items").isArray()
@@ -975,23 +1089,27 @@ public class ResourceOperations {
   }
 
   private <T> T lifecycleLocked(String owner, String key, Supplier<T> action) {
+    return operationLocked("resource-lifecycle:" + owner, key, action);
+  }
+
+  private <T> T operationLocked(String namespace, String key, Supplier<T> action) {
     try (Connection lock = Objects.requireNonNull(store.jdbc.getDataSource()).getConnection()) {
       try (PreparedStatement query = lock.prepareStatement("select pg_try_advisory_lock(hashtext(?),hashtext(?))")) {
-        query.setString(1, "resource-lifecycle:" + owner); query.setString(2, key);
+        query.setString(1, namespace); query.setString(2, key);
         try (ResultSet result = query.executeQuery()) {
           result.next();
           if (!result.getBoolean(1))
-            throw new ApiException(409, "原启停或移除任务正在执行，请稍后查询", "RESOURCE_JOB_ALREADY_RUNNING");
+            throw new ApiException(409, "原资源操作正在执行，请稍后查询", "RESOURCE_JOB_ALREADY_RUNNING");
         }
       }
       try { return action.get(); }
       finally {
         try (PreparedStatement query = lock.prepareStatement("select pg_advisory_unlock(hashtext(?),hashtext(?))")) {
-          query.setString(1, "resource-lifecycle:" + owner); query.setString(2, key); query.execute();
+          query.setString(1, namespace); query.setString(2, key); query.execute();
         }
       }
     } catch (SQLException failure) {
-      throw new ApiException(503, "启停或移除任务执行锁暂不可用", "RESOURCE_JOB_LOCK_UNAVAILABLE");
+      throw new ApiException(503, "资源操作执行锁暂不可用", "RESOURCE_JOB_LOCK_UNAVAILABLE");
     }
   }
 

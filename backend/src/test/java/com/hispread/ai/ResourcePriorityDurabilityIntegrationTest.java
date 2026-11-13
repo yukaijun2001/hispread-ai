@@ -34,9 +34,11 @@ class ResourcePriorityDurabilityIntegrationTest {
   String csrf, owner, targetId, userId, first, second;
   List<String> jobs;
   Map<String, Integer> weights, writes;
+  Map<String, Integer> refreshes;
   Map<String, String> accountStates;
   AtomicReference<String> blockedAccount;
   AtomicBoolean rejectSecond;
+  AtomicBoolean denyAccountRead;
   CountDownLatch received, release;
 
   @BeforeEach
@@ -50,9 +52,11 @@ class ResourcePriorityDurabilityIntegrationTest {
     jobs = new ArrayList<>();
     weights = new ConcurrentHashMap<>(Map.of("first", 10, "second", 10));
     writes = new ConcurrentHashMap<>();
+    refreshes = new ConcurrentHashMap<>();
     accountStates = new ConcurrentHashMap<>(Map.of("first", "active", "second", "active"));
     blockedAccount = new AtomicReference<>("first");
     rejectSecond = new AtomicBoolean(false);
+    denyAccountRead = new AtomicBoolean(false);
     received = new CountDownLatch(1);
     release = new CountDownLatch(1);
     executor = Executors.newCachedThreadPool();
@@ -67,7 +71,16 @@ class ResourcePriorityDurabilityIntegrationTest {
         response.put("access_token", "FIXTURE-PRIVATE").putObject("user").put("role", "admin");
       } else if (path.startsWith("/api/admin/oauth-accounts/")) {
         String account = path.substring("/api/admin/oauth-accounts/".length());
-        if (method.equals("PATCH")) {
+        if (method.equals("POST") && account.endsWith("/refresh")) {
+          account = account.substring(0, account.length() - "/refresh".length());
+          refreshes.merge(account, 1, Integer::sum);
+          if (account.equals(blockedAccount.get())) {
+            received.countDown();
+            try { release.await(10, TimeUnit.SECONDS); }
+            catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
+          }
+          response.put("ok", true);
+        } else if (method.equals("PATCH")) {
           JsonNode input = store.json.readTree(exchange.getRequestBody());
           writes.merge(account, 1, Integer::sum);
           if (account.equals("second") && rejectSecond.get()) {
@@ -86,6 +99,9 @@ class ResourcePriorityDurabilityIntegrationTest {
             }
             response.put("ok", true);
           }
+        } else if (denyAccountRead.get()) {
+          status = 403;
+          response.put("error", "fixture read denied");
         } else {
           response.putObject("account").put("id", account).put("status", accountStates.get(account))
               .put("weight", weights.get(account));
@@ -315,5 +331,69 @@ class ResourcePriorityDurabilityIntegrationTest {
         + finished.path("id").asText() + "/reconcile", store.object(), 409).path("code").asText());
     assertEquals(1, writes.get("first"));
     assertEquals("UNKNOWN", findLifecycle(input).path("state").asText());
+  }
+
+  @Test
+  void credentialRefreshCommitsIntentAndSerializesReplayNewKeysAndReadback() throws Exception {
+    String path = "/api/resources/" + first + "/credential-refresh";
+    ObjectNode input = store.object().put("requestKey", UUID.randomUUID().toString());
+    CompletableFuture<ObjectNode> running = CompletableFuture.supplyAsync(() -> {
+      try { return postJson(path, input, 200); }
+      catch (Exception failure) { throw new CompletionException(failure); }
+    }, executor);
+    String operationId;
+    try {
+      assertTrue(received.await(5, TimeUnit.SECONDS));
+      ObjectNode intent = findLifecycle(input);
+      operationId = intent.path("id").asText();
+      assertEquals("UNKNOWN", intent.path("state").asText());
+      mvc.perform(get(path).session(session)).andExpect(status().isOk())
+          .andExpect(jsonPath("$.state").value("UNKNOWN"))
+          .andExpect(jsonPath("$.maintenanceBinding").doesNotExist());
+      assertEquals("RESOURCE_JOB_ALREADY_RUNNING", postJson(path, input, 409).path("code").asText());
+      assertEquals("RESOURCE_JOB_ALREADY_RUNNING", postJson(path,
+          store.object().put("requestKey", UUID.randomUUID().toString()), 409).path("code").asText());
+      assertEquals("RESOURCE_JOB_ALREADY_RUNNING", postJson("/api/resources/" + first + "/operations/"
+          + operationId + "/reconcile", store.object(), 409).path("code").asText());
+    } finally { release.countDown(); }
+    ObjectNode finished = running.get(10, TimeUnit.SECONDS);
+    assertEquals("UPDATED", finished.path("state").asText());
+    long version = store.get("resource", first, owner).path("version").asLong();
+    assertEquals(finished.path("operationId"), postJson(path, input, 200).path("operationId"));
+    assertEquals(version, store.get("resource", first, owner).path("version").asLong());
+    assertEquals("UPDATED", postJson("/api/resources/" + first + "/operations/" + operationId
+        + "/reconcile", store.object(), 200).path("state").asText());
+    assertEquals("IDEMPOTENCY_CONFLICT", postJson("/api/resources/" + second + "/credential-refresh",
+        input, 409).path("code").asText());
+    assertEquals(1, refreshes.get("first"));
+    assertFalse(refreshes.containsKey("second"));
+  }
+
+  @Test
+  void acceptedCredentialRefreshWithUnreadableReceiptStaysUnknownAndBlocksAnotherKey() throws Exception {
+    blockedAccount.set("");
+    denyAccountRead.set(true);
+    String path = "/api/resources/" + first + "/credential-refresh";
+    ObjectNode input = store.object().put("requestKey", UUID.randomUUID().toString());
+    postJson(path, input, 502);
+    ObjectNode intent = findLifecycle(input);
+    String operation = "/api/resources/" + first + "/operations/" + intent.path("id").asText();
+    assertEquals("UNKNOWN", intent.path("state").asText());
+    assertEquals("UNKNOWN", postJson(path, input, 200).path("state").asText());
+    assertEquals("RESOURCE_OPERATION_UNCERTAIN", postJson(path,
+        store.object().put("requestKey", UUID.randomUUID().toString()), 409).path("code").asText());
+    denyAccountRead.set(false);
+    long version = store.get("resource", first, owner).path("version").asLong();
+    ObjectNode checked = postJson(operation + "/reconcile", store.object(), 200);
+    assertEquals("UNKNOWN", checked.path("state").asText());
+    assertTrue(checked.path("message").asText().contains("无法"));
+    assertEquals(version, store.get("resource", first, owner).path("version").asLong());
+    mvc.perform(get("/api/resources/" + second + "/operations/" + intent.path("id").asText()).session(session))
+        .andExpect(status().isNotFound());
+    postJson("/api/resources/" + second + "/operations/" + intent.path("id").asText() + "/reconcile",
+        store.object(), 404);
+    store.update("resource", first, owner, store.object().put("upstreamAccountId", "replacement"));
+    assertEquals("RESOURCE_MAPPING_CHANGED", postJson(operation + "/reconcile", store.object(), 409).path("code").asText());
+    assertEquals(1, refreshes.get("first"));
   }
 }
