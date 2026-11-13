@@ -161,6 +161,7 @@ final class NewApiResourceAdapter {
     ArrayNode items = result.putArray("items");
     for (var entry : channels.entrySet()) {
       ObjectNode item = items.addObject().put("resourceId", entry.getKey()).put("laneId", entry.getValue().toString()).put("priority", desired);
+      boolean writeAccepted = false;
       try {
         if (!readOnly) {
           JsonNode before = send(config, "GET", "/channel/" + entry.getValue(), null, key).path("data");
@@ -168,13 +169,14 @@ final class NewApiResourceAdapter {
           ObjectNode update = store.object().put("id", entry.getValue()).put("priority", desired);
           preserveRouting(before, update);
           send(config, "PUT", "/channel/", update, key);
+          writeAccepted = true;
         }
         JsonNode observed = send(config, "GET", "/channel/" + entry.getValue(), null, key).path("data");
         if (observed.path("id").asLong() != entry.getValue() || !observed.path("priority").isIntegralNumber()) throw invalid();
         if (observed.path("priority").asInt() == desired) item.put("state", "SUCCESS");
         else { unknown++; item.put("state", "UNKNOWN"); }
       } catch (ApiException e) {
-        boolean uncertain = e.status >= 500 || e.status == 408;
+        boolean uncertain = readOnly || writeAccepted || e.status >= 500 || e.status == 408;
         if (uncertain) unknown++; else failed++;
         item.put("state", uncertain ? "UNKNOWN" : "FAILED").put("errorCode", e.code);
       }
