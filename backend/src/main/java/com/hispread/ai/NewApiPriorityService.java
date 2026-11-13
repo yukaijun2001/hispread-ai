@@ -5,18 +5,24 @@ import static com.hispread.ai.BusinessSupport.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.*;
 import jakarta.servlet.http.HttpServletRequest;
+import java.sql.*;
 import java.time.Instant;
 import java.util.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class NewApiPriorityService {
   private final Store store;
   private final BusinessSupport business;
   private final ResourceIntegrationGateway gateway;
+  private final TransactionTemplate transactions;
 
-  public NewApiPriorityService(Store store, BusinessSupport business, ResourceIntegrationGateway gateway) {
+  public NewApiPriorityService(Store store, BusinessSupport business, ResourceIntegrationGateway gateway,
+      PlatformTransactionManager transactionManager) {
     this.store = store; this.business = business; this.gateway = gateway;
+    this.transactions = new TransactionTemplate(transactionManager);
   }
 
   ObjectNode preview(ObjectNode body, HttpServletRequest req) {
@@ -70,7 +76,8 @@ public class NewApiPriorityService {
         .put("resourceName", text(resource, "name")).put("laneId", text(resource, mappingField))
         .put("resourceVersion", resource.path("version").asLong()).put("priority", body.path("priority").asInt()).put("state", "PENDING");
     ObjectNode op = store.object().put("type", "PRIORITY").put("protocol", protocol).put("supplierId", "GLOBAL")
-        .put("targetId", text(config, "id")).put("requestKey", key).put("state", "PREVIEW").put("total", selected.size());
+        .put("targetId", text(config, "id")).put("requestKey", key).put("state", "PREVIEW")
+        .put("writeIntentVersion", 1).put("total", selected.size());
     op.set("request", request); op.set("priorityInput", fingerprint); op.set("items", items);
     ObjectNode result = request.deepCopy().put("state", "PREVIEW"); result.putObject("counts").put("PENDING", selected.size());
     op.set("result", result);
@@ -80,11 +87,61 @@ public class NewApiPriorityService {
   ObjectNode action(ObjectNode op, String action, HttpServletRequest req) {
     if (!Set.of("start", "retry", "reconcile").contains(action)) throw new ApiException(400, "不支持的优先级操作");
     String id = text(op, "id");
-    store.jdbc.queryForObject("select pg_advisory_xact_lock(hashtext(?),hashtext(?))", (rs, row) -> true, "newapi-priority-job", id);
-    op = store.get("resource-operation", id, "GLOBAL");
-    if (action.equals("start") && !eq(op, "state", "PREVIEW")) return view(op);
+    // A session lock spans the committed intent, remote call and committed result. A process
+    // crash releases the lock but cannot roll a potentially accepted write back to PREVIEW.
+    try (Connection lock = Objects.requireNonNull(store.jdbc.getDataSource()).getConnection()) {
+      try (PreparedStatement query = lock.prepareStatement("select pg_try_advisory_lock(hashtext(?),hashtext(?))")) {
+        query.setString(1, "newapi-priority-job"); query.setString(2, id);
+        try (ResultSet result = query.executeQuery()) {
+          result.next();
+          if (!result.getBoolean(1))
+            throw new ApiException(409, "原优先级任务正在执行，请稍后查询结果", "RESOURCE_JOB_ALREADY_RUNNING");
+        }
+      }
+      try {
+        Attempt attempt = transactions.execute(status -> prepare(id, action, req));
+        if (attempt.request() == null) return view(attempt.operation());
+        ObjectNode result;
+        try {
+          result = gateway.exchange(attempt.config(), action.equals("reconcile") ? "GET" : "POST",
+              action.equals("reconcile") ? "/priority-batch/reconcile" : "/priority-batch",
+              attempt.request(), text(attempt.operation(), "requestKey"));
+        } catch (ApiException error) {
+          result = attempt.request().deepCopy().put("state", "UNKNOWN");
+          for (JsonNode item : result.path("items"))
+            ((ObjectNode) item).put("state", "UNKNOWN").put("errorCode", error.code);
+        }
+        ObjectNode reply = result;
+        return transactions.execute(status -> complete(attempt, reply, req));
+      } finally {
+        try (PreparedStatement query = lock.prepareStatement("select pg_advisory_unlock(hashtext(?),hashtext(?))")) {
+          query.setString(1, "newapi-priority-job"); query.setString(2, id); query.execute();
+        }
+      }
+    } catch (SQLException error) {
+      throw new ApiException(503, "优先级任务执行锁暂不可用", "RESOURCE_JOB_LOCK_UNAVAILABLE");
+    }
+  }
+
+  private record Attempt(ObjectNode operation, ObjectNode config, ObjectNode request) {}
+
+  private Attempt prepare(String id, String action, HttpServletRequest req) {
+    ObjectNode op = store.get("resource-operation", id, "GLOBAL");
+    if (eq(op, "state", "PREVIEW") && op.path("writeIntentVersion").asInt() != 1) {
+      // A PREVIEW left by the old single-transaction writer may already have reached upstream.
+      // There is no evidence to distinguish that case from a never-started legacy preview.
+      ObjectNode pending = op.path("result").deepCopy();
+      for (JsonNode item : pending.path("items"))
+        ((ObjectNode) item).put("state", "UNKNOWN").put("errorCode", "RESOURCE_LEGACY_PREVIEW_UNCERTAIN")
+            .put("errorMessage", "旧任务缺少持久化执行标记，请先核对原操作；未再次发送更新");
+      summarize(pending);
+      ObjectNode patch = store.object().put("state", "UNKNOWN");
+      patch.set("result", pending);
+      op = store.update("resource-operation", id, "GLOBAL", patch);
+    }
+    if (action.equals("start") && !eq(op, "state", "PREVIEW")) return new Attempt(op, null, null);
     if (action.equals("retry") && eq(op, "state", "PREVIEW")) throw new ApiException(409, "请先确认执行任务");
-    if (action.equals("reconcile") && eq(op, "state", "PREVIEW")) return view(op);
+    if (action.equals("reconcile") && eq(op, "state", "PREVIEW")) return new Attempt(op, null, null);
     ObjectNode config = gateway.requireConfigured(text(op, "targetId"));
     if (!eq(config, "protocol", text(op, "protocol"))) throw new ApiException(409, "目标协议已变化");
     String mappingField = eq(config, "protocol", "CCMAX_NATIVE") ? "upstreamAccountId" : "upstreamChannelId";
@@ -104,37 +161,66 @@ public class NewApiPriorityService {
       }
       items.add(item);
     }
-    if (items.isEmpty()) return view(op);
+    if (items.isEmpty()) return new Attempt(op, null, null);
     request.set("items", items);
-    ObjectNode result;
-    try {
-      result = gateway.exchange(config, action.equals("reconcile") ? "GET" : "POST", action.equals("reconcile") ? "/priority-batch/reconcile" : "/priority-batch", request, text(op, "requestKey"));
-    } catch (ApiException error) {
-      result = request.deepCopy().put("state", "UNKNOWN");
-      for (JsonNode item : result.path("items")) ((ObjectNode) item).put("state", "UNKNOWN").put("errorCode", error.code);
+    if (!action.equals("reconcile")) {
+      ObjectNode pending = op.path("result").deepCopy();
+      Set<String> claimed = new HashSet<>();
+      for (JsonNode item : items) claimed.add(text(item, "resourceId"));
+      for (JsonNode item : pending.path("items")) {
+        if (!claimed.contains(text(item, "resourceId"))) continue;
+        ObjectNode row = (ObjectNode) item;
+        row.remove(List.of("errorCode", "errorMessage"));
+        row.put("state", "UNKNOWN");
+      }
+      summarize(pending);
+      ObjectNode patch = store.object().put("state", text(pending, "state"))
+          .put("startedAt", Instant.now().toString()).putNull("finishedAt");
+      patch.set("result", pending);
+      op = store.update("resource-operation", id, "GLOBAL", patch);
     }
+    return new Attempt(op, config, request);
+  }
+
+  private ObjectNode complete(Attempt attempt, ObjectNode result, HttpServletRequest req) {
+    ObjectNode op = store.get("resource-operation", text(attempt.operation(), "id"), "GLOBAL");
+    ObjectNode config = attempt.config(), request = attempt.request();
+    String mappingField = eq(config, "protocol", "CCMAX_NATIVE") ? "upstreamAccountId" : "upstreamChannelId";
     Map<String, JsonNode> changed = new LinkedHashMap<>();
     for (JsonNode item : result.path("items")) changed.put(text(item, "resourceId"), item);
     ArrayNode merged = store.json.createArrayNode();
-    int failed = 0, unknown = 0, success = 0;
     for (JsonNode item : op.path("request").path("items")) {
       JsonNode previous = item;
       for (JsonNode old : op.path("result").path("items")) if (eq(old, "resourceId", text(item, "resourceId"))) previous = old;
       ObjectNode finalItem = ((ObjectNode) item).deepCopy();
       finalItem.setAll((ObjectNode) changed.getOrDefault(text(item, "resourceId"), previous));
       merged.add(finalItem);
-      if (eq(finalItem, "state", "SUCCESS")) {
-        success++;
-        if (changed.containsKey(text(item, "resourceId")))
-          business.update("resource", text(item, "resourceId"), req, store.object().put("upstreamPriority", request.path("priority").asInt()));
-      } else if (eq(finalItem, "state", "FAILED")) failed++; else unknown++;
+      if (eq(finalItem, "state", "SUCCESS") && changed.containsKey(text(item, "resourceId"))) {
+        ObjectNode resource = business.resource(text(item, "resourceId"), req);
+        if (!eq(resource, "targetId", text(config, "id"))
+            || !eq(resource, mappingField, text(item, "laneId")) || eq(resource, "operationalState", "GONE"))
+          finalItem.put("state", "UNKNOWN").put("errorCode", "RESOURCE_MAPPING_CHANGED")
+              .put("errorMessage", "执行期间资源关联已变化，请核对原账号");
+        else business.update("resource", text(item, "resourceId"), req,
+            store.object().put("upstreamPriority", request.path("priority").asInt()));
+      }
     }
     result.set("items", merged);
-    result.putObject("counts").put("SUCCESS", success).put("FAILED", failed).put("UNKNOWN", unknown);
-    result.put("state", unknown > 0 ? "UNKNOWN" : failed == merged.size() ? "FAILED" : failed > 0 ? "PARTIAL_FAILED" : "COMPLETED");
+    summarize(result);
     ObjectNode patch = store.object().put("state", text(result, "state")).put("finishedAt", Instant.now().toString());
     patch.set("result", result);
-    return view(store.update("resource-operation", id, "GLOBAL", patch));
+    return view(store.update("resource-operation", text(op, "id"), "GLOBAL", patch));
+  }
+
+  private void summarize(ObjectNode result) {
+    int failed = 0, unknown = 0, success = 0;
+    for (JsonNode item : result.path("items")) {
+      if (eq(item, "state", "SUCCESS")) success++;
+      else if (eq(item, "state", "FAILED")) failed++;
+      else unknown++;
+    }
+    result.putObject("counts").put("SUCCESS", success).put("FAILED", failed).put("UNKNOWN", unknown);
+    result.put("state", unknown > 0 ? "UNKNOWN" : success == 0 ? "FAILED" : failed > 0 ? "PARTIAL_FAILED" : "COMPLETED");
   }
 
   ObjectNode view(ObjectNode op) {

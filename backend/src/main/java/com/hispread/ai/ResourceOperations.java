@@ -11,6 +11,8 @@ import java.time.Instant;
 import java.util.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /** Durable local records around explicitly configured upstream adapter operations. */
 @Service
@@ -21,16 +23,18 @@ public class ResourceOperations {
   private final ResourceIntegrationGateway gateway;
   private final NewApiPriorityService newApiPriority;
   private final CcmaxAccessPolicy ccmaxPolicy;
+  private final TransactionTemplate transactions;
 
   public ResourceOperations(
       Store store, AuthService auth, BusinessSupport b, ResourceIntegrationGateway gateway, NewApiPriorityService newApiPriority,
-      CcmaxAccessPolicy ccmaxPolicy) {
+      CcmaxAccessPolicy ccmaxPolicy, PlatformTransactionManager transactionManager) {
     this.store = store;
     this.auth = auth;
     this.b = b;
     this.gateway = gateway;
     this.newApiPriority = newApiPriority;
     this.ccmaxPolicy = ccmaxPolicy;
+    this.transactions = new TransactionTemplate(transactionManager);
   }
 
   private JsonNode canonical(JsonNode value) {
@@ -987,22 +991,25 @@ public class ResourceOperations {
         req);
   }
 
-  @Transactional(noRollbackFor = ApiException.class)
   public ObjectNode priorityAction(String id, String action, HttpServletRequest req) {
     if (!auth.admin(req)) throw new ApiException(403, "仅最高管理员可调整批量优先级");
     auth.require(req, "resource.dispatch");
     ObjectNode op = store.get("resource-operation", id, "GLOBAL");
     if (Set.of("NEWAPI", "CCMAX_NATIVE").contains(text(op, "protocol")) && eq(op, "type", "PRIORITY")) return newApiPriority.action(op, action, req);
-    return invoke(
-        "PRIORITY_" + action,
-        null,
-        "GLOBAL",
-        "POST",
-        "/cc-intake/admin/priority/jobs/" + encode(text(op, "upstreamId")) + "/" + action,
-        b.obj(),
-        id + ":" + action,
-        text(op, "targetId"),
-        req);
+    // Preserve CUSTOM's persisted FAILED/UNKNOWN receipt even when its request returns an error.
+    ApiException[] failure = new ApiException[1];
+    ObjectNode result = transactions.execute(status -> {
+      try {
+        return invoke("PRIORITY_" + action, null, "GLOBAL", "POST",
+            "/cc-intake/admin/priority/jobs/" + encode(text(op, "upstreamId")) + "/" + action,
+            b.obj(), id + ":" + action, text(op, "targetId"), req);
+      } catch (ApiException error) {
+        failure[0] = error;
+        return null;
+      }
+    });
+    if (failure[0] != null) throw failure[0];
+    return result;
   }
 
   public static String encode(String value) {

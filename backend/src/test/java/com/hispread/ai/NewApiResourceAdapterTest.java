@@ -63,6 +63,34 @@ class NewApiResourceAdapterTest {
     assertEquals("COMPLETED", adapter.exchange(config(), "GET", "/priority-batch/reconcile", request, "priority").path("state").asText());
     assertEquals(1, writes.get());
   }
+
+  @Test void acceptedPriorityWriteWithRejectedReadbackRemainsUnknown() {
+    Store store = mock(Store.class); when(store.object()).thenAnswer(call -> obj());
+    when(store.get("resource", "local", null)).thenReturn(obj().put("upstreamChannelId", "148"));
+    AtomicInteger writes = new AtomicInteger();
+    AtomicBoolean blockRead = new AtomicBoolean(true);
+    NewApiResourceAdapter adapter = new NewApiResourceAdapter(store, (config, method, path, body, key) -> {
+      if (method.equals("PUT")) {
+        writes.incrementAndGet();
+        return obj().put("success", true);
+      }
+      if (writes.get() > 0 && blockRead.get()) throw new ApiException(403, "fixture read denied");
+      ObjectNode reply = obj().put("success", true);
+      reply.putObject("data").put("id", 148).put("status", 1).put("priority", 7);
+      return reply;
+    });
+    ObjectNode request = obj().put("priority", 7);
+    request.putArray("items").add(obj().put("resourceId", "local"));
+    ObjectNode uncertain = adapter.exchange(config(), "POST", "/priority-batch", request, "priority");
+    assertEquals("UNKNOWN", uncertain.path("state").asText());
+    assertEquals(0, uncertain.path("counts").path("FAILED").asInt());
+    ObjectNode readDenied = adapter.exchange(config(), "GET", "/priority-batch/reconcile", request, "priority");
+    assertEquals("UNKNOWN", readDenied.path("state").asText());
+    assertEquals(0, readDenied.path("counts").path("FAILED").asInt());
+    blockRead.set(false);
+    assertEquals("COMPLETED", adapter.exchange(config(), "GET", "/priority-batch/reconcile", request, "priority").path("state").asText());
+    assertEquals(1, writes.get());
+  }
   @Test void rejectedStatusDoesNotFallbackAndUnconfirmedWriteStaysUnknown() {
     Store store = mock(Store.class); when(store.object()).thenAnswer(call -> obj());
     when(store.get("resource", "local", null)).thenReturn(obj().put("upstreamChannelId", "148"));
