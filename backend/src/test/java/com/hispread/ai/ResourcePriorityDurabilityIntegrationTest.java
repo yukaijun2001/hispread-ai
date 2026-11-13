@@ -35,6 +35,7 @@ class ResourcePriorityDurabilityIntegrationTest {
   List<String> jobs;
   Map<String, Integer> weights, writes;
   Map<String, Integer> refreshes;
+  Map<String, Integer> exchanges;
   Map<String, String> accountStates;
   AtomicReference<String> blockedAccount;
   AtomicBoolean rejectSecond;
@@ -53,6 +54,7 @@ class ResourcePriorityDurabilityIntegrationTest {
     weights = new ConcurrentHashMap<>(Map.of("first", 10, "second", 10));
     writes = new ConcurrentHashMap<>();
     refreshes = new ConcurrentHashMap<>();
+    exchanges = new ConcurrentHashMap<>();
     accountStates = new ConcurrentHashMap<>(Map.of("first", "active", "second", "active"));
     blockedAccount = new AtomicReference<>("first");
     rejectSecond = new AtomicBoolean(false);
@@ -71,7 +73,17 @@ class ResourcePriorityDurabilityIntegrationTest {
         response.put("access_token", "FIXTURE-PRIVATE").putObject("user").put("role", "admin");
       } else if (path.startsWith("/api/admin/oauth-accounts/")) {
         String account = path.substring("/api/admin/oauth-accounts/".length());
-        if (method.equals("POST") && account.endsWith("/refresh")) {
+        if (method.equals("POST") && account.endsWith("/reauthorize")) {
+          response.put("url", "https://claude.ai/oauth/authorize?state=fixture-state")
+              .put("state", "fixture-state").put("expires_in", 600);
+        } else if (method.equals("POST") && account.endsWith("/reauthorize/exchange")) {
+          account = account.substring(0, account.length() - "/reauthorize/exchange".length());
+          exchanges.merge(account, 1, Integer::sum);
+          received.countDown();
+          try { release.await(10, TimeUnit.SECONDS); }
+          catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
+          response.putObject("account").put("id", account).put("status", "active");
+        } else if (method.equals("POST") && account.endsWith("/refresh")) {
           account = account.substring(0, account.length() - "/refresh".length());
           refreshes.merge(account, 1, Integer::sum);
           if (account.equals(blockedAccount.get())) {
@@ -144,6 +156,7 @@ class ResourcePriorityDurabilityIntegrationTest {
     executor.shutdown();
     executor.awaitTermination(10, TimeUnit.SECONDS);
     upstream.stop(0);
+    store.jdbc.update("delete from hub_entity where kind='native-oauth' and data->>'targetId'=?", targetId);
     for (String id : jobs) store.jdbc.update("delete from hub_entity where kind='resource-operation' and id=?", id);
     store.jdbc.update("delete from hub_entity where owner_id=? or id=?", owner, targetId);
     store.jdbc.update("delete from hub_user where id=?", userId);
@@ -395,5 +408,69 @@ class ResourcePriorityDurabilityIntegrationTest {
     store.update("resource", first, owner, store.object().put("upstreamAccountId", "replacement"));
     assertEquals("RESOURCE_MAPPING_CHANGED", postJson(operation + "/reconcile", store.object(), 409).path("code").asText());
     assertEquals(1, refreshes.get("first"));
+  }
+
+  @Test
+  void oauthExchangeCommitsIntentAndSessionBeforeSendAndNeverAcceptsAnotherKey() throws Exception {
+    store.update("resource", first, owner, store.object().put("laneId", "first"));
+    String path = "/api/resources/" + first + "/reauthorizations";
+    ObjectNode authorization = postJson(path, store.object().put("requestKey", UUID.randomUUID().toString()), 200);
+    String id = authorization.path("id").asText();
+    String completePath = path + "/" + id;
+    ObjectNode input = store.object().put("requestKey", UUID.randomUUID().toString())
+        .put("code", "fixture-code#fixture-state");
+    CompletableFuture<ObjectNode> running = CompletableFuture.supplyAsync(() -> {
+      try { return postJson(completePath, input, 200); }
+      catch (Exception failure) { throw new CompletionException(failure); }
+    }, executor);
+    try {
+      assertTrue(received.await(5, TimeUnit.SECONDS));
+      ObjectNode intent = findLifecycle(input);
+      assertEquals("UNKNOWN", intent.path("state").asText());
+      ObjectNode nativeSession = store.get("native-oauth", intent.path("oauthNativeSessionId").asText(), "GLOBAL");
+      assertEquals("SUBMITTING", nativeSession.path("state").asText());
+      mvc.perform(get(path + "/current").session(session)).andExpect(status().isOk())
+          .andExpect(jsonPath("$.state").value("UNKNOWN"))
+          .andExpect(jsonPath("$.authUrl").doesNotExist());
+      assertEquals("RESOURCE_JOB_ALREADY_RUNNING", postJson(completePath, input, 409).path("code").asText());
+      assertEquals("RESOURCE_JOB_ALREADY_RUNNING", postJson(completePath,
+          input.deepCopy().put("requestKey", UUID.randomUUID().toString()), 409).path("code").asText());
+    } finally { release.countDown(); }
+    ObjectNode complete = running.get(10, TimeUnit.SECONDS);
+    assertEquals("SUCCESS", complete.path("state").asText());
+    long version = store.get("resource", first, owner).path("version").asLong();
+    assertEquals(complete.path("operationId"), postJson(completePath, input, 200).path("operationId"));
+    postJson(completePath, input.deepCopy().put("requestKey", UUID.randomUUID().toString()), 409);
+    assertEquals(version, store.get("resource", first, owner).path("version").asLong());
+    assertEquals(1, exchanges.get("first"));
+    assertFalse(complete.has("oauthNativeSessionId"));
+    assertFalse(complete.has("oauthBinding"));
+  }
+
+  @Test
+  void uncertainReauthorizationCannotCreateAnotherAuthorizationAndMappingChangesDoNotApplySuccess() throws Exception {
+    store.update("resource", first, owner, store.object().put("laneId", "first"));
+    String path = "/api/resources/" + first + "/reauthorizations";
+    ObjectNode authorization = postJson(path, store.object().put("requestKey", UUID.randomUUID().toString()), 200);
+    ObjectNode input = store.object().put("requestKey", UUID.randomUUID().toString()).put("code", "fixture#fixture-state");
+    CompletableFuture<ObjectNode> running = CompletableFuture.supplyAsync(() -> {
+      try { return postJson(path + "/" + authorization.path("id").asText(), input, 200); }
+      catch (Exception failure) { throw new CompletionException(failure); }
+    }, executor);
+    try {
+      assertTrue(received.await(5, TimeUnit.SECONDS));
+      assertEquals("RESOURCE_OPERATION_UNCERTAIN", postJson(path,
+          store.object().put("requestKey", UUID.randomUUID().toString()), 409).path("code").asText());
+      assertEquals("RESOURCE_OPERATION_UNCERTAIN", postJson("/api/resources/" + first + "/oauth/authorize",
+          store.object().put("requestKey", UUID.randomUUID().toString()), 409).path("code").asText());
+      store.update("resource", first, owner, store.object().put("upstreamAccountId", "replacement").put("laneId", "replacement"));
+    } finally { release.countDown(); }
+    ObjectNode result = running.get(10, TimeUnit.SECONDS);
+    assertEquals("UNKNOWN", result.path("state").asText());
+    assertEquals("RESOURCE_MAPPING_CHANGED", result.path("errorCode").asText());
+    assertEquals("replacement", store.get("resource", first, owner).path("upstreamAccountId").asText());
+    mvc.perform(get(path + "/current").session(session)).andExpect(status().isOk())
+        .andExpect(jsonPath("$.state").value("UNKNOWN"));
+    assertEquals(1, exchanges.get("first"));
   }
 }

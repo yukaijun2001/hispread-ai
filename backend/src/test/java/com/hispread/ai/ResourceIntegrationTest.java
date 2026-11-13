@@ -1044,6 +1044,7 @@ class ResourceIntegrationTest {
     String rid = completed.path("resourceId").asText();
     assertEquals("new-account", store.get("resource", rid, supplier.owner).path("upstreamAccountId").asText());
     assertEquals("DELIVERED", store.get("resource", rid, supplier.owner).path("state").asText());
+    assertEquals(target.path("id"), store.get("resource", rid, supplier.owner).path("targetId"));
     int before = calls.get();
     write("/api/resources/oauth/supplier-submit", store.object().put("sessionId", sessionId).put("code", "code#fixture-state"), supplier, 200);
     assertEquals(before, calls.get());

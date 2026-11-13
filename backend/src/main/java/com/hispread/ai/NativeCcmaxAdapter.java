@@ -326,6 +326,11 @@ final class NativeCcmaxAdapter {
     String boundState = "";
     if (!localId.isBlank()) {
       ObjectNode resource = store.get("resource", localId, null);
+      for (ObjectNode operation : store.list("resource-operation", null))
+        if (eq(operation, "resourceId", localId) && eq(operation, "protocol", "CCMAX_NATIVE")
+            && operation.has("oauthAuthorizationId")
+            && Set.of("UNKNOWN", "SUBMITTING", "RUNNING", "PENDING").contains(text(operation, "state")))
+          throw new ApiException(409, "原授权兑换结果未确认，请查询原操作，勿生成新授权", "RESOURCE_OPERATION_UNCERTAIN");
       if (!text(resource, "laneId").isBlank()) bound = mapped(config, resource);
       if (eq(resource, "operationalState", "GONE"))
         throw new ApiException(409, "账号已归档，不可再授权", "RESOURCE_CHANNEL_REMOVED");
@@ -398,7 +403,10 @@ final class NativeCcmaxAdapter {
   private ObjectNode complete(ObjectNode config, JsonNode input, String key) {
     String sessionId = text(input, "sessionId");
     ObjectNode session = session(config, sessionId);
-    requireReadySession(session);
+    String intent = text(input, "expectedOAuthOperationId");
+    if (intent.isBlank()) requireReadySession(session);
+    else if (!eq(session, "state", "SUBMITTING") || !eq(session, "exchangeOperationId", intent))
+      throw new ApiException(409, "授权兑换已提交，请核对原操作", "OAUTH_SESSION_NOT_READY");
     if (!text(input, "localResourceId").isBlank()
         && !eq(session, "localResourceId", text(input, "localResourceId")))
       throw new ApiException(409, "授权会话与资源不匹配");
@@ -451,6 +459,19 @@ final class NativeCcmaxAdapter {
         .put("state", "SUCCESS")
         .put("credentialConfigured", true)
         .put("existingAccountUpdated", reply.path("overwritten").asBoolean());
+  }
+
+  void claimExchange(ObjectNode config, String sessionId, String localId, String code, String operationId) {
+    ObjectNode saved = session(config, sessionId);
+    requireReadySession(saved);
+    validatedCallback(saved, code);
+    if (!eq(saved, "localResourceId", localId)) throw new ApiException(404, "授权会话与资源不匹配");
+    ObjectNode local = store.get("resource", localId, null);
+    if (eq(local, "operationalState", "GONE")) throw new ApiException(409, "账号已归档，不可更新授权");
+    if (!text(saved, "accountId").isBlank() && !mapped(config, local).equals(text(saved, "accountId")))
+      throw new ApiException(409, "授权期间账号关联已变化", "RESOURCE_MAPPING_CHANGED");
+    store.update("native-oauth", sessionId, "GLOBAL", store.object()
+        .put("state", "SUBMITTING").put("exchangeOperationId", operationId));
   }
 
   void validateCallback(ObjectNode config, String sessionId, String code) {

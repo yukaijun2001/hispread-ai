@@ -86,6 +86,9 @@ public class ResourceOperations {
             "request",
             "lifecycleBindings",
             "maintenanceBinding",
+            "oauthBinding",
+            "oauthAuthorizationId",
+            "oauthNativeSessionId",
             "fingerprint",
             "proxyUrl",
             "socks5",
@@ -520,6 +523,19 @@ public class ResourceOperations {
   public ObjectNode action(
       String id, String action, String method, ObjectNode body, HttpServletRequest req) {
     if (action.equals("credential-refresh")) return credentialRefresh(id, method, body, req);
+    if (action.startsWith("reauthorizations/") || Set.of("oauth/complete", "oauth/supplier-submit").contains(action)) {
+      writable(req);
+      b.resource(id, req);
+      if (!action.startsWith("reauthorizations/")) required(body, "sessionId");
+      String authorizationId = action.startsWith("reauthorizations/")
+          ? action.substring("reauthorizations/".length()) : text(body, "sessionId");
+      ObjectNode authorization = getOperation(authorizationId, req);
+      if (!eq(authorization, "resourceId", id)
+          || !eq(authorization, "type", action.startsWith("reauthorizations/") ? "REAUTHORIZATIONS" : "OAUTH_AUTHORIZE"))
+        throw new ApiException(404, "授权会话不存在");
+      if (eq(authorization, "protocol", "CCMAX_NATIVE"))
+        return nativeOAuthComplete(authorization, action, method, body, req);
+    }
     return preservingApiFailure(() -> actionTransactional(id, action, method, body, req));
   }
 
@@ -552,6 +568,13 @@ public class ResourceOperations {
         ? "OAUTH_AUTHORIZE" : (action.equals("oauth/supplier-submit") || action.equals("oauth/complete"))
             ? "OAUTH_COMPLETE" : action.toUpperCase(Locale.ROOT);
     ObjectNode previousOperation = findRequest(owner, key, preliminaryType, req);
+    if (previousOperation == null && action.equals("reauthorizations")) {
+      for (ObjectNode op : store.list("resource-operation", owner))
+        if (eq(op, "resourceId", id) && eq(op, "protocol", "CCMAX_NATIVE")
+            && text(op, "type").startsWith("REAUTHORIZATIONS/")
+            && Set.of("UNKNOWN", "SUBMITTING", "RUNNING", "PENDING").contains(text(op, "state")))
+          throw new ApiException(409, "原授权兑换结果未确认，请查询原操作，勿生成新授权", "RESOURCE_OPERATION_UNCERTAIN");
+    }
     if (previousOperation == null && isCcmax(resource)) {
       if (action.equals("credential-refresh") || action.equals("reauthorizations"))
         ccmaxPolicy.requireReauthorization(owner, req);
@@ -648,11 +671,20 @@ public class ResourceOperations {
         req);
   }
 
-  @Transactional(noRollbackFor = ApiException.class)
   public ObjectNode session(String id, String action, ObjectNode body, HttpServletRequest req) {
+    ObjectNode original = getOperation(id, req);
+    if (!eq(original, "type", "OAUTH_AUTHORIZE")) throw new ApiException(404, "授权会话不存在");
+    if (action.equals("complete") && eq(original, "protocol", "CCMAX_NATIVE"))
+      return nativeOAuthComplete(original, "session", "POST", body, req);
+    return preservingApiFailure(() -> sessionTransactional(id, action, body, req));
+  }
+
+  private ObjectNode sessionTransactional(String id, String action, ObjectNode body, HttpServletRequest req) {
     ObjectNode op = getOperation(id, req);
     if (!eq(op, "type", "OAUTH_AUTHORIZE")) throw new ApiException(404, "授权会话不存在");
     if (action.equals("get")) {
+      ObjectNode completion = oauthCompletion(op, req);
+      if (completion != null) return oauthAuthorizationResult(op, completion, req);
       ObjectNode remote =
           gateway.request(
               text(op, "targetId"),
@@ -693,7 +725,116 @@ public class ResourceOperations {
   public ObjectNode operation(String id, HttpServletRequest req) {
     ObjectNode op = getOperation(id, req);
     if (eq(op, "type", "REAUTHORIZATIONS")) return reauthorizationResult(op, req);
+    if (eq(op, "type", "OAUTH_AUTHORIZE")) {
+      ObjectNode completion = oauthCompletion(op, req);
+      if (completion != null) return oauthAuthorizationResult(op, completion, req);
+    }
     return result(op, req);
+  }
+
+  private ObjectNode oauthCompletion(ObjectNode authorization, HttpServletRequest req) {
+    for (ObjectNode op : store.list("resource-operation", text(authorization, "supplierId")))
+      if (eq(op, "oauthAuthorizationId", text(authorization, "id"))
+          && eq(op, "resourceId", text(authorization, "resourceId"))) {
+        getOperation(text(op, "id"), req);
+        return op;
+      }
+    return null;
+  }
+
+  private ObjectNode oauthAuthorizationResult(ObjectNode authorization, ObjectNode completion, HttpServletRequest req) {
+    ObjectNode out = result(completion, req);
+    out.put("sessionId", text(authorization, "id")).put("completionOperationId", text(completion, "id"));
+    out.remove(List.of("authUrl", "expiresAt"));
+    return out;
+  }
+
+  private record OAuthAttempt(ObjectNode operation, ObjectNode config, ObjectNode wire) {}
+
+  private ObjectNode nativeOAuthComplete(ObjectNode original, String action, String method, ObjectNode body, HttpServletRequest req) {
+    writable(req);
+    String authorizationId = text(original, "id"), nativeSessionId = text(original, "upstreamId");
+    return operationLocked("resource-oauth:" + text(original, "targetId"), nativeSessionId, () -> {
+      OAuthAttempt attempt = transactions.execute(status -> {
+        ObjectNode authorization = getOperation(authorizationId, req);
+        String rid = text(authorization, "resourceId"), owner = text(authorization, "supplierId");
+        ObjectNode local = b.resource(rid, req);
+        boolean session = action.equals("session"), reauthorization = action.startsWith("reauthorizations/");
+        String type = reauthorization ? action.toUpperCase(Locale.ROOT) : "OAUTH_COMPLETE";
+        String key = session ? authorizationId + ":complete" : text(body, "requestKey");
+        if (key.isBlank()) key = text(body, "requestId");
+        if (key.isBlank()) key = rid + ":" + action + ":" + local.path("version").asLong();
+        ObjectNode prior = findRequest(owner, key, type, req);
+        ObjectNode payload = body.deepCopy();
+        if (!reauthorization) payload.put("sessionId", nativeSessionId);
+        if (session) payload.set("input", prior == null ? resourceInput(local) : prior.path("request").path("input"));
+        if (prior != null) {
+          if (!eq(prior, "resourceId", rid) || !eq(prior, "fingerprint", digest(payload)))
+            throw new ApiException(409, "提交编号已用于不同资料", "IDEMPOTENCY_CONFLICT");
+          return new OAuthAttempt(prior, null, null);
+        }
+        ObjectNode config = gateway.requireConfigured(text(authorization, "targetId"));
+        if (!eq(config, "protocol", "CCMAX_NATIVE")) throw new ApiException(409, "目标协议已变化，请核对原授权");
+        String operationId = UUID.randomUUID().toString();
+        gateway.claimNativeOAuthExchange(config, nativeSessionId, rid, text(body, "code"), operationId);
+        String path = session ? "/resources/oauth/supplier-submit"
+            : "/resources/" + encode(rid) + "/" + (reauthorization ? "reauthorizations/" + encode(nativeSessionId) : action);
+        ObjectNode op = store.object().put("id", operationId).put("type", type).put("supplierId", owner)
+            .put("resourceId", rid).put("requestKey", key).put("fingerprint", digest(payload))
+            .put("targetId", text(config, "id")).put("protocol", "CCMAX_NATIVE")
+            .put("upstreamPath", path).put("method", method).put("state", "UNKNOWN").put("status", "UNKNOWN")
+            .put("writeIntentVersion", 1).put("startedAt", Instant.now().toString()).put("createdBy", auth.userId(req))
+            .put("oauthAuthorizationId", authorizationId).put("oauthNativeSessionId", nativeSessionId);
+        op.set("request", payload);
+        op.set("oauthBinding", store.object().put("targetId", text(local, "targetId"))
+            .put("accountId", local.path("upstreamAccountId").asText(local.path("laneId").asText())));
+        op.set("result", store.object().put("state", "UNKNOWN")
+            .put("message", "原授权兑换结果待核对，未再次发送兑换请求"));
+        ObjectNode saved = store.create("resource-operation", owner, op);
+        if (!reauthorization) store.update("resource", rid, owner, store.object().put("dispatchState", "UNKNOWN"));
+        ObjectNode wire = payload.deepCopy().put("sessionId", nativeSessionId).put("localResourceId", rid)
+            .put("expectedOAuthOperationId", operationId);
+        return new OAuthAttempt(saved, config, wire);
+      });
+      return attempt.config() == null ? result(attempt.operation(), req) : executeNativeOAuth(attempt, req);
+    });
+  }
+
+  private ObjectNode executeNativeOAuth(OAuthAttempt attempt, HttpServletRequest req) {
+    ObjectNode op = attempt.operation();
+    ObjectNode response;
+    try {
+      response = gateway.exchange(attempt.config(), text(op, "method"), text(op, "upstreamPath"), attempt.wire(), text(op, "requestKey"));
+      validateIdentity(text(op, "resourceId"), text(op, "supplierId"), response);
+      ResourceResponseValidator.validate(text(op, "type"), response, op.path("request"));
+    } catch (ApiException failure) {
+      transactions.execute(status -> {
+        ObjectNode patch = store.object().put("state", "UNKNOWN").put("status", "UNKNOWN")
+            .put("errorCode", Objects.toString(failure.code, "RESOURCE_UPSTREAM_ERROR"))
+            .put("error", "授权兑换结果未确认，请查询原操作，勿重复提交");
+        patch.set("result", store.object().put("state", "UNKNOWN")
+            .put("message", "授权兑换结果未确认，未再次发送兑换请求"));
+        store.update("resource-operation", text(op, "id"), text(op, "supplierId"), patch);
+        return null;
+      });
+      throw failure;
+    }
+    return transactions.execute(status -> {
+      ObjectNode local = b.resource(text(op, "resourceId"), req);
+      String account = local.path("upstreamAccountId").asText(local.path("laneId").asText());
+      if (!eq(local, "targetId", text(op.path("oauthBinding"), "targetId"))
+          || !account.equals(text(op.path("oauthBinding"), "accountId"))) {
+        response.removeAll();
+        response.put("state", "UNKNOWN").put("errorCode", "RESOURCE_MAPPING_CHANGED")
+            .put("message", "授权期间资源关联已变化，请核对原账号");
+      }
+      ObjectNode patch = store.object().put("state", text(response, "state")).put("status", text(response, "state"))
+          .put("finishedAt", Instant.now().toString());
+      patch.set("result", response);
+      if (eq(response, "state", "SUCCESS"))
+        applyResource(text(op, "resourceId"), text(op, "supplierId"), response, text(op, "type"), req);
+      return result(store.update("resource-operation", text(op, "id"), text(op, "supplierId"), patch), req);
+    });
   }
 
   private ObjectNode reauthorizationResult(ObjectNode authorization, HttpServletRequest req) {
