@@ -84,11 +84,14 @@ final class NewApiResourceAdapter {
     if (body == null || !body.path("items").isArray() || body.path("items").isEmpty()
         || body.path("items").size() > 100 || !Set.of("PAUSE", "RESUME", "REMOVE").contains(body.path("action").asText()))
       throw new ApiException(400, "New API生命周期请求无效");
+    LifecycleBindings.validate(store, config, body);
     // Resolve every mapping before sending the first mutation.
     Map<String, Long> channels = new LinkedHashMap<>();
     for (JsonNode item : body.path("items")) {
       String id = item.path("resourceId").asText();
-      long channel = channel(store.get("resource", id, null));
+      String mapped = LifecycleBindings.frozenId(body, id, Long.toString(channel(store.get("resource", id, null))));
+      if (!mapped.matches("[1-9][0-9]{0,17}")) throw new ApiException(409, "资源上游渠道无效", "RESOURCE_CHANNEL_NOT_MAPPED");
+      long channel = Long.parseLong(mapped);
       if (channels.containsValue(channel) || channels.putIfAbsent(id, channel) != null)
         throw new ApiException(400, "资源不能重复");
     }
@@ -106,6 +109,7 @@ final class NewApiResourceAdapter {
         item.put("state", "GONE");
         continue;
       }
+      boolean writeAccepted = false;
       try {
         long id = entry.getValue();
         if (readOnly) {
@@ -120,6 +124,7 @@ final class NewApiResourceAdapter {
           int desired = action.equals("PAUSE") ? 2 : 1;
           try {
             send(config, "POST", "/channel/" + id + "/status", store.object().put("status", desired), key);
+            writeAccepted = true;
           } catch (ApiException e) {
             if (e.status != 404 && e.status != 405) throw e;
             JsonNode before = send(config, "GET", "/channel/" + id, null, key).path("data");
@@ -127,6 +132,7 @@ final class NewApiResourceAdapter {
             ObjectNode update = store.object().put("id", id).put("status", desired);
             preserveRouting(before, update);
             send(config, "PUT", "/channel/", update, key);
+            writeAccepted = true;
           }
           JsonNode observed = send(config, "GET", "/channel/" + id, null, key).path("data");
           if (observed.path("id").asLong() != id || !validStatus(observed.path("status"))) throw invalid();
@@ -134,7 +140,7 @@ final class NewApiResourceAdapter {
         }
         item.put("state", action.equals("PAUSE") ? "PAUSED" : action.equals("RESUME") ? "RESUMED" : "GONE");
       } catch (ApiException e) {
-        boolean uncertain = e.status >= 500 || e.status == 408 || readOnly && action.equals("REMOVE");
+        boolean uncertain = readOnly || writeAccepted || e.status >= 500 || e.status == 408;
         if (uncertain) unknown++; else failed++;
         item.put("state", uncertain ? "UNKNOWN" : "FAILED").put("errorCode", e.code)
             .put("errorMessage", readOnly && action.equals("REMOVE")

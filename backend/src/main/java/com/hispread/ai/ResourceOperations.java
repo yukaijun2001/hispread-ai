@@ -7,8 +7,10 @@ import com.fasterxml.jackson.databind.node.*;
 import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.sql.*;
 import java.time.Instant;
 import java.util.*;
+import java.util.function.Supplier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -82,6 +84,7 @@ public class ResourceOperations {
     safe.remove(
         List.of(
             "request",
+            "lifecycleBindings",
             "fingerprint",
             "proxyUrl",
             "socks5",
@@ -706,9 +709,31 @@ public class ResourceOperations {
     return result(authorization, req);
   }
 
-  @Transactional(noRollbackFor = ApiException.class)
   public ObjectNode reconcile(String id, HttpServletRequest req) {
     writable(req);
+    ObjectNode operation = getOperation(id, req);
+    if (eq(operation, "type", "LIFECYCLE")
+        && Set.of("NEWAPI", "CCMAX_NATIVE").contains(text(operation, "protocol"))) {
+      return lifecycleLocked(text(operation, "supplierId"), text(operation, "requestKey"), () -> {
+        LifecycleAttempt attempt = transactions.execute(status -> {
+          ObjectNode op = getOperation(id, req);
+          if (confirmedRemoval(op)) return new LifecycleAttempt(op, null, null, false);
+          ObjectNode config = gateway.requireConfigured(text(op, "targetId"));
+          if (!eq(config, "protocol", text(op, "protocol")))
+            throw new ApiException(409, "目标协议已变化，请核对原操作");
+          ObjectNode wire = ((ObjectNode) op.path("request")).deepCopy();
+          wire.set("confirmedItems", op.path("result").path("items"));
+          if (op.path("lifecycleBindings").isArray()) wire.set("expectedBindings", op.path("lifecycleBindings"));
+          return new LifecycleAttempt(op, config, wire, false);
+        });
+        if (attempt.config() == null) return result(attempt.operation(), req);
+        return executeLifecycle(attempt, true, req);
+      });
+    }
+    return preservingApiFailure(() -> reconcileTransactional(id, req));
+  }
+
+  private ObjectNode reconcileTransactional(String id, HttpServletRequest req) {
     store.jdbc.queryForObject(
         "select pg_advisory_xact_lock(hashtext(?),hashtext(?))", (row, index) -> true,
         "resource-operation-reconcile", id);
@@ -770,13 +795,33 @@ public class ResourceOperations {
     }
   }
 
-  @Transactional(noRollbackFor = ApiException.class)
   public ObjectNode job(String type, ObjectNode body, HttpServletRequest req) {
+    if (!type.equals("LIFECYCLE")) return preservingApiFailure(() -> jobTransactional(type, body, req));
     writable(req);
     required(body, "requestKey");
+    requireJobItems(body);
+    String owner = b.entityOwner("resource", text(body.path("items").get(0), "resourceId"), req);
+    return lifecycleLocked(owner, text(body, "requestKey"), () -> {
+      LifecycleAttempt attempt = transactions.execute(status -> prepareLifecycle(body, owner, req));
+      if (attempt.fallback()) return preservingApiFailure(() -> jobTransactional(type, body, req));
+      if (attempt.config() == null) return publishOperation(attempt.operation(), req);
+      return executeLifecycle(attempt, false, req);
+    });
+  }
+
+  private record LifecycleAttempt(ObjectNode operation, ObjectNode config, ObjectNode wire, boolean fallback) {}
+  private record JobSelection(String owner, String target) {}
+
+  private void requireJobItems(ObjectNode body) {
     if (!body.path("items").isArray()
         || body.path("items").isEmpty()
         || body.path("items").size() > 100) throw new ApiException(400, "每批应包含1至100个资源");
+  }
+
+  private ObjectNode jobTransactional(String type, ObjectNode body, HttpServletRequest req) {
+    writable(req);
+    required(body, "requestKey");
+    requireJobItems(body);
     String firstId = body.path("items").get(0).path("resourceId").asText();
     b.resource(firstId, req);
     String firstOwner = b.entityOwner("resource", firstId, req);
@@ -786,6 +831,15 @@ public class ResourceOperations {
       if (!eq(previous, "fingerprint", digest(body))) throw new ApiException(409, "提交编号已用于不同资料", "IDEMPOTENCY_CONFLICT");
       return jobDetail(text(previous, "id"), req);
     }
+    JobSelection selection = validateJob(type, body, req);
+    String path = type.equals("LIFECYCLE") ? "/resource-lifecycle-jobs" : "/resource-proxy-replacements";
+    ObjectNode response = invoke(type, null, selection.owner(), "POST", path, body,
+        text(body, "requestKey"), selection.target(), req);
+    return publishOperation(getOperation(text(response, "operationId"), req), req);
+  }
+
+  private JobSelection validateJob(String type, ObjectNode body, HttpServletRequest req) {
+    String firstId = text(body.path("items").get(0), "resourceId");
     String selectedTarget = actionTarget(b.resource(firstId, req), body);
     String owner = null;
     Set<String> ids = new HashSet<>();
@@ -825,22 +879,130 @@ public class ResourceOperations {
           throw new ApiException(409, "代理与资源不属于同一供应商");
       }
     }
-    String path =
-        type.equals("LIFECYCLE") ? "/resource-lifecycle-jobs" : "/resource-proxy-replacements";
-    ObjectNode response =
-        invoke(
-            type,
-            null,
-            owner,
-            "POST",
-            path,
-            body,
-            text(body, "requestKey"),
-            selectedTarget,
-            req);
-    String id = text(response, "operationId");
-    ObjectNode op = getOperation(id, req);
-    return publishOperation(op, req);
+    return new JobSelection(owner, selectedTarget);
+  }
+
+  private LifecycleAttempt prepareLifecycle(ObjectNode body, String owner, HttpServletRequest req) {
+    ObjectNode prior = findRequest(owner, text(body, "requestKey"), "LIFECYCLE", req);
+    if (prior != null) {
+      if (!eq(prior, "fingerprint", digest(body)))
+        throw new ApiException(409, "提交编号已用于不同资料", "IDEMPOTENCY_CONFLICT");
+      return new LifecycleAttempt(prior, null, null, false);
+    }
+    JobSelection selection = validateJob("LIFECYCLE", body, req);
+    ObjectNode config = gateway.requireConfigured(selection.target());
+    String protocol = text(config, "protocol");
+    if (!Set.of("NEWAPI", "CCMAX_NATIVE").contains(protocol))
+      return new LifecycleAttempt(null, null, null, true);
+    ObjectNode op = b.obj().put("type", "LIFECYCLE").put("supplierId", owner)
+        .put("resourceId", "").put("requestKey", text(body, "requestKey"))
+        .put("fingerprint", digest(body)).put("targetId", text(config, "id"))
+        .put("protocol", protocol).put("upstreamPath", "/resource-lifecycle-jobs")
+        .put("method", "POST").put("state", "UNKNOWN").put("status", "UNKNOWN")
+        .put("writeIntentVersion", 1).put("total", body.path("items").size())
+        .put("startedAt", Instant.now().toString()).put("createdBy", auth.userId(req))
+        .put("creatorName", text(auth.user(req), "displayName"));
+    op.set("request", body.deepCopy());
+    ArrayNode bindings = op.putArray("lifecycleBindings"), items = op.putArray("items");
+    for (JsonNode item : body.path("items")) {
+      ObjectNode resource = b.resource(text(item, "resourceId"), req);
+      String mapping = protocol.equals("CCMAX_NATIVE") ? "upstreamAccountId" : "upstreamChannelId";
+      String upstreamId = resource.path(mapping).asText(resource.path("laneId").asText());
+      bindings.addObject().put("resourceId", text(resource, "id"))
+          .put("targetId", text(config, "id")).put("upstreamId", upstreamId);
+      items.addObject().put("resourceId", text(resource, "id"))
+          .put("resourceName", text(resource, "name")).put("targetName", text(config, "name"))
+          .put("state", "UNKNOWN");
+    }
+    ObjectNode pending = b.obj().put("state", "UNKNOWN").put("completedCount", 0)
+        .put("failedCount", 0).put("unknownCount", items.size());
+    pending.set("items", items.deepCopy());
+    op.set("result", pending);
+    ObjectNode wire = body.deepCopy();
+    wire.set("expectedBindings", bindings.deepCopy());
+    return new LifecycleAttempt(store.create("resource-operation", owner, op), config, wire, false);
+  }
+
+  private ObjectNode executeLifecycle(LifecycleAttempt attempt, boolean readOnly, HttpServletRequest req) {
+    ObjectNode response;
+    try {
+      response = gateway.exchange(attempt.config(), readOnly ? "GET" : "POST",
+          readOnly ? "/resource-lifecycle-jobs/reconcile" : "/resource-lifecycle-jobs",
+          attempt.wire(), text(attempt.operation(), "requestKey"));
+      ResourceResponseValidator.validate("LIFECYCLE", response, attempt.wire());
+    } catch (ApiException error) {
+      // The committed intent remains available if dispatch/readback cannot be confirmed.
+      transactions.execute(status -> {
+        store.update("resource-operation", text(attempt.operation(), "id"), text(attempt.operation(), "supplierId"),
+            b.obj().put("errorCode", Objects.toString(error.code, "RESOURCE_UPSTREAM_ERROR"))
+                .put("error", "上游操作未完成，请查询原操作"));
+        return null;
+      });
+      throw error;
+    }
+    return transactions.execute(status -> {
+      ObjectNode op = getOperation(text(attempt.operation(), "id"), req);
+      Map<String, JsonNode> bindings = new HashMap<>();
+      for (JsonNode binding : op.path("lifecycleBindings")) bindings.put(text(binding, "resourceId"), binding);
+      int uncertain = 0, failed = 0, complete = 0;
+      for (JsonNode item : response.path("items")) {
+        JsonNode binding = bindings.get(text(item, "resourceId"));
+        if (binding != null) {
+          ObjectNode resource = b.resource(text(item, "resourceId"), req);
+          String mapping = eq(op, "protocol", "CCMAX_NATIVE") ? "upstreamAccountId" : "upstreamChannelId";
+          String upstream = resource.path(mapping).asText(resource.path("laneId").asText());
+          if (!eq(resource, "targetId", text(binding, "targetId")) || !upstream.equals(text(binding, "upstreamId")))
+            ((ObjectNode) item).put("state", "UNKNOWN").put("errorCode", "RESOURCE_MAPPING_CHANGED")
+                .put("errorMessage", "执行期间资源关联已变化，请核对原账号");
+        }
+        String state = text(item, "state");
+        if (state.equals("FAILED")) failed++;
+        else if (Set.of("PAUSED", "RESUMED", "GONE", "SUCCESS", "COMPLETED").contains(state)) complete++;
+        else uncertain++;
+      }
+      if (response.path("items").isArray() && response.path("items").size() == op.path("items").size()) {
+        response.put("state", uncertain > 0 ? "UNKNOWN" : failed == op.path("items").size() ? "FAILED" : failed > 0 ? "PARTIAL" : "COMPLETED")
+            .put("completedCount", complete).put("failedCount", failed).put("unknownCount", uncertain);
+      }
+      ObjectNode patch = b.obj().put("state", text(response, "state")).put("status", text(response, "state"))
+          .put("finishedAt", Instant.now().toString());
+      if (eq(response, "state", "COMPLETED")) patch.putNull("error").putNull("errorCode");
+      patch.set("result", response);
+      ObjectNode updated = store.update("resource-operation", text(op, "id"), text(op, "supplierId"), patch);
+      applyJob(updated, response, req);
+      return publishOperation(updated, req);
+    });
+  }
+
+  private <T> T lifecycleLocked(String owner, String key, Supplier<T> action) {
+    try (Connection lock = Objects.requireNonNull(store.jdbc.getDataSource()).getConnection()) {
+      try (PreparedStatement query = lock.prepareStatement("select pg_try_advisory_lock(hashtext(?),hashtext(?))")) {
+        query.setString(1, "resource-lifecycle:" + owner); query.setString(2, key);
+        try (ResultSet result = query.executeQuery()) {
+          result.next();
+          if (!result.getBoolean(1))
+            throw new ApiException(409, "原启停或移除任务正在执行，请稍后查询", "RESOURCE_JOB_ALREADY_RUNNING");
+        }
+      }
+      try { return action.get(); }
+      finally {
+        try (PreparedStatement query = lock.prepareStatement("select pg_advisory_unlock(hashtext(?),hashtext(?))")) {
+          query.setString(1, "resource-lifecycle:" + owner); query.setString(2, key); query.execute();
+        }
+      }
+    } catch (SQLException failure) {
+      throw new ApiException(503, "启停或移除任务执行锁暂不可用", "RESOURCE_JOB_LOCK_UNAVAILABLE");
+    }
+  }
+
+  private ObjectNode preservingApiFailure(Supplier<ObjectNode> action) {
+    ApiException[] failure = new ApiException[1];
+    ObjectNode result = transactions.execute(status -> {
+      try { return action.get(); }
+      catch (ApiException error) { failure[0] = error; return null; }
+    });
+    if (failure[0] != null) throw failure[0];
+    return result;
   }
 
   private boolean isCcmax(ObjectNode resource) {

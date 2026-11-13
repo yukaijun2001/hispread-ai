@@ -34,6 +34,7 @@ class ResourcePriorityDurabilityIntegrationTest {
   String csrf, owner, targetId, userId, first, second;
   List<String> jobs;
   Map<String, Integer> weights, writes;
+  Map<String, String> accountStates;
   AtomicReference<String> blockedAccount;
   AtomicBoolean rejectSecond;
   CountDownLatch received, release;
@@ -49,6 +50,7 @@ class ResourcePriorityDurabilityIntegrationTest {
     jobs = new ArrayList<>();
     weights = new ConcurrentHashMap<>(Map.of("first", 10, "second", 10));
     writes = new ConcurrentHashMap<>();
+    accountStates = new ConcurrentHashMap<>(Map.of("first", "active", "second", "active"));
     blockedAccount = new AtomicReference<>("first");
     rejectSecond = new AtomicBoolean(false);
     received = new CountDownLatch(1);
@@ -72,7 +74,8 @@ class ResourcePriorityDurabilityIntegrationTest {
             status = 422;
             response.put("error", "fixture rejection");
           } else {
-            weights.put(account, input.path("weight").asInt());
+            if (input.has("weight")) weights.put(account, input.path("weight").asInt());
+            if (input.has("status")) accountStates.put(account, input.path("status").asText());
             if (account.equals(blockedAccount.get())) {
               received.countDown();
               try {
@@ -84,7 +87,7 @@ class ResourcePriorityDurabilityIntegrationTest {
             response.put("ok", true);
           }
         } else {
-          response.putObject("account").put("id", account).put("status", "active")
+          response.putObject("account").put("id", account).put("status", accountStates.get(account))
               .put("weight", weights.get(account));
         }
       } else {
@@ -239,5 +242,78 @@ class ResourcePriorityDurabilityIntegrationTest {
     weights.put("second", 11);
     assertEquals("COMPLETED", postJson(path + "/reconcile", store.object(), 200).path("state").asText());
     assertTrue(writes.isEmpty());
+  }
+
+  ObjectNode lifecycleInput() {
+    ObjectNode input = store.object().put("requestKey", UUID.randomUUID().toString()).put("action", "PAUSE");
+    input.putArray("items").addObject().put("resourceId", first).put("resourceVersion", 0);
+    return input;
+  }
+
+  CompletableFuture<ObjectNode> lifecycleRun(ObjectNode input) {
+    return CompletableFuture.supplyAsync(() -> {
+      try { return postJson("/api/resource-lifecycle-jobs", input, 200); }
+      catch (Exception failure) { throw new CompletionException(failure); }
+    }, executor);
+  }
+
+  ObjectNode findLifecycle(ObjectNode input) {
+    return store.list("resource-operation", owner).stream()
+        .filter(x -> x.path("requestKey").equals(input.path("requestKey")))
+        .findFirst().orElseThrow();
+  }
+
+  @Test
+  void lifecycleIntentCommitsBeforeSendAndReplayNeverRepeatsAcceptedPause() throws Exception {
+    ObjectNode input = lifecycleInput();
+    CompletableFuture<ObjectNode> running = lifecycleRun(input);
+    String path;
+    try {
+      assertTrue(received.await(5, TimeUnit.SECONDS));
+      ObjectNode committed = findLifecycle(input);
+      assertEquals("UNKNOWN", committed.path("state").asText());
+      assertEquals(1, committed.path("result").path("unknownCount").asInt());
+      path = "/api/resource-lifecycle-jobs/" + committed.path("id").asText();
+      mvc.perform(get(path).session(session)).andExpect(status().isOk())
+          .andExpect(jsonPath("$.state").value("UNKNOWN"))
+          .andExpect(jsonPath("$.lifecycleBindings").doesNotExist());
+      assertEquals("RESOURCE_JOB_ALREADY_RUNNING",
+          postJson("/api/resource-lifecycle-jobs", input, 409).path("code").asText());
+      assertEquals("RESOURCE_JOB_ALREADY_RUNNING",
+          postJson(path + "/reconcile", store.object(), 409).path("code").asText());
+    } finally {
+      release.countDown();
+    }
+    ObjectNode finished = running.get(10, TimeUnit.SECONDS);
+    assertEquals("COMPLETED", finished.path("state").asText());
+    assertEquals("PAUSED", store.get("resource", first, owner).path("operationalState").asText());
+    long version = store.get("resource", first, owner).path("version").asLong();
+    ObjectNode replay = postJson("/api/resource-lifecycle-jobs", input, 200);
+    assertEquals(finished.path("id"), replay.path("id"));
+    assertEquals(version, store.get("resource", first, owner).path("version").asLong());
+    assertEquals("IDEMPOTENCY_CONFLICT", postJson("/api/resource-lifecycle-jobs",
+        input.deepCopy().put("action", "RESUME"), 409).path("code").asText());
+    postJson("/api/resource-lifecycle-jobs/" + finished.path("id").asText() + "/reconcile", store.object(), 200);
+    assertEquals(1, writes.get("first"));
+  }
+
+  @Test
+  void lifecycleCannotApplyOrReconcileSuccessfulPauseAgainstAReplacementAccount() throws Exception {
+    ObjectNode input = lifecycleInput();
+    CompletableFuture<ObjectNode> running = lifecycleRun(input);
+    try {
+      assertTrue(received.await(5, TimeUnit.SECONDS));
+      store.update("resource", first, owner, store.object().put("upstreamAccountId", "replacement"));
+    } finally {
+      release.countDown();
+    }
+    ObjectNode finished = running.get(10, TimeUnit.SECONDS);
+    assertEquals("UNKNOWN", finished.path("state").asText());
+    assertEquals("RESOURCE_MAPPING_CHANGED", finished.path("items").path(0).path("errorCode").asText());
+    assertEquals("ACTIVE", store.get("resource", first, owner).path("operationalState").asText());
+    assertEquals("RESOURCE_MAPPING_CHANGED", postJson("/api/resource-lifecycle-jobs/"
+        + finished.path("id").asText() + "/reconcile", store.object(), 409).path("code").asText());
+    assertEquals(1, writes.get("first"));
+    assertEquals("UNKNOWN", findLifecycle(input).path("state").asText());
   }
 }
