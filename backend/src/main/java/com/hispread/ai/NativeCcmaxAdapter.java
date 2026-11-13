@@ -107,6 +107,8 @@ final class NativeCcmaxAdapter {
       return observed;
     }
     if (action.equals("credential-refresh")) {
+      NativeMaintenanceBinding.validate(config, resource, body.path("expectedMaintenanceBinding"));
+      if (body.path("expectedMaintenanceBinding").isObject()) accountId = text(body.path("expectedMaintenanceBinding"), "accountId");
       ObjectNode refreshed =
           call(
               config,
@@ -117,7 +119,10 @@ final class NativeCcmaxAdapter {
       if (refreshed.path("ok").isBoolean() && !refreshed.path("ok").asBoolean()) throw rejected();
       if (!refreshed.path("ok").asBoolean() && !refreshed.path("access_token").isObject())
         throw invalid();
-      return observation(account(config, accountId, key)).put("state", "UPDATED");
+      try { return observation(account(config, accountId, key)).put("state", "UPDATED"); }
+      catch (ApiException readback) {
+        throw new ApiException(502, "上游已受理凭据刷新，但回读未确认，请查询原操作，勿重复刷新", "RESOURCE_OPERATION_UNCERTAIN");
+      }
     }
     if (action.equals("reauthorizations")) return authorize(config, body, localId, key);
     if (action.startsWith("reauthorizations/"))
@@ -726,7 +731,10 @@ final class NativeCcmaxAdapter {
     String type = text(operation, "type"), rid = text(operation, "resourceId");
     if (Set.of("USAGE", "CREDENTIAL-REFRESH").contains(type)) {
       ObjectNode local = store.get("resource", rid, null);
-      ObjectNode observed = observation(account(config, mapped(config, local), key));
+      if (type.equals("CREDENTIAL-REFRESH")) NativeMaintenanceBinding.validate(config, local, operation.path("maintenanceBinding"));
+      String accountId = type.equals("CREDENTIAL-REFRESH") && operation.path("maintenanceBinding").isObject()
+          ? text(operation.path("maintenanceBinding"), "accountId") : mapped(config, local);
+      ObjectNode observed = observation(account(config, accountId, key));
       if (type.equals("CREDENTIAL-REFRESH")) {
         observed.put("state", "UNKNOWN").put("message", "账号可读取，但无法仅凭状态确认刷新凭据结果，请人工核对");
       } else {

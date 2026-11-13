@@ -1625,6 +1625,61 @@ class ResourceIntegrationTest {
   }
 
   @Test
+  void maintenanceRecoveryUsesSameResourceAndTenantForConsoleAndBearerWithoutAnotherRefresh() throws Exception {
+    nativeTarget();
+    Client supplier = supplier(), other = supplier();
+    nativeResponder(new AtomicInteger(), new AtomicInteger(1), new AtomicInteger(10));
+    ObjectNode local = nativeResource(supplier);
+    String rid = local.path("id").asText();
+    store.update("resource", rid, supplier.owner, store.object().put("targetId", target.path("id").asText())
+        .put("upstreamAccountId", "native-148").put("upstreamProtocol", "CCMAX_NATIVE"));
+    var previous = responder.get();
+    AtomicInteger refreshes = new AtomicInteger();
+    AtomicBoolean denyRead = new AtomicBoolean(true);
+    responder.set((request, body) -> {
+      httpStatus.set(200);
+      if (request.equals("POST /api/admin/oauth-accounts/native-148/refresh")) {
+        refreshes.incrementAndGet();
+        return "{\"ok\":true}";
+      }
+      if (request.equals("GET /api/admin/oauth-accounts/native-148") && denyRead.get()) {
+        httpStatus.set(403);
+        return "{}";
+      }
+      return previous.apply(request, body);
+    });
+    ObjectNode input = store.object().put("requestKey", UUID.randomUUID().toString());
+    write("/api/resources/" + rid + "/credential-refresh", input, supplier, 502);
+    String op = store.list("resource-operation", supplier.owner).get(0).path("id").asText();
+    String path = "/api/resources/" + rid + "/operations/" + op;
+    String openPath = "/api/open/v1/ccmax/resources/" + rid + "/operations/" + op;
+    ObjectNode token = write("/api/auth/api-tokens", store.object().put("name", "maintenance-recovery"), supplier, 200);
+    String bearer = "Bearer " + token.path("key").asText();
+    ObjectNode otherToken = write("/api/auth/api-tokens", store.object().put("name", "foreign-recovery"), other, 200);
+    mvc.perform(get(path).session(supplier.session)).andExpect(status().isOk())
+        .andExpect(jsonPath("$.state").value("UNKNOWN"))
+        .andExpect(jsonPath("$.maintenanceBinding").doesNotExist());
+    mvc.perform(get(path).session(other.session)).andExpect(status().isNotFound());
+    write(path + "/reconcile", store.object(), other, 404);
+    mvc.perform(get(openPath)).andExpect(status().isUnauthorized());
+    mvc.perform(get(openPath).header("Authorization", "Bearer " + otherToken.path("key").asText()))
+        .andExpect(status().isNotFound());
+    mvc.perform(post(openPath + "/reconcile").header("Authorization", "Bearer " + otherToken.path("key").asText()))
+        .andExpect(status().isNotFound());
+    denyRead.set(false);
+    mvc.perform(get(openPath).header("Authorization", bearer)).andExpect(status().isOk())
+        .andExpect(jsonPath("$.state").value("UNKNOWN"));
+    mvc.perform(post(openPath + "/reconcile").header("Authorization", bearer))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.state").value("UNKNOWN"))
+        .andExpect(jsonPath("$.operationId").value(op));
+    mvc.perform(post("/api/open/v1/ccmax/resources/" + rid + "/credential-refresh")
+        .header("Authorization", bearer).contentType("application/json").content(input.toString()))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.operationId").value(op));
+    assertEquals(1, refreshes.get());
+    assertEquals("UNKNOWN", store.get("resource-operation", op, supplier.owner).path("state").asText());
+  }
+
+  @Test
   void nativeCredentialImportRefreshAndArchivePreserveReceiptsAndAvoidDuplicates() throws Exception {
     nativeTarget(); Client supplier = supplier(), admin = administrator();
     nativeResponder(new AtomicInteger(),new AtomicInteger(1),new AtomicInteger(10));

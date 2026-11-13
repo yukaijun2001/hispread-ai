@@ -355,6 +355,18 @@ public class OpenCcmaxController {
     return b.access.publicRecord("reauthorization", op, r);
   }
 
+  @GetMapping("/resources/{resourceId}/operations/{id}")
+  public ObjectNode maintenanceOperation(@PathVariable String resourceId, @PathVariable String id, HttpServletRequest r) {
+    row(resourceId, r);
+    return resources.maintenanceOperation(resourceId, id, r);
+  }
+
+  @PostMapping("/resources/{resourceId}/operations/{id}/reconcile")
+  public ObjectNode reconcileMaintenance(@PathVariable String resourceId, @PathVariable String id, HttpServletRequest r) {
+    row(resourceId, r);
+    return resources.reconcileMaintenance(resourceId, id, r);
+  }
+
   @PutMapping("/resources/{resourceId}/reauthorizations/{id}")
   public Object authorization(
       @PathVariable String resourceId,

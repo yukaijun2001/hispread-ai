@@ -360,6 +360,26 @@ public class ResourcesController {
         req);
   }
 
+  @GetMapping("/resources/{id}/operations/{op}")
+  public ObjectNode maintenanceOperation(@PathVariable String id, @PathVariable String op, HttpServletRequest req) {
+    requireMaintenanceOperation(id, op, req);
+    return operations.operation(op, req);
+  }
+
+  @PostMapping("/resources/{id}/operations/{op}/reconcile")
+  public ObjectNode reconcileMaintenance(@PathVariable String id, @PathVariable String op, HttpServletRequest req) {
+    requireMaintenanceOperation(id, op, req);
+    return operations.reconcile(op, req);
+  }
+
+  private void requireMaintenanceOperation(String id, String op, HttpServletRequest req) {
+    auth.require(req, "resource.read");
+    b.resource(id, req);
+    ObjectNode original = operations.getOperation(op, req);
+    if (!eq(original, "resourceId", id) || !Set.of("USAGE", "CREDENTIAL-REFRESH").contains(text(original, "type")))
+      throw new ApiException(404, "维护操作不存在");
+  }
+
   @GetMapping("/resources/{id}/reauthorizations/{op}")
   public ObjectNode authorizationOperation(
       @PathVariable String id, @PathVariable String op, HttpServletRequest req) {
