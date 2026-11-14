@@ -58,8 +58,6 @@ app:
     proxy-probe-timeout-ms: ${INTEGRATION_PROXY_PROBE_TIMEOUT_MS:10000}
   payments:
     sandbox-enabled: ${PAYMENT_SANDBOX_ENABLED:false}
-  monitoring:
-    scheduling-enabled: ${MONITORING_SCHEDULING_ENABLED:true}
   operator-username: ${OPERATOR_USERNAME:}
   operator-password: ${OPERATOR_PASSWORD:}
   finance-username: ${FINANCE_USERNAME:}

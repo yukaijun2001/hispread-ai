@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Isolated browser fixture for task types and explicit HTTP monitoring consent.
+"""Isolated browser fixture for the delivery-only task scope.
 
 Build backend first, run this script, then use the printed browser URL with the
 credentials in the private fixture file. Signal completion by writing
 browser-done.json in the printed output directory. No real upstream is called.
 """
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.parse import urlencode
@@ -104,20 +104,33 @@ def main():
                                                 password_field: login_secret}, form=True)[0] == 200
             csrf = request("/api/auth/csrf")[1]["token"]
             tasks = request("/api/system/scheduled-tasks")[1]
-            daily = next(t for t in tasks if t["key"] == "CCMAX_DAILY_SYNC")
-            invalid_cases = [
-                {"intervalMinutes": 10.5}, {"intervalMinutes": "10"},
-                {"intervalMinutes": 4294967306}, {"enabled": "false"},
-                {"enabled": "true"}, {"enabled": 1},
-            ]
+            status = next(t for t in tasks if t["key"] == "CCMAX_STATUS_SYNC")
+            assert len(tasks) == 1 and not status["enabled"]
             checks = []
-            for patch in invalid_cases:
-                code, _ = request("/api/system/scheduled-tasks/CCMAX_DAILY_SYNC/config",
-                                  dict(patch, version=daily["version"]), method="PUT")
+            for patch in [{"intervalMinutes": 1}, {"intervalMinutes": 10.5}, {"enabled": "true"}]:
+                code, _ = request("/api/system/scheduled-tasks/CCMAX_STATUS_SYNC/config",
+                                  dict(patch, version=status["version"]), method="PUT")
                 checks.append({"input": patch, "http": code, "pass": code == 400})
-            code, after = request("/api/system/scheduled-tasks")
-            assert code == 200 and next(t for t in after if t["key"] == daily["key"]) == daily
             assert all(c["pass"] for c in checks)
+            # Existing local receipts only: no credentials and no upstream target.
+            today = datetime.now(timezone(timedelta(hours=8))).date().isoformat()
+            rows = [
+                ("supplier", "delivery-qa", {"id":"delivery-qa","name":"Delivery QA","state":"APPROVED","enabled":True}),
+                ("project", "GLOBAL", {"id":"delivery-project","name":"Delivery QA project","enabled":True}),
+                ("resource", "delivery-qa", {"id":"delivery-resource","supplierId":"delivery-qa","name":"QA delivered account",
+                    "resourceType":"CCMAX","state":"DELIVERED","projectId":"delivery-project","projectName":"Delivery QA project",
+                    "createdBy":"local-admin"}),
+                ("resource-operation", "delivery-qa", {"id":"delivery-receipt","supplierId":"delivery-qa","resourceId":"delivery-resource",
+                    "type":"OAUTH_COMPLETE","state":"SUCCESS","createdBy":"local-admin"}),
+                ("quote", "delivery-qa", {"id":"delivery-quote","supplierId":"delivery-qa","projectId":"delivery-project",
+                    "projectName":"Delivery QA project","state":"APPROVED","currency":"USD","multiplier":"0.25",
+                    "effectiveFrom":today,"effectiveTo":today}),
+            ]
+            for kind, owner, data in rows:
+                data.update(version=0,createdAt=datetime.now(timezone.utc).isoformat())
+                literal=lambda value: "'"+str(value).replace("'","''")+"'"
+                sql("insert into hub_entity(id,kind,owner_id,data,version) values("+
+                    ",".join([literal(data["id"]),literal(kind),literal(owner),literal(json.dumps(data))+"::jsonb","0"])+")")
             frontend = subprocess.Popen(
                 ["npm", "run", "dev", "--", "--port", str(frontend_port)],
                 cwd=ROOT / "frontend", env=dict(os.environ, API_ORIGIN=origin),
@@ -138,13 +151,12 @@ def main():
             assert browser["allPassed"] is True
             code, sources = request("/api/workbench-monitoring/sources")
             assert code == 200 and sources == []
-            assert sql("select count(*) from hub_entity where kind in"
-                       " ('scheduled-run','resource','input','settlement','payment','notification')") == "0"
-            result = {"at": datetime.now(timezone.utc).isoformat(), "allPassed": True,
-                      "typedTaskChecks": checks, "browser": browser,
-                      "sourcesRemaining": len(sources),
-                      "noJobExecutionOrCollection": True, "isolatedDatabaseDeletedOnExit": True}
-            (out / "result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+            assert sql("select count(*) from hub_entity where kind in ('scheduled-run','input','settlement','payment','notification')") == "0"
+            assert sql("select count(*) from hub_entity where kind='quote'") == "1"
+            result = {"at":datetime.now(timezone.utc).isoformat(),"allPassed":True,
+                      "typedTaskChecks":checks,"browser":browser,"noExecutionOrFinancialWrites":True,
+                      "isolatedDatabaseDeletedOnExit":True}
+            (out / "result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2)+"\n")
             print(json.dumps(result, ensure_ascii=False, indent=2), flush=True)
     finally:
         for process in [frontend, backend]:
@@ -156,8 +168,6 @@ def main():
                     process.kill()
                     process.wait()
         private_file.unlink(missing_ok=True)
-        if done.exists():
-            (out / "result.json").write_text(done.read_text())
         subprocess.run(["dropdb", db], check=True)
 
 

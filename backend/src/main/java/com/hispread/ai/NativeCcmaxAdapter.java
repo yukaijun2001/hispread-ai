@@ -729,6 +729,7 @@ final class NativeCcmaxAdapter {
       if (observed.has("usage")) row.set("usage", observed.get("usage"));
       row.set("resourceData", observed.path("resourceData"));
     }
+    if (body.path("deliveryStatusOnly").asBoolean()) return result;
     ObjectNode query = store.object();
     query.set("resources", requested);
     Map<String, ObjectNode> daily = todayConsumption(config, query, key);

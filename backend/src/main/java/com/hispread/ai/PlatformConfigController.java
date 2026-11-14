@@ -471,7 +471,7 @@ public class PlatformConfigController {
       guardAny(r, "resource.config.test", "workbench.monitoring.configure");
     else guard(r, "resource.config.test");
     if (r.getRequestURI().startsWith("/api/workbench-monitoring/sources/")) {
-      return sourceView(monitoring.refresh(id));
+      throw TaskScope.retired();
     }
     ObjectNode config = s.get("resource-target", id, null);
     if (r.getRequestURI().endsWith("/sync") && eq(config, "protocol", "CCMAX_NATIVE"))
@@ -519,9 +519,7 @@ public class PlatformConfigController {
   @PostMapping("/workbench-monitoring/sources")
   public Object source(@RequestBody ObjectNode body, HttpServletRequest r) {
     guardAny(r, "resource.config.write", "workbench.monitoring.configure");
-    return sourceView(
-        s.create(
-            "monitoring-source", "GLOBAL", configInput(body, null, true).put("state", "PENDING")));
+    throw TaskScope.retired();
   }
 
   @PutMapping("/workbench-monitoring/sources/{id}")
@@ -529,14 +527,7 @@ public class PlatformConfigController {
   public Object source(
       @PathVariable String id, @RequestBody ObjectNode body, HttpServletRequest r) {
     guardAny(r, "resource.config.write", "workbench.monitoring.configure");
-    s.jdbc.queryForObject(
-        "select pg_advisory_xact_lock(hashtextextended(?,0))", Object.class, "monitoring:" + id);
-    return sourceView(
-        s.update(
-            "monitoring-source",
-            id,
-            null,
-            configInput(body, s.get("monitoring-source", id, null), true)));
+    throw TaskScope.retired();
   }
 
   @GetMapping("/workbench-monitoring/multipliers")
@@ -548,17 +539,7 @@ public class PlatformConfigController {
   @PutMapping("/workbench-monitoring/multipliers")
   public Object multipliers(@RequestBody ObjectNode body, HttpServletRequest r) {
     guard(r, "system.settings");
-    String id = text(body, "category");
-    java.math.BigDecimal min = decimal(body, "minMultiplier", true),
-        max = decimal(body, "maxMultiplier", true);
-    if (min.compareTo(new java.math.BigDecimal("0.1")) < 0
-        || max.compareTo(new java.math.BigDecimal("100")) > 0
-        || min.compareTo(max) > 0) throw new ApiException(400, "倍率需在0.1至100且上限不小于下限");
-    List<ObjectNode> items =
-        s.list("monitoring-multiplier", null).stream().filter(n -> eq(n, "category", id)).toList();
-    if (items.isEmpty())
-      return s.create("monitoring-multiplier", "GLOBAL", body.deepCopy().put("id", id));
-    return s.update("monitoring-multiplier", text(items.get(0), "id"), null, body);
+    throw TaskScope.retired();
   }
 
   @GetMapping("/payout-providers/{code}")

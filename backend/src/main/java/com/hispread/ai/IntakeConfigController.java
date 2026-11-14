@@ -227,56 +227,20 @@ public class IntakeConfigController {
   public Object rotation(
       @PathVariable String key, @RequestBody ObjectNode body, HttpServletRequest r) {
     guard(r, "system.settings");
-    rotation(key, r);
-    validateRotation(body);
-    ObjectNode task = s.get("scheduled-task", key, null);
-    if (body.path("taskVersion").asLong(-1) != task.path("version").asLong())
-      throw new ApiException(409, "任务配置已变化");
-    ObjectNode patch = b.pick(body, "settings", "version");
-    s.update("rotation-settings", key, null, patch);
-    s.update(
-        "scheduled-task",
-        key,
-        null,
-        b.pick(body, "name", "intervalMinutes").put("version", task.path("version").asLong()));
-    return rotation(key, r);
+    throw TaskScope.retired();
   }
 
   @PostMapping("/system/scheduled-tasks/priority-support")
   @Transactional
   public Object priority(@RequestBody ObjectNode body, HttpServletRequest r) {
     guard(r, "system.settings");
-    validateRotation(body);
-    String id = "PRIORITY_" + UUID.randomUUID();
-    ObjectNode task =
-        body.deepCopy()
-            .put("id", id)
-            .put("key", id)
-            .put("type", "CCMAX_PRIORITY_ROTATION")
-            .put("enabled", false)
-            .put("running", false)
-            .put("ready", false)
-            .put("unavailableReason", "尚未配置上游任务执行器");
-    s.create("scheduled-task", "GLOBAL", task);
-    ObjectNode config = body.deepCopy().put("id", id);
-    s.create("rotation-settings", "GLOBAL", config);
-    return rotation(id, r);
+    throw TaskScope.retired();
   }
 
   @PostMapping("/system/scheduled-tasks/{key}/rotation-settings/retry-restore")
   public Object retry(@PathVariable String key, HttpServletRequest r) {
     guard(r, "system.settings");
     return jobs.retryRestore(key);
-  }
-
-  private void validateRotation(ObjectNode body) {
-    var settings = body.path("settings");
-    BackgroundResourceJobService.validateSettings(settings);
-    if (text(body, "name").isBlank() || text(body, "name").length() > 160)
-      throw new ApiException(400, "任务名称须为1至160字");
-    if (body.path("intervalMinutes").asInt() < 1 || body.path("intervalMinutes").asInt() > 1440)
-      throw new ApiException(400, "周期须为1–1440分钟");
-    for (var id : settings.path("supplierIds")) s.get("supplier", id.asText(), null);
   }
 
   @GetMapping("/cc-intake/admin/reviews")

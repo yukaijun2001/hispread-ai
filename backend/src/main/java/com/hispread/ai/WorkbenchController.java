@@ -65,6 +65,22 @@ public class WorkbenchController {
       t.set("facts", facts);
       out.add(t);
     }
+    // Derive expiry reminders at read time; no new quote, approval, or background scan.
+    if (has(user, "quote.read")) {
+      java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Shanghai"));
+      for (ObjectNode quote : access.visible("quote", req)) {
+        if (!eq(quote, "state", "APPROVED")) continue;
+        try {
+          java.time.LocalDate end = java.time.LocalDate.parse(text(quote, "effectiveTo"));
+          if (end.isBefore(today) || end.isAfter(today.plusDays(7))) continue;
+          ObjectNode reminder = task(quote, "QUOTE_EXPIRING", "报价即将到期",
+              "quotes?id=" + text(quote, "id"), quote.path("projectName").asText(text(quote, "title")));
+          reminder.put("summary", "报价有效期至 " + end + "，需要继续交付时请手动提交新报价")
+              .put("detail", "到期提醒不会延长报价或生成续期申请");
+          out.add(reminder);
+        } catch (java.time.DateTimeException ignored) { /* Invalid historical dates remain in quotation history. */ }
+      }
+    }
     if (platform) {
       for (ObjectNode supplier : access.visible("supplier", req))
         if (has(user, "supplier.review")
@@ -200,7 +216,7 @@ public class WorkbenchController {
   @GetMapping("/workbench/monitoring")
   public Object monitoring(HttpServletRequest req) {
     a.require(req, "workbench.monitoring.read");
-    return monitoring.snapshots(!a.platform(req));
+    return List.of();
   }
 
   @GetMapping("/notifications/unread-count")

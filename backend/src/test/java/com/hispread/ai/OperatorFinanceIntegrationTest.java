@@ -74,80 +74,17 @@ class OperatorFinanceIntegrationTest {
   }
 
   @Test
-  void monitoringSourcesUseTheRecoveredAlternativePermissionGates() throws Exception {
-    org.mockito.Mockito.when(resourceGateway.refreshMonitoring(org.mockito.ArgumentMatchers.any()))
-        .thenThrow(new ApiException(502, "Fixture monitoring upstream unavailable"));
-    Client restrictedOperator = client("OPERATOR", null);
-    mvc.perform(get("/api/workbench-monitoring/sources").session(restrictedOperator.session))
-        .andExpect(status().isForbidden());
-    Client operator = client("ADMIN", null), finance = client("FINANCE", null);
-    mvc.perform(get("/api/workbench-monitoring/sources").session(operator.session))
-        .andExpect(status().isOk());
-    mvc.perform(get("/api/workbench-monitoring/sources").session(finance.session))
-        .andExpect(status().isForbidden());
-    ObjectNode created =
-        write(
-            "POST",
-            "/api/workbench-monitoring/sources",
-            store
-                .object()
-                .put("name", "Local monitoring source")
-                .put("endpoint", "https://example.com/monitoring")
-                .put("rpmPath", "rpm"),
-            operator,
-            200);
-    String id = created.path("id").asText();
-    write(
-        "PUT",
-        "/api/workbench-monitoring/sources/" + id,
-        store.object().put("name", "Updated source").put("version", 0),
-        operator,
-        200);
-    write("POST", "/api/workbench-monitoring/sources", store.object(), finance, 403);
-    write("PUT", "/api/workbench-monitoring/sources/" + id, store.object(), finance, 403);
-    write(
-        "POST",
-        "/api/workbench-monitoring/sources/" + id + "/refresh",
-        store.object(),
-        operator,
-        502);
-    write(
-        "POST",
-        "/api/workbench-monitoring/sources/" + id + "/refresh",
-        store.object(),
-        finance,
-        403);
-    mvc.perform(get("/api/workbench-monitoring/multipliers").session(restrictedOperator.session))
-        .andExpect(status().isForbidden());
-    ObjectNode profile = auth.findUser(operator.id);
-    profile.set("permissions", store.json.valueToTree(List.of("workbench.monitoring.configure")));
-    auth.saveUser(profile);
-    mvc.perform(get("/api/workbench-monitoring/sources").session(operator.session))
-        .andExpect(status().isOk());
-    write(
-        "POST",
-        "/api/workbench-monitoring/sources",
-        store
-            .object()
-            .put("name", "Configure-only source")
-            .put("endpoint", "https://example.com/monitoring")
-            .put("rpmPath", "rpm"),
-        operator,
-        200);
-    write(
-        "PUT",
-        "/api/workbench-monitoring/sources/" + id,
-        store
-            .object()
-            .put("version", store.get("monitoring-source", id, null).path("version").asLong()),
-        operator,
-        200);
-    write(
-        "POST",
-        "/api/workbench-monitoring/sources/" + id + "/refresh",
-        store.object(),
-        operator,
-        502);
+  void retiredMonitoringIsReadOnlyAndStillRespectsPlatformRoleBoundaries() throws Exception {
+    Client administrator=client("ADMIN",null),operator=client("OPERATOR",null),finance=client("FINANCE",null);
+    mvc.perform(get("/api/workbench-monitoring/sources").session(administrator.session)).andExpect(status().isOk());
+    for (Client denied:List.of(operator,finance)) {
+      mvc.perform(get("/api/workbench-monitoring/sources").session(denied.session)).andExpect(status().isForbidden());
+      write("POST","/api/workbench-monitoring/sources",store.object(),denied,403);
+    }
+    write("POST","/api/workbench-monitoring/sources",store.object(),administrator,410);
+    write("PUT","/api/workbench-monitoring/sources/retired",store.object(),administrator,410);
+    write("POST","/api/workbench-monitoring/sources/retired/refresh",store.object(),administrator,410);
+    assertTrue(store.list("monitoring-source",null).isEmpty());
   }
 
   @Test

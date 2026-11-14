@@ -1815,6 +1815,58 @@ class ResourceIntegrationTest {
   }
 
   @Test
+  void nativeDeliveryStatusOnlySkipsRequestLogsAndLeavesFinancialSnapshotsUntouched() throws Exception {
+    nativeTarget(); Client supplier=supplier();
+    ObjectNode local=nativeResource(supplier); String id=local.path("id").asText();
+    ObjectNode patch=store.object().put("targetId",target.path("id").asText())
+        .put("upstreamAccountId","native-148").put("laneId","native-148")
+        .put("upstreamProtocol","CCMAX_NATIVE").put("priority",77);
+    patch.putObject("usage").put("amount","42").put("currency","USD");
+    patch.putObject("dailyConsumption").put("amount","5").put("businessDate",BusinessSupport.today());
+    patch.putObject("resourceData").putObject("usage").put("sevenDayPercent",80);
+    store.update("resource",id,supplier.owner,patch);
+    nativeResponder(new AtomicInteger(),new AtomicInteger(1),new AtomicInteger(10));
+    var original=responder.get(); AtomicInteger logs=new AtomicInteger();
+    responder.set((request,body)->{
+      if (request.equals("GET /api/admin/request-logs")) { logs.incrementAndGet();throw new AssertionError("Light status sync must not fetch request logs"); }
+      return original.apply(request,body);
+    });
+    ObjectNode result=backgroundJobs.sync(store.object().put("type","CCMAX_STATUS_SYNC")
+        .put("deliveryStatusOnly",true).put("targetId",target.path("id").asText()),"light-status");
+    assertEquals(1,result.path("processedCount").asInt()); assertEquals(0,logs.get());
+    ObjectNode saved=store.get("resource",id,supplier.owner);
+    assertEquals("ACTIVE",saved.path("operationalState").asText());
+    assertEquals("42",saved.path("usage").path("amount").asText());
+    assertEquals("5",saved.path("dailyConsumption").path("amount").asText());
+    assertEquals(77,saved.path("priority").asInt());
+    assertEquals(80,saved.path("resourceData").path("usage").path("sevenDayPercent").asInt());
+    assertTrue(store.list("input",supplier.owner).isEmpty());assertTrue(store.list("bill",supplier.owner).isEmpty());
+  }
+
+  @Test
+  void deliveryTaskReconciliationQueriesOriginalReceiptAndNeverReplaysSuccessfulCreation() throws Exception {
+    Client owner=supplier();ObjectNode input=submission(owner);
+    response.set("{\"state\":\"UNKNOWN\"}");
+    ObjectNode submitted=write("/api/resources/supplier-submit",input,owner,200);
+    String operation=submitted.path("operationId").asText(),rid=submitted.path("resourceId").asText();
+    assertFalse(operation.isBlank());
+    mvc.perform(get("/api/delivery-tasks?needsReview=true").session(owner.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1));
+    int before=calls.get();response.set("{\"state\":\"SUCCESS\",\"laneId\":\"fixture-lane\"}");
+    String path="/api/delivery-tasks/"+operation+"/reconcile";
+    ObjectNode result=write(path,store.object(),owner,200);
+    assertEquals("SUCCESS",result.path("state").asText());assertEquals(before+1,calls.get());
+    assertTrue(seenPath.get().contains("/operations/"));
+    assertEquals("SUCCESS",store.get("resource",rid,owner.owner).path("dispatchState").asText());
+    long version=store.get("resource-operation",operation,owner.owner).path("version").asLong();
+    write(path,store.object(),owner,200);
+    assertEquals(before+1,calls.get());
+    assertEquals(version,store.get("resource-operation",operation,owner.owner).path("version").asLong());
+    mvc.perform(get("/api/delivery-tasks?needsReview=true").session(owner.session))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(0));
+  }
+
+  @Test
   void nativeDailySyncProducesScopedPendingObservationsWithoutCredentials() throws Exception {
     nativeTarget(); Client supplier = supplier();
     ObjectNode local = nativeResource(supplier);

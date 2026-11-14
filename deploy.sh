@@ -242,9 +242,8 @@ if values.get('ADMIN_USERNAME', 'admin') in ('', 'admin'):
 else:
     values.setdefault('ADMIN_USERNAME', 'wutong')
     values.setdefault('ADMIN_PASSWORD', 'wutong@Qq1.')
-values.setdefault('WECOM_ENCRYPTION_KEY', base64.b64encode(secrets.token_bytes(32)).decode())
 values.setdefault('PAYMENT_SANDBOX_ENABLED', 'false')
-values.setdefault('MONITORING_SCHEDULING_ENABLED', 'true')
+values['MONITORING_SCHEDULING_ENABLED'] = 'false'
 if len(values['DATABASE_PASSWORD']) < 20 or len(values['ADMIN_PASSWORD']) < 8:
     raise SystemExit('Existing database/admin password is too short. Correct the environment explicitly; deployment will not silently rotate it.')
 values.update(PUBLIC_ORIGIN=origin, COOKIE_SECURE='true' if u.scheme == 'https' else 'false',

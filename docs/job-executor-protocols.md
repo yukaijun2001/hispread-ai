@@ -1,5 +1,8 @@
 # Background job executors
 
+> 2026-11-14 产品范围调整：本文为旧实现/验收历史。网关监控、自动权重轮换、自动报价续期、企微提醒与自动结算确认已退出当前产品；当前行为见 [交付任务范围](delivery-task-scope.md)。
+
+
 Implemented and verified 2026-11-09. The recovered UI contract is in `frontend/src/recovered/ScheduledTasks-DQG4VARN.js`, `ScheduledTaskRuns-DXdXtjvS.js`, and `PrioritySupportDialog-DfV-rWYR.js`.
 
 The original private CCMAX provider implementation was unavailable. The paths below define this repository's **CUSTOM adapter contract**, not a claimed public CCMAX API. Configure an enabled `resource-target` with `protocol=CUSTOM` (the default), server-owned `baseUrl`, `upstreamPathPrefix` (default `/api`), and optional server-side credentials. `NEWAPI` targets are excluded because their public channel API does not supply this observation/rotation contract. Set `targetId` on a task to select one target; null processes enabled CUSTOM targets. Resources are selected by `resource.targetId` / `upstreamTargetId`; legacy resources without a binding are assigned only to the unique enabled target or unique default. Suppliers must be enabled and approved.

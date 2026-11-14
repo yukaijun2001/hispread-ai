@@ -18,178 +18,59 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 public class SystemJobService {
   private final Store s;
-  private final FinancialWorkflowService finance;
-  private final QuotePricingService pricing;
   private final TransactionTemplate tx;
   private final BackgroundResourceJobService remote;
-  private final WecomReminderService wecom;
 
   public SystemJobService(
       Store s,
-      FinancialWorkflowService finance,
-      QuotePricingService pricing,
       PlatformTransactionManager manager,
-      BackgroundResourceJobService remote,
-      WecomReminderService wecom) {
+      BackgroundResourceJobService remote) {
     this.s = s;
-    this.finance = finance;
-    this.pricing = pricing;
     this.tx = new TransactionTemplate(manager);
     this.remote = remote;
-    this.wecom = wecom;
-  }
-
-  private boolean local(ObjectNode task) {
-    return Set.of("SETTLEMENT_AUTO_CONFIRM", "SETTLEMENT_DEADLINE_CONFIRM")
-            .contains(text(task, "type"))
-        || eq(task, "type", "QUOTE_AUTO_RENEWAL") && renewalConfigured(task);
-  }
-
-  private boolean renewalConfigured(ObjectNode task) {
-    return task.path("autoRenewEnabled").asBoolean()
-        && task.path("renewalDays").isIntegralNumber()
-        && task.path("renewalDays").canConvertToInt()
-        && task.path("renewalDays").asInt() >= 1
-        && task.path("renewalDays").asInt() <= 365
-        && task.path("renewBeforeDays").isIntegralNumber()
-        && task.path("renewBeforeDays").canConvertToInt()
-        && task.path("renewBeforeDays").asInt() >= 0
-        && task.path("renewBeforeDays").asInt() <= 30
-        && task.path("quoteIds").isArray()
-        && !task.path("quoteIds").isEmpty();
   }
 
   private boolean ready(ObjectNode task) {
-    return local(task)
-        || switch (text(task, "type")) {
-          case "CCMAX_DAILY_SYNC", "CCMAX_STATUS_SYNC", "CCMAX_PRIORITY_ROTATION" ->
-              remote.configured(task);
-          case "WORKBENCH_WECOM_REMINDER" -> wecom.configured();
-          default -> false;
-        };
+    return TaskScope.supported(text(task, "type")) && remote.configured(task);
   }
 
   public ObjectNode describe(ObjectNode task) {
     ObjectNode out = task.deepCopy();
     boolean ready = ready(task);
     out.put("ready", ready);
-    out.put(
-        "unavailableReason",
-        ready
-            ? ""
-            : text(task, "type").equals("QUOTE_AUTO_RENEWAL")
-                ? "报价自动续期的延长期与冲突规则尚未配置"
-                : text(task, "type").equals("WORKBENCH_WECOM_REMINDER")
-                    ? "请配置企业微信机器人与服务端加密密钥"
-                    : "请配置支持该任务的CCMAX原生或CUSTOM资源上游与有效任务规则");
+    boolean retired = !TaskScope.supported(text(task, "type"));
+    out.put("retired", retired);
+    if (retired) out.put("enabled", false).putNull("nextRunAt");
+    out.put("unavailableReason", retired ? "旧自动任务已停用，仅保留执行历史"
+        : ready ? "" : "请配置可读取交付状态的资源上游");
     return out;
   }
 
   public List<ObjectNode> tasks() {
-    ensureDeadline();
+    return s.list("scheduled-task", null).stream()
+        .filter(task -> TaskScope.supported(text(task, "type"))).map(this::describe).toList();
+  }
+
+  public List<ObjectNode> historyTasks() {
     return s.list("scheduled-task", null).stream().map(this::describe).toList();
   }
 
-  private synchronized void ensureDeadline() {
-    if (s.list("scheduled-task", null).stream()
-        .noneMatch(t -> eq(t, "key", "SETTLEMENT_AUTO_CONFIRM"))) {
-      s.seed(
-          "scheduled-task",
-          "GLOBAL",
-          s.object()
-              .put("id", "SETTLEMENT_AUTO_CONFIRM")
-              .put("key", "SETTLEMENT_AUTO_CONFIRM")
-              .put("type", "SETTLEMENT_AUTO_CONFIRM")
-              .put("name", "结算截止自动确认")
-              .put("intervalMinutes", 1)
-              .put("enabled", false)
-              .put("running", false)
-              .put("ready", true));
-    }
-  }
-
   public ObjectNode update(String key, ObjectNode body) {
+    TaskScope.requireSupported(text(s.get("scheduled-task", key, null), "type"));
     return locked(
         key,
         () -> {
-          ObjectNode saved = tx.execute(status -> updateConfig(key, body));
-          if (!saved.path("enabled").asBoolean() && eq(saved, "type", "CCMAX_PRIORITY_ROTATION"))
-            remote.restore(key, false);
-          return describe(s.get("scheduled-task", key, null));
+          return tx.execute(status -> updateConfig(key, body));
         });
   }
 
   private ObjectNode updateConfig(String key, ObjectNode body) {
     ObjectNode task = s.get("scheduled-task", key, null), patch = s.object();
-    if (body.has("version")) {
-      if (!body.path("version").isIntegralNumber()
-          || !body.path("version").canConvertToLong()
-          || body.path("version").asLong() < 0)
-        throw new ApiException(409, "任务配置已变化");
-      patch.set("version", body.get("version"));
-    }
-    if (eq(task, "type", "QUOTE_AUTO_RENEWAL")) {
-      if (body.has("autoRenewEnabled") && !body.path("autoRenewEnabled").isBoolean())
-        throw new ApiException(400, "续期规则开关须为布尔值");
-      for (String field :
-          List.of("autoRenewEnabled", "renewalDays", "renewBeforeDays", "requestKey"))
-        if (body.has(field)) patch.set(field, body.get(field));
-      if (body.has("renewalDays")
-              && (!body.path("renewalDays").isIntegralNumber()
-                  || !body.path("renewalDays").canConvertToInt()
-                  || body.path("renewalDays").asInt() < 1 || body.path("renewalDays").asInt() > 365)
-          || body.has("renewBeforeDays")
-              && (!body.path("renewBeforeDays").isIntegralNumber()
-                  || !body.path("renewBeforeDays").canConvertToInt()
-                  || body.path("renewBeforeDays").asInt(-1) < 0
-                  || body.path("renewBeforeDays").asInt() > 30))
-        throw new ApiException(400, "续期天数须1–365天，提前天数须0–30天");
-      if (body.has("quoteIds")
-          && (!body.path("version").isIntegralNumber()
-              || body.path("version").asLong() != task.path("version").asLong()))
-        throw new ApiException(409, "任务配置已变化");
-      if (body.has("quoteIds")) {
-        if (!body.path("quoteIds").isArray() || body.path("quoteIds").size() > 500)
-          throw new ApiException(400, "quoteIds须为最多500项的数组");
-        Set<String> selected = new HashSet<>();
-        for (var id : body.path("quoteIds")) {
-          if (!id.isTextual() || id.asText().isBlank() || !selected.add(id.asText()))
-            throw new ApiException(400, "报价编号须为不重复的非空字符串");
-          if (!eq(s.get("quote", id.asText(), null), "state", "APPROVED"))
-            throw new ApiException(400, "只能为已通过报价配置自动续期");
-        }
-        patch.set("quoteIds", body.path("quoteIds"));
-        ObjectNode candidate = task.deepCopy();
-        candidate.setAll(patch);
-        if (candidate.path("autoRenewEnabled").asBoolean() && !renewalConfigured(candidate))
-          throw new ApiException(400, "启用续期规则须选择至少一条报价并填写有效天数");
-        for (var id : task.path("quoteIds")) {
-          if (selected.contains(id.asText())) continue;
-          for (ObjectNode quote : s.list("quote", null))
-            if (eq(quote, "id", id.asText()))
-              s.update("quote", id.asText(), text(quote, "supplierId"),
-                  s.object().put("version", quote.path("version").asLong()).put("autoRenewEnabled", false));
-        }
-        for (var id : body.path("quoteIds")) {
-          ObjectNode quote = s.get("quote", id.asText(), null);
-          String owner = text(quote, "supplierId");
-          s.update(
-              "quote",
-              id.asText(),
-              owner,
-              s.object()
-                  .put("version", quote.path("version").asLong())
-                  .put(
-                      "autoRenewEnabled",
-                      body.path("autoRenewEnabled")
-                          .asBoolean(task.path("autoRenewEnabled").asBoolean())));
-        }
-      }
-      ObjectNode candidate = task.deepCopy();
-      candidate.setAll(patch);
-      if (body.path("autoRenewEnabled").asBoolean() && !renewalConfigured(candidate))
-        throw new ApiException(400, "启用续期规则须选择至少一条报价并填写有效天数");
-    }
+    TaskScope.requireSupported(text(task, "type"));
+    if (!body.path("version").isIntegralNumber() || !body.path("version").canConvertToLong()
+        || body.path("version").asLong() != task.path("version").asLong())
+      throw new ApiException(409, "任务配置已变化，请刷新后保存");
+    patch.set("version", body.get("version"));
     if (body.has("targetId")) {
       if (!body.path("targetId").isNull() && !body.path("targetId").isTextual())
         throw new ApiException(400, "目标编号须为字符串或null");
@@ -198,9 +79,9 @@ public class SystemJobService {
     if (body.has("intervalMinutes")) {
       if (!body.path("intervalMinutes").isIntegralNumber()
           || !body.path("intervalMinutes").canConvertToInt())
-        throw new ApiException(400, "运行周期须为1–1440分钟的整数");
+        throw new ApiException(400, "运行周期须为10–1440分钟的整数");
       int interval = body.path("intervalMinutes").asInt();
-      if (interval < 1 || interval > 1440) throw new ApiException(400, "运行周期须为1–1440分钟");
+      if (interval < 10 || interval > 1440) throw new ApiException(400, "运行周期须为10–1440分钟");
       patch.put("intervalMinutes", interval);
     }
     if (body.has("name")) {
@@ -222,10 +103,10 @@ public class SystemJobService {
           "nextRunAt",
           Instant.now()
               .plusSeconds(
-                  patch.path("intervalMinutes").asLong(task.path("intervalMinutes").asLong(1)) * 60)
+                  patch.path("intervalMinutes").asLong(Math.max(10, task.path("intervalMinutes").asLong(30))) * 60)
               .toString());
     else patch.putNull("nextRunAt");
-    return s.update("scheduled-task", key, null, patch);
+    return describe(s.update("scheduled-task", key, null, patch));
   }
 
   private <T> T locked(String key, Supplier<T> action) {
@@ -266,11 +147,13 @@ public class SystemJobService {
           ObjectNode task = s.get("scheduled-task", key, null);
           if (!eq(task, "type", "CCMAX_PRIORITY_ROTATION"))
             throw new ApiException(400, "此任务不支持优先级恢复");
-          return remote.restore(key, true);
+          // Retired jobs can leave an ACTIVE round behind; explicit cleanup restores every open snapshot.
+          return remote.restore(key, false);
         });
   }
 
   public ObjectNode run(String key, String trigger) {
+    TaskScope.requireSupported(text(s.get("scheduled-task", key, null), "type"));
     return locked(
         key,
         () -> {
@@ -316,26 +199,7 @@ public class SystemJobService {
           ObjectNode result;
           String state = "SUCCESS";
           try {
-            if (local(task)) {
-              int count =
-                  tx.execute(
-                      status ->
-                          eq(task, "type", "QUOTE_AUTO_RENEWAL")
-                              ? renewQuotes(task)
-                              : finance.confirmOverdue());
-              result =
-                  s.object()
-                      .put("processedCount", count)
-                      .put(
-                          "resultCode",
-                          (eq(task, "type", "QUOTE_AUTO_RENEWAL")
-                                  ? "QUOTE_RENEWAL_PENDING:"
-                                  : "SETTLEMENT_AUTO_CONFIRMED:")
-                              + count);
-            } else if (eq(task, "type", "WORKBENCH_WECOM_REMINDER")) result = wecom.send(task);
-            else if (eq(task, "type", "CCMAX_PRIORITY_ROTATION"))
-              result = remote.rotate(task, text(run, "id"));
-            else result = remote.sync(task, text(run, "id"));
+            result = remote.sync(task.deepCopy().put("deliveryStatusOnly", true), text(run, "id"));
           } catch (RuntimeException error) {
             state = "FAILED";
             result =
@@ -366,7 +230,7 @@ public class SystemJobService {
                   taskPatch.put(
                       "nextRunAt",
                       Instant.now()
-                          .plusSeconds(current.path("intervalMinutes").asLong(1) * 60)
+                          .plusSeconds(Math.max(10, current.path("intervalMinutes").asLong(30)) * 60)
                           .toString());
                 else taskPatch.putNull("nextRunAt");
                 s.update("scheduled-task", key, null, taskPatch);
@@ -375,130 +239,10 @@ public class SystemJobService {
         });
   }
 
-  /** Local opt-in policy, deliberately generates a new pending quotation, never approval. */
-  private int renewQuotes(ObjectNode task) {
-    LocalDate today = LocalDate.now(ZoneId.of("Asia/Shanghai"));
-    int generated = 0;
-    Set<String> selected = new HashSet<>();
-    for (var id : task.path("quoteIds")) selected.add(id.asText());
-    if (selected.isEmpty()) return 0;
-    for (ObjectNode quote : s.list("quote", null)) {
-      String id = text(quote, "id");
-      if (!eq(quote, "state", "APPROVED")
-          || !quote.path("autoRenewEnabled").asBoolean()
-          || !selected.contains(id)) continue;
-      String owner = text(quote, "supplierId"), project = text(quote, "projectId");
-      ObjectNode supplier;
-      try {
-        supplier = s.get("supplier", owner, null);
-        if (!supplier.path("enabled").asBoolean(true)
-            || !eq(supplier, "state", "APPROVED")
-            || !s.get("project", project, null).path("enabled").asBoolean()) continue;
-      } catch (ApiException ignored) {
-        continue;
-      }
-      LocalDate end;
-      try {
-        end = LocalDate.parse(text(quote, "effectiveTo"));
-      } catch (DateTimeException ignored) {
-        continue;
-      }
-      if (end.isBefore(today) || end.isAfter(today.plusDays(task.path("renewBeforeDays").asInt())))
-        continue;
-      LocalDate from = end.plusDays(1), to = from.plusDays(task.path("renewalDays").asInt() - 1);
-      ObjectNode priced = pricing.at(quote, from);
-      String renewalKey = id + ":" + from + ":" + to;
-      boolean exists =
-          s.list("quote", owner).stream()
-              .anyMatch(
-                  q ->
-                      eq(q, "renewalKey", renewalKey)
-                          || eq(q, "projectId", project)
-                              && Set.of("PENDING", "APPROVED").contains(text(q, "state"))
-                              && text(q, "effectiveFrom").compareTo(to.toString()) <= 0
-                              && text(q, "effectiveTo").compareTo(from.toString()) >= 0);
-      if (exists) continue;
-      ObjectNode next = s.object();
-      for (String f :
-          List.of(
-              "supplierId",
-              "supplierName",
-              "projectId",
-              "projectName",
-              "projectCode",
-              "currency",
-              "pricingType",
-              "multiplier",
-              "unitPrice",
-              "taxInclusive",
-              "serviceCapacityNote",
-              "accountCount",
-              "accountQuota",
-              "rpm",
-              "tpm",
-              "settlementMethod",
-              "deliveryMethod",
-              "unit",
-              "capacityType",
-              "capacityScope",
-              "capacityPeriod",
-              "capacityCurrency")) if (priced.has(f)) next.set(f, priced.get(f));
-      next.put("state", "PENDING")
-          .put("effectiveFrom", from.toString())
-          .put("effectiveTo", to.toString())
-          .put("submittedBy", "SYSTEM_QUOTE_RENEWAL")
-          .put("createdBy", "SYSTEM_QUOTE_RENEWAL")
-          .put("submittedAt", Instant.now().toString())
-          .put("renewedFrom", id)
-          .put("renewalKey", renewalKey)
-          .put("autoRenewEnabled", false)
-          .put("code", "Q-RENEW-" + UUID.randomUUID().toString().substring(0, 8));
-      ObjectNode snapshot = s.object();
-      for (String f :
-          List.of(
-              "pricingType",
-              "multiplier",
-              "unitPrice",
-              "currency",
-              "taxInclusive",
-              "accountCount",
-              "accountQuota",
-              "rpm",
-              "tpm")) if (priced.has(f)) snapshot.set(f, priced.get(f));
-      next.set("priceSnapshot", snapshot);
-      next.putArray("priceHistory");
-      next.putArray("renewalHistory");
-      ObjectNode created = s.create("quote", owner, next);
-      ArrayNode history =
-          quote.path("renewalHistory").isArray()
-              ? (ArrayNode) quote.path("renewalHistory").deepCopy()
-              : s.json.createArrayNode();
-      history.add(
-          s.object()
-              .put("id", UUID.randomUUID().toString())
-              .put("kind", "AUTO_PENDING")
-              .put("actorName", "系统续期申请（待审核）")
-              .put("actorId", "SYSTEM_QUOTE_RENEWAL")
-              .put("previousFrom", text(quote, "effectiveFrom"))
-              .put("previousTo", text(quote, "effectiveTo"))
-              .put("effectiveFrom", from.toString())
-              .put("effectiveTo", to.toString())
-              .put("pendingQuoteId", text(created, "id"))
-              .put("occurredAt", Instant.now().toString()));
-      s.update(
-          "quote",
-          id,
-          owner,
-          s.object().put("version", quote.path("version").asLong()).set("renewalHistory", history));
-      generated++;
-    }
-    return generated;
-  }
-
-  @Scheduled(fixedDelayString = "${app.jobs.poll-ms:15000}")
+  @Scheduled(fixedDelayString = "${app.jobs.poll-ms:60000}")
   public void tick() {
     for (ObjectNode task : s.list("scheduled-task", null)) {
-      if (!task.path("enabled").asBoolean() || !ready(task)) continue;
+      if (!TaskScope.supported(text(task, "type")) || !task.path("enabled").asBoolean() || !ready(task)) continue;
       String next = text(task, "nextRunAt");
       try {
         if (next.isBlank() || !Instant.parse(next).isAfter(Instant.now()))
