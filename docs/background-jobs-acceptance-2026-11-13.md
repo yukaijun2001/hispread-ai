@@ -176,3 +176,13 @@ mvn -q '-Dtest=BackgroundJobExecutionIntegrationTest,ExplicitJobConfigurationTes
 - 相关后端测试 **22 项通过**（后台执行 11、任务配置 5、监控契约 6）；前端 `npm run check` 与 `npm run build` 通过，`git diff --check` 与 Python 脚本语法检查通过。
 
 本机浏览器验收脚本为 `scripts/verify-background-config.py`；脱敏、非 Git 证据保存在 `.run/background-jobs-2026-11-14/`。线上最后回读时，除日账任务版本增加到 35 外，其余任务、5 条 PENDING 财务观测、0 结算单和 0 监控源与探测前状态相同。自动化修复仍需提交、部署后复验；本报告不将本地通过计为线上通过。
+
+## 第五轮部署复验 — 2026-11-14
+
+`6178768` 已部署，线上 `/api/health` 报告 `UP`、版本 `0.8.122`。使用既有平台管理员会话复验：
+
+- 对停用的 `CCMAX_DAILY_SYNC` 发送 `intervalMinutes=10.5`、字符串周期、溢出整数，以及字符串/数值 `enabled`。六种输入全部返回 400；任务配置前后完全相同，版本保持 35，周期 10 分钟、`targetId=null`、停用且没有下次运行时间。
+- 打开监控来源表单，验证 HTTP 许可默认关闭，仅 HTTP 地址显示，许可当前地址后更换 HTTP 地址会重置，HTTPS 地址下许可控件隐藏，再切回 HTTP 时仍默认关闭。表单没有保存。
+- 最终状态：5 个后台任务仍全部停用、没有运行中任务或下次运行时间；监控源 0，企微版本 0/未配置，5 条财务观测仍为 PENDING/version=0，结算单 0。没有保存生产监控配置或执行任何任务。
+
+第五轮线上参数及界面复验均通过。工作区在推送前的本地实现与部署提交一致；线上已部署，不需要再次部署。本轮证据保存在 `.run/background-jobs-2026-11-14/deployed-task-checks.json`、`deployed-http-ui.json` 和 `deployed-final-state.json`，均为本机忽略产物。
