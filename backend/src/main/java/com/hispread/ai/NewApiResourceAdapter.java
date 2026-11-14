@@ -25,12 +25,13 @@ final class NewApiResourceAdapter {
     }
     if (path.equals("/resource-lifecycle-jobs")) return lifecycle(target, body, key, false);
     if (path.equals("/resource-lifecycle-jobs/reconcile")) return lifecycle(target, body, key, true);
-    if (path.equals("/priority-batch")) return priorityBatch(target, body, key, false);
-    if (path.equals("/priority-batch/reconcile")) return priorityBatch(target, body, key, true);
+    if (path.equals("/priority-batch")) throw UpstreamScope.retired();
+    if (path.equals("/priority-batch/reconcile")) return priorityBatch(target, body, key);
     String[] pieces = path.split("/");
     if (pieces.length != 4 || !pieces[1].equals("resources")) throw unsupported();
     String action = pieces[3];
-    if (!Set.of("usage", "say-hi", "priority", "channel-bind").contains(action)) throw unsupported();
+    if (Set.of("say-hi", "priority").contains(action)) throw UpstreamScope.retired();
+    if (!Set.of("usage", "channel-bind").contains(action)) throw unsupported();
     if (action.equals("channel-bind")) {
       String id = body == null ? "" : body.path("channelId").asText();
       if (!id.matches("[1-9][0-9]{0,17}")) throw new ApiException(400, "New API渠道ID无效");
@@ -63,19 +64,6 @@ final class NewApiResourceAdapter {
       result.put("operationalState", data.path("status").asInt() == 1 ? "ACTIVE" : "PAUSED");
       if (data.path("priority").isIntegralNumber()) result.set("upstreamPriority", data.get("priority"));
       return result;
-    }
-    if (action.equals("say-hi")) {
-      ObjectNode reply = send(target, "GET", "/channel/test/" + channel, null, key);
-      ObjectNode result = store.object().put("state", "SUCCESS").put("ok", true);
-      if (reply.path("time").isNumber()) result.set("time", reply.get("time"));
-      return result;
-    }
-    if (action.equals("priority")) {
-      if (body == null || !body.path("priority").isIntegralNumber() || !body.path("priority").canConvertToInt()
-          || body.path("priority").asInt() < 0 || body.path("priority").asInt() > 1000)
-        throw new ApiException(400, "优先级须在0至1000之间");
-      send(target, "PUT", "/channel/", store.object().put("id", channel).set("priority", body.path("priority")), key);
-      return store.object().put("state", "UPDATED").set("priority", body.path("priority"));
     }
     throw unsupported();
   }
@@ -151,7 +139,7 @@ final class NewApiResourceAdapter {
         .put("completedCount", channels.size() - failed - unknown).put("failedCount", failed).put("unknownCount", unknown);
   }
 
-  private ObjectNode priorityBatch(ObjectNode config, JsonNode body, String key, boolean readOnly) {
+  private ObjectNode priorityBatch(ObjectNode config, JsonNode body, String key) {
     if (body == null || !body.path("priority").isIntegralNumber() || body.path("priority").asInt(-1) < 0
         || body.path("priority").asLong() > 1000 || !body.path("items").isArray()
         || body.path("items").isEmpty() || body.path("items").size() > 100)
@@ -162,34 +150,24 @@ final class NewApiResourceAdapter {
       long id = channel(store.get("resource", rid, null));
       if (channels.containsValue(id) || channels.putIfAbsent(rid, id) != null) throw new ApiException(400, "渠道不能重复");
     }
-    int failed = 0, unknown = 0, desired = body.path("priority").asInt();
+    int unknown = 0, desired = body.path("priority").asInt();
     ObjectNode result = store.object();
     ArrayNode items = result.putArray("items");
     for (var entry : channels.entrySet()) {
       ObjectNode item = items.addObject().put("resourceId", entry.getKey()).put("laneId", entry.getValue().toString()).put("priority", desired);
-      boolean writeAccepted = false;
       try {
-        if (!readOnly) {
-          JsonNode before = send(config, "GET", "/channel/" + entry.getValue(), null, key).path("data");
-          if (before.path("id").asLong() != entry.getValue() || !validStatus(before.path("status"))) throw invalid();
-          ObjectNode update = store.object().put("id", entry.getValue()).put("priority", desired);
-          preserveRouting(before, update);
-          send(config, "PUT", "/channel/", update, key);
-          writeAccepted = true;
-        }
         JsonNode observed = send(config, "GET", "/channel/" + entry.getValue(), null, key).path("data");
         if (observed.path("id").asLong() != entry.getValue() || !observed.path("priority").isIntegralNumber()) throw invalid();
         if (observed.path("priority").asInt() == desired) item.put("state", "SUCCESS");
         else { unknown++; item.put("state", "UNKNOWN"); }
       } catch (ApiException e) {
-        boolean uncertain = readOnly || writeAccepted || e.status >= 500 || e.status == 408;
-        if (uncertain) unknown++; else failed++;
-        item.put("state", uncertain ? "UNKNOWN" : "FAILED").put("errorCode", e.code);
+        unknown++;
+        item.put("state", "UNKNOWN").put("errorCode", e.code);
       }
     }
     ObjectNode counts = result.putObject("counts");
-    counts.put("SUCCESS", channels.size() - failed - unknown).put("FAILED", failed).put("UNKNOWN", unknown);
-    return result.put("total", channels.size()).put("state", unknown > 0 ? "UNKNOWN" : failed == channels.size() ? "FAILED" : failed > 0 ? "PARTIAL_FAILED" : "COMPLETED");
+    counts.put("SUCCESS", channels.size() - unknown).put("FAILED", 0).put("UNKNOWN", unknown);
+    return result.put("total", channels.size()).put("state", unknown > 0 ? "UNKNOWN" : "COMPLETED");
   }
 
   private void preserveRouting(JsonNode before, ObjectNode update) {

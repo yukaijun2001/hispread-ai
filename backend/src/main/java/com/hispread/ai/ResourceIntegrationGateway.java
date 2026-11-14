@@ -162,10 +162,6 @@ public class ResourceIntegrationGateway {
     return syncSettings.read(targetId);
   }
 
-  public ObjectNode saveSyncSettings(String targetId, ObjectNode input) {
-    return syncSettings.save(targetId, input);
-  }
-
   public void validateNativeCallback(String targetId, String sessionId, String code) {
     ObjectNode target = requireConfigured(targetId);
     if (target.path("protocol").asText().equals("CCMAX_NATIVE"))

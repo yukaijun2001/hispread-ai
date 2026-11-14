@@ -46,9 +46,11 @@ final class NativeCcmaxAdapter {
           .put("readOnly", true);
     }
     if (path.equals("/native/accounts")) return accounts(config, body, key);
-    if (path.equals("/oauth/link") || path.equals("/resources/oauth/supplier-authorize"))
+    if (Set.of("/oauth/link", "/oauth/complete", "/priority-batch", "/jobs/ccmax/daily-sync").contains(path))
+      throw UpstreamScope.retired();
+    if (path.equals("/resources/oauth/supplier-authorize"))
       return authorize(config, body, text(body, "localResourceId"), key);
-    if (path.equals("/oauth/complete") || path.equals("/resources/oauth/supplier-submit"))
+    if (path.equals("/resources/oauth/supplier-submit"))
       return complete(config, body, key);
     if (path.startsWith("/resources/oauth/supplier-session/")) {
       String id = path.substring("/resources/oauth/supplier-session/".length());
@@ -76,11 +78,10 @@ final class NativeCcmaxAdapter {
     if (path.equals("/resource-lifecycle-jobs")
         || path.equals("/resource-lifecycle-jobs/reconcile"))
       return lifecycle(config, body, key, path.endsWith("/reconcile"));
-    if (path.equals("/priority-batch") || path.equals("/priority-batch/reconcile"))
-      return priorities(config, body, key, path.endsWith("/reconcile"));
+    if (path.equals("/priority-batch/reconcile"))
+      return priorities(config, body, key);
     if (path.equals("/jobs/ccmax/status-sync") || path.equals("/resources/sync"))
       return statusSync(config, body, key);
-    if (path.equals("/jobs/ccmax/daily-sync")) return dailySync(config, body, key);
     if (path.contains("/operations/")) return reconcileOperation(config, path, key);
     String[] pieces = path.split("/");
     if (pieces.length < 4 || !pieces[1].equals("resources")) throw unsupported();
@@ -104,15 +105,8 @@ final class NativeCcmaxAdapter {
     if (eq(resource, "operationalState", "GONE"))
       throw new ApiException(409, "账号已移除，不可再操作", "RESOURCE_CHANNEL_REMOVED");
     if (action.equals("usage")) {
-      ObjectNode refreshed =
-          call(config, "POST", accountPath(accountId) + "/refresh-usage", store.object(), key);
-      requireOk(refreshed);
-      ObjectNode observed = observation(account(config, accountId, key));
-      ObjectNode query = store.object();
-      query.putArray("resources").addObject().put("resourceId", localId)
-          .put("supplierId", text(resource, "supplierId"));
-      observed.set("dailyConsumption", todayConsumption(config, query, key).get(localId));
-      return observed;
+      // Read the account's current snapshot; do not refresh billing or scan request logs.
+      return observation(account(config, accountId, key));
     }
     if (action.equals("credential-refresh")) {
       NativeMaintenanceBinding.validate(config, resource, body.path("expectedMaintenanceBinding"));
@@ -137,11 +131,7 @@ final class NativeCcmaxAdapter {
       return complete(
           config, bodyWithSession(body, action.substring("reauthorizations/".length())), key);
     if (action.equals("priority")) {
-      int weight = priority(body);
-      call(config, "PATCH", accountPath(accountId), store.object().put("weight", weight), key);
-      ObjectNode observed = account(config, accountId, key);
-      if (observed.path("weight").asInt(-1) != weight) throw invalid();
-      return observation(observed).put("state", "UPDATED");
+      throw UpstreamScope.retired();
     }
     if (action.equals("submit") || action.equals("dispatch")) return submit(config, body, key);
     throw unsupported();
@@ -269,6 +259,10 @@ final class NativeCcmaxAdapter {
   }
 
   private ObjectNode observation(JsonNode account) {
+    return observation(account, false);
+  }
+
+  private ObjectNode observation(JsonNode account, boolean statusOnly) {
     String status = text(account, "status");
     String state =
         status.equals("active") ? "ACTIVE" : status.equals("disabled") ? "PAUSED" : "ERROR";
@@ -291,6 +285,10 @@ final class NativeCcmaxAdapter {
       result.put("operationalState", "INVALID").put("laneState", "INVALID");
     }
     data.put("upstreamProtocol", "CCMAX_NATIVE");
+    if (statusOnly) {
+      result.remove("upstreamPriority");
+      return result;
+    }
     ObjectNode quota = data.putObject("usage");
     JsonNode stats = account.path("stats"), utilization = stats.path("claude_utilization");
     for (String[] window : List.of(new String[] {"five_hour", "fiveHour"}, new String[] {"seven_day", "sevenDay"})) {
@@ -650,14 +648,14 @@ final class NativeCcmaxAdapter {
         .put("unknownCount", unknown);
   }
 
-  private ObjectNode priorities(ObjectNode config, JsonNode body, String key, boolean readOnly) {
+  private ObjectNode priorities(ObjectNode config, JsonNode body, String key) {
     int weight = priority(body);
     if (!body.path("items").isArray()
         || body.path("items").isEmpty()
         || body.path("items").size() > 100) throw new ApiException(400, "优先级参数无效");
     ObjectNode result = store.object();
     ArrayNode items = result.putArray("items");
-    int success = 0, failed = 0;
+    int success = 0;
     Set<String> seen = new HashSet<>();
     for (JsonNode item : body.path("items")) {
       String rid = text(item, "resourceId"), id = mapped(config, store.get("resource", rid, null));
@@ -668,20 +666,12 @@ final class NativeCcmaxAdapter {
           id = mapped(config, store.get("resource", rid, null));
       ObjectNode item =
           items.addObject().put("resourceId", rid).put("laneId", id).put("priority", weight);
-      boolean writeAccepted = false;
       try {
-        if (!readOnly) {
-          call(config, "PATCH", accountPath(id), store.object().put("weight", weight), key);
-          writeAccepted = true;
-        }
         if (account(config, id, key).path("weight").asInt(-1) != weight) throw invalid();
         item.put("state", "SUCCESS");
         success++;
       } catch (ApiException error) {
-        boolean rejected = !readOnly && !writeAccepted
-            && error.status >= 400 && error.status < 500 && error.status != 408;
-        if (rejected) failed++;
-        item.put("state", rejected ? "FAILED" : "UNKNOWN")
+        item.put("state", "UNKNOWN")
             .put("errorCode", error.code)
             .put("errorMessage", error.getMessage());
       }
@@ -689,12 +679,11 @@ final class NativeCcmaxAdapter {
     result
         .putObject("counts")
         .put("SUCCESS", success)
-        .put("FAILED", failed)
-        .put("UNKNOWN", items.size() - success - failed);
+        .put("FAILED", 0)
+        .put("UNKNOWN", items.size() - success);
     return result
         .put("total", items.size())
-        .put("state", success + failed < items.size() ? "UNKNOWN"
-            : failed == items.size() ? "FAILED" : failed > 0 ? "PARTIAL_FAILED" : "COMPLETED");
+        .put("state", success < items.size() ? "UNKNOWN" : "COMPLETED");
   }
 
   private ObjectNode statusSync(ObjectNode config, JsonNode body, String key) {
@@ -718,40 +707,16 @@ final class NativeCcmaxAdapter {
       String rid = text(item, "resourceId");
       ObjectNode local = store.get("resource", rid, null);
       if (!eq(local, "supplierId", text(item, "supplierId"))) throw invalid();
-      ObjectNode observed = observation(account(config, mapped(config, local), key));
+      ObjectNode observed = observation(account(config, mapped(config, local), key), true);
       ObjectNode row =
           resources
               .addObject()
               .put("resourceId", rid)
               .put("supplierId", text(local, "supplierId"))
-              .put("operationalState", text(observed, "operationalState"))
-              .put("priority", observed.path("upstreamPriority").asInt());
-      if (observed.has("usage")) row.set("usage", observed.get("usage"));
+              .put("operationalState", text(observed, "operationalState"));
       row.set("resourceData", observed.path("resourceData"));
     }
-    if (body.path("deliveryStatusOnly").asBoolean()) return result;
-    ObjectNode query = store.object();
-    query.set("resources", requested);
-    Map<String, ObjectNode> daily = todayConsumption(config, query, key);
-    for (JsonNode row : resources)
-      ((ObjectNode) row).set("dailyConsumption", daily.get(text(row, "resourceId")));
     return result;
-  }
-
-  private Map<String, ObjectNode> todayConsumption(ObjectNode config, ObjectNode query, String key) {
-    String day = BusinessSupport.today();
-    query.put("businessDate", day);
-    ObjectNode amounts = dailySync(config, query, key);
-    Map<String, java.math.BigDecimal> totals = new LinkedHashMap<>();
-    for (JsonNode resource : query.path("resources")) totals.put(text(resource, "resourceId"), java.math.BigDecimal.ZERO);
-    for (JsonNode row : amounts.path("rows"))
-      totals.merge(text(row, "resourceId"), new java.math.BigDecimal(text(row, "originalAmount")), java.math.BigDecimal::add);
-    Map<String, ObjectNode> out = new LinkedHashMap<>();
-    String now = Instant.now().toString();
-    totals.forEach((id, amount) -> out.put(id, store.object().put("businessDate", day)
-        .put("currency", "USD").put("amount", amount.toPlainString())
-        .put("basis", "UPSTREAM_REQUEST_LOG_OFFICIAL_TOTAL").put("queriedAt", now)));
-    return out;
   }
 
   private ObjectNode reconcileOperation(ObjectNode config, String path, String key) {
@@ -773,10 +738,6 @@ final class NativeCcmaxAdapter {
       ObjectNode observed = observation(account(config, accountId, key));
       if (type.equals("CREDENTIAL-REFRESH")) {
         observed.put("state", "UNKNOWN").put("message", "账号可读取，但无法仅凭状态确认刷新凭据结果，请人工核对");
-      } else {
-        ObjectNode query = store.object();
-        query.putArray("resources").addObject().put("resourceId", rid).put("supplierId", text(local, "supplierId"));
-        observed.set("dailyConsumption", todayConsumption(config, query, key).get(rid));
       }
       return observed;
     }
@@ -805,95 +766,6 @@ final class NativeCcmaxAdapter {
         .object()
         .put("state", "UNKNOWN")
         .put("message", "原操作结果仍不确定，未再次发送导入、授权兑换或凭据刷新请求，请人工核对");
-  }
-
-  private ObjectNode dailySync(ObjectNode config, JsonNode body, String key) {
-    long deadline = System.nanoTime() + 120000000000L;
-    java.time.LocalDate day;
-    try {
-      day = java.time.LocalDate.parse(text(body, "businessDate"));
-    } catch (RuntimeException error) {
-      throw new ApiException(400, "采集日期无效");
-    }
-    java.time.ZoneId zone = java.time.ZoneId.of("Asia/Shanghai");
-    Instant since = day.atStartOfDay(zone).toInstant(),
-        until = day.plusDays(1).atStartOfDay(zone).toInstant();
-    Map<String, ObjectNode> resources = new HashMap<>();
-    for (JsonNode item : body.path("resources")) {
-      ObjectNode local = store.get("resource", text(item, "resourceId"), null);
-      if (!eq(local, "supplierId", text(item, "supplierId"))) throw invalid();
-      String accountId = mapped(config, local);
-      if (resources.putIfAbsent(accountId, local) != null)
-        throw new ApiException(409, "同一账号存在重复映射");
-    }
-    ObjectNode out = store.object().put("state", "SUCCESS");
-    ArrayNode rows = out.putArray("rows");
-    if (resources.isEmpty()) return out;
-    Map<String, java.math.BigDecimal> totals = new LinkedHashMap<>();
-    Set<String> seen = new HashSet<>();
-    String cursor = "", cursorAt = "";
-    for (int page = 0; page < 500; page++) {
-      if (System.nanoTime() >= deadline)
-        throw new ApiException(503, "日账采集超过单次时间上限，未确认完整批次，请稍后重试", "RESOURCE_SYNC_LIMIT");
-      String path =
-          "/admin/request-logs?mode=cursor&limit=100&since="
-              + ResourceOperations.encode(since.toString())
-              + "&until="
-              + ResourceOperations.encode(until.toString());
-      if (!cursor.isBlank())
-        path +=
-            "&cursor_id="
-                + ResourceOperations.encode(cursor)
-                + "&cursor_at="
-                + ResourceOperations.encode(cursorAt);
-      ObjectNode reply = call(config, "GET", path, null, key);
-      JsonNode logs = reply.path("logs").isArray() ? reply.path("logs") : reply.path("items");
-      if (!logs.isArray()) throw invalid();
-      for (JsonNode log : logs) {
-        String id = text(log, "id"),
-            accountId = log.path("account_id").asText(log.path("oauth_account_id").asText());
-        if (id.isBlank() || !seen.add(id)) throw invalid();
-        if (!resources.containsKey(accountId)) continue;
-        Instant created;
-        try {
-          created = Instant.parse(text(log, "created_at"));
-        } catch (RuntimeException error) {
-          throw invalid();
-        }
-        if (created.isBefore(since) || !created.isBefore(until)) throw invalid();
-        if (log.path("billing_evaluation_failed").asBoolean()) throw invalid();
-        String model = text(log, "request_model");
-        if (model.isBlank() || model.length() > 160) throw invalid();
-        java.math.BigDecimal cost;
-        try {
-          cost = new java.math.BigDecimal(log.path("cost_official_usd").asText());
-        } catch (RuntimeException error) {
-          throw invalid();
-        }
-        if (cost.signum() < 0 || cost.precision() > 30 || cost.scale() > 8) throw invalid();
-        totals.merge(accountId + "\n" + model, cost, java.math.BigDecimal::add);
-      }
-      JsonNode next = reply.path("cursor");
-      if (next.isNull() || next.isMissingNode()) break;
-      String nextId = text(next, "id"),
-          nextAt = next.path("createdAt").asText(next.path("created_at").asText());
-      if (nextId.isBlank() || nextAt.isBlank() || nextId.equals(cursor)) throw invalid();
-      cursor = nextId;
-      cursorAt = nextAt;
-      if (page == 499) throw new ApiException(503, "日账超过单次采集上限，请缩小范围", "RESOURCE_SYNC_LIMIT");
-    }
-    for (var entry : totals.entrySet()) {
-      String[] identity = entry.getKey().split("\n", 2);
-      ObjectNode local = resources.get(identity[0]);
-      rows.addObject()
-          .put("resourceId", text(local, "id"))
-          .put("supplierId", text(local, "supplierId"))
-          .put("businessDate", day.toString())
-          .put("model", identity[1])
-          .put("currency", "USD")
-          .put("originalAmount", entry.getValue().toPlainString());
-    }
-    return out;
   }
 
   private String mapped(ObjectNode config, ObjectNode resource) {
@@ -940,10 +812,6 @@ final class NativeCcmaxAdapter {
 
   private ObjectNode bodyWithSession(JsonNode body, String id) {
     return ((ObjectNode) body).deepCopy().put("sessionId", id);
-  }
-
-  private void requireOk(JsonNode data) {
-    if (!data.path("ok").isBoolean() || !data.path("ok").asBoolean()) throw rejected();
   }
 
   private ApiException rejected() {

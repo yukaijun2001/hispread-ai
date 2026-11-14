@@ -1,5 +1,7 @@
 # CCMAX native integration and acceptance — 2026-11-12
 
+> 本文件保留历史接入与验收记录。当前 `0.8.124` 边界见 [资源上游功能范围](resource-upstream-scope.md)：账号查询只读上游快照，不调用 refresh-usage 或扫描请求日志；本站权重修改、日费用采集、并发调参与配置页独立 OAuth 已停用。下文旧协议表和验收记录不能用来重新开启这些能力。
+
 `CCMAX_NATIVE` is the observed Claude Gateway administrator protocol. It is separate from this repository's `CUSTOM` adapter contract and the numeric-channel `NEWAPI` protocol. Evidence came from the authorized deployment's public client and authenticated administrator UI; its server source was not supplied. Native route compatibility remains tied to that deployment's version.
 
 ## Configuration

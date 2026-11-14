@@ -536,6 +536,11 @@ public class ResourceOperations {
 
   public ObjectNode action(
       String id, String action, String method, ObjectNode body, HttpServletRequest req) {
+    if (Set.of("say-hi", "priority").contains(action)) {
+      auth.require(req, "resource.read");
+      b.resource(id, req);
+      throw UpstreamScope.retired();
+    }
     if (Set.of("submit", "dispatch").contains(action) || action.startsWith("oauth/") || action.startsWith("reauthorizations"))
       CcmaxIntakeLedger.rejectOverrides(body);
     if ((action.startsWith("oauth/") || action.startsWith("reauthorizations"))
@@ -561,7 +566,6 @@ public class ResourceOperations {
   private ObjectNode actionTransactional(
       String id, String action, String method, ObjectNode body, HttpServletRequest req) {
     if (action.equals("usage")) auth.require(req, "resource.usage");
-    else if (action.equals("say-hi")) auth.require(req, "resource.read");
     else writable(req);
     ObjectNode resource = b.resource(id, req);
     if (resource.path("intakeQuarantined").asBoolean()
@@ -895,6 +899,9 @@ public class ResourceOperations {
   public ObjectNode reconcile(String id, HttpServletRequest req) {
     writable(req);
     ObjectNode operation = getOperation(id, req);
+    if (eq(operation, "type", "PRIORITY")) return priorityAction(id, "reconcile", req);
+    if (text(operation, "type").startsWith("PRIORITY_") || eq(operation, "type", "SAY-HI"))
+      throw UpstreamScope.retired();
     if (eq(operation, "type", "OAUTH_COMPLETE") && !text(operation, "intakeLedgerId").isBlank())
       return operationLocked("resource-oauth:" + text(operation, "targetId"), text(operation, "oauthNativeSessionId"),
           () -> preservingApiFailure(() -> {
@@ -1480,44 +1487,17 @@ public class ResourceOperations {
   public ObjectNode priority(ObjectNode body, HttpServletRequest req) {
     if (!auth.admin(req)) throw new ApiException(403, "仅最高管理员可调整批量优先级");
     auth.require(req, "resource.dispatch");
-    if (!body.path("priority").isIntegralNumber() || !body.path("priority").canConvertToInt() || body.path("priority").asInt(-1) < 0 || body.path("priority").asInt() > 1000)
-      throw new ApiException(400, "优先级须在0至1000之间");
-    ObjectNode newApiJob = newApiPriority.preview(body, req);
-    if (newApiJob != null) return newApiJob;
-    ObjectNode payload = body.deepCopy();
-    String key = text(body, "requestKey");
-    if (key.isBlank()) key = UUID.randomUUID().toString();
-    return invoke(
-        "PRIORITY",
-        null,
-        "GLOBAL",
-        "POST",
-        "/cc-intake/admin/priority/jobs",
-        payload,
-        key,
-        text(body, "targetId"),
-        req);
+    throw UpstreamScope.retired();
   }
 
   public ObjectNode priorityAction(String id, String action, HttpServletRequest req) {
     if (!auth.admin(req)) throw new ApiException(403, "仅最高管理员可调整批量优先级");
     auth.require(req, "resource.dispatch");
+    if (!action.equals("reconcile")) throw UpstreamScope.retired();
     ObjectNode op = store.get("resource-operation", id, "GLOBAL");
     if (Set.of("NEWAPI", "CCMAX_NATIVE").contains(text(op, "protocol")) && eq(op, "type", "PRIORITY")) return newApiPriority.action(op, action, req);
-    // Preserve CUSTOM's persisted FAILED/UNKNOWN receipt even when its request returns an error.
-    ApiException[] failure = new ApiException[1];
-    ObjectNode result = transactions.execute(status -> {
-      try {
-        return invoke("PRIORITY_" + action, null, "GLOBAL", "POST",
-            "/cc-intake/admin/priority/jobs/" + encode(text(op, "upstreamId")) + "/" + action,
-            b.obj(), id + ":" + action, text(op, "targetId"), req);
-      } catch (ApiException error) {
-        failure[0] = error;
-        return null;
-      }
-    });
-    if (failure[0] != null) throw failure[0];
-    return result;
+    // CUSTOM never guaranteed that its old reconcile endpoint was read-only.
+    throw UpstreamScope.retired();
   }
 
   public static String encode(String value) {

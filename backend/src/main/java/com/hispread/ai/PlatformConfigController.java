@@ -404,6 +404,9 @@ public class PlatformConfigController {
       String protocol = out.path("protocol").asText("CUSTOM");
       if (!Set.of("CUSTOM", "NEWAPI", "CCMAX_NATIVE").contains(protocol))
         throw new ApiException(400, "资源协议须为CUSTOM、NEWAPI或CCMAX_NATIVE");
+      if (previous == null && protocol.equals("CUSTOM")) throw UpstreamScope.retired();
+      if (previous != null && !protocol.equals(previous.path("protocol").asText("CUSTOM")))
+        throw new ApiException(409, "已有目标不能切换接入类型，请新增目标以保留原账号关联");
       out.put("protocol", protocol);
       if (protocol.equals("CCMAX_NATIVE")) {
         required(out, "adminUsername", "adminPassword");
@@ -474,11 +477,8 @@ public class PlatformConfigController {
       throw TaskScope.retired();
     }
     ObjectNode config = s.get("resource-target", id, null);
-    if (r.getRequestURI().endsWith("/sync") && eq(config, "protocol", "CCMAX_NATIVE"))
-      return resourceJobs.syncNativeTarget(id);
     if (r.getRequestURI().endsWith("/sync"))
-      return resources.exchange(
-          config, "POST", "/resources/sync", s.object(), UUID.randomUUID().toString());
+      return resourceJobs.syncTarget(id);
     ObjectNode result = resources.testTarget(config);
     return s.object().put("state", "READY").put("message", "目标只读连接检查成功").set("result", result);
   }
@@ -489,25 +489,14 @@ public class PlatformConfigController {
       @RequestBody(required = false) ObjectNode body,
       HttpServletRequest r) {
     guard(r, "resource.dispatch");
-    return resources.exchange(
-        s.get("resource-target", id, null),
-        "POST",
-        "/oauth/link",
-        body == null ? s.object() : body,
-        UUID.randomUUID().toString());
+    throw UpstreamScope.retired();
   }
 
   @PostMapping("/resource-targets/{id}/oauth/complete")
   public Object oauthComplete(
       @PathVariable String id, @RequestBody ObjectNode body, HttpServletRequest r) {
     guard(r, "resource.dispatch");
-    required(body, "sessionId", "code");
-    return resources.exchange(
-        s.get("resource-target", id, null),
-        "POST",
-        "/oauth/complete",
-        body,
-        text(body, "sessionId"));
+    throw UpstreamScope.retired();
   }
 
   @GetMapping("/workbench-monitoring/sources")
@@ -770,6 +759,6 @@ public class PlatformConfigController {
   @PutMapping("/resource-targets/{id}/sync-settings")
   public Object sync(@PathVariable String id, @RequestBody ObjectNode body, HttpServletRequest r) {
     guard(r, "resource.config.write");
-    return resources.saveSyncSettings(id, body);
+    throw UpstreamScope.retired();
   }
 }

@@ -96,105 +96,43 @@ class ResourceSyncSettingsIntegrationTest {
   }
 
   @Test
-  void savedSettingsMatchReadShapeWithoutReturningTargetCredentials() throws Exception {
-    Client admin = client("ADMIN");
-    ObjectNode target = target();
-    String path = path(target);
-    ObjectNode initial = read(path, admin);
-    ObjectNode saved =
-        save(
-            path,
-            initial.deepCopy().put("perTargetConcurrency", 3).put("globalConcurrency", 5),
-            admin,
-            200);
-    assertFalse(saved.toString().contains("PRIVATE-SYNC-KEY"));
-    assertEquals(
-        Set.of(
-            "perTargetConcurrency",
-            "globalConcurrency",
-            "effectiveConcurrency",
-            "targetVersion",
-            "globalVersion"),
-        json.convertValue(saved, Map.class).keySet());
-    assertEquals(3, saved.path("perTargetConcurrency").asInt());
-    assertEquals(5, saved.path("globalConcurrency").asInt());
-    assertEquals(3, saved.path("effectiveConcurrency").asInt());
-    assertEquals(saved, read(path, admin));
-    assertEquals(
-        "PRIVATE-SYNC-KEY",
-        store.get("resource-target", target.path("id").asText(), null).path("apiKey").asText());
-    save(path, initial, admin, 409);
-  }
-
-  @Test
-  void validatesIntegersAndBothVersionsWithoutChangingSettings() throws Exception {
-    Client admin = client("ADMIN");
-    ObjectNode target = target();
-    ObjectNode initial = read(path(target), admin);
-    List<ObjectNode> invalid =
-        List.of(
-            initial.deepCopy().put("perTargetConcurrency", 0),
-            initial.deepCopy().put("perTargetConcurrency", 33),
-            initial.deepCopy().put("perTargetConcurrency", 1.5),
-            initial.deepCopy().put("perTargetConcurrency", "2"),
-            initial.deepCopy().put("globalConcurrency", 0),
-            initial.deepCopy().put("globalConcurrency", 65),
-            initial.deepCopy().put("globalConcurrency", 4.5),
-            initial.deepCopy().put("globalConcurrency", 4294967297L),
-            initial.deepCopy().put("targetVersion", "0"),
-            initial.deepCopy().put("globalVersion", -1));
-    for (ObjectNode input : invalid) save(path(target), input, admin, 400);
-    ObjectNode missing = initial.deepCopy();
-    missing.remove("targetVersion");
-    save(path(target), missing, admin, 400);
-    missing = initial.deepCopy();
-    missing.remove("globalVersion");
-    save(path(target), missing, admin, 400);
-    assertEquals(initial, read(path(target), admin));
-  }
-
-  @Test
-  void globalSettingsAreSharedAndStaleOtherTargetChangesAreRejected() throws Exception {
-    Client admin = client("ADMIN");
-    ObjectNode first = target(), second = target();
-    ObjectNode beforeFirst = read(path(first), admin), beforeSecond = read(path(second), admin);
-    ObjectNode saved =
-        save(
-            path(first),
-            beforeFirst.deepCopy().put("perTargetConcurrency", 2).put("globalConcurrency", 6),
-            admin,
-            200);
-    ObjectNode other = read(path(second), admin);
-    assertEquals(6, other.path("globalConcurrency").asInt());
-    assertEquals(saved.path("globalVersion"), other.path("globalVersion"));
-    assertEquals(beforeSecond.path("targetVersion"), other.path("targetVersion"));
-    save(path(second), beforeSecond.deepCopy().put("globalConcurrency", 7), admin, 409);
-    save(path(second), other.deepCopy().put("perTargetConcurrency", 1), admin, 200);
-    assertEquals(2, read(path(first), admin).path("perTargetConcurrency").asInt());
-  }
-
-  @Test
-  void legacySettingsRemainReadableWithoutLeakingUnexpectedFields() throws Exception {
-    Client admin = client("ADMIN");
-    ObjectNode target = target();
-    ObjectNode legacy =
-        store
-            .object()
-            .put("perTargetConcurrency", 1)
-            .put("globalConcurrency", 4)
-            .put("targetVersion", 100)
-            .put("apiKey", "LEGACY-PRIVATE");
-    store.update(
-        "resource-target",
-        target.path("id").asText(),
-        null,
-        store.object().set("syncSettings", legacy));
-    ObjectNode settings = read(path(target), admin);
-    assertEquals(1, settings.path("perTargetConcurrency").asInt());
-    assertEquals(1, settings.path("targetVersion").asInt());
-    assertFalse(settings.has("apiKey"));
+  void concurrencyIsManagedAndOldWritesCannotChangeItOrExposeCredentials() throws Exception {
+    Client admin = client("ADMIN"); ObjectNode target = target();
+    ObjectNode legacy = store.object().put("perTargetConcurrency", 32).put("globalConcurrency", 64).put("apiKey", "LEGACY-PRIVATE");
+    store.update("resource-target", target.path("id").asText(), null, store.object().set("syncSettings", legacy));
+    ObjectNode before = store.get("resource-target", target.path("id").asText(), null);
+    ObjectNode managed = read(path(target), admin);
+    assertEquals(2, managed.path("perTargetConcurrency").asInt());
+    assertEquals(4, managed.path("globalConcurrency").asInt());
+    assertTrue(managed.path("managed").asBoolean());
+    assertFalse(managed.toString().contains("PRIVATE"));
+    ObjectNode error = save(path(target), managed.deepCopy().put("perTargetConcurrency", 32), admin, 410);
+    assertEquals("UPSTREAM_FEATURE_RETIRED", error.path("code").asText());
+    assertEquals(before, store.get("resource-target", target.path("id").asText(), null));
+    assertEquals(managed, read(path(target), admin));
     Client supplier = client("SUPPLIER");
     mvc.perform(get(path(target)).session(supplier.session)).andExpect(status().isForbidden());
-    save(path(target), settings, supplier, 403);
+    save(path(target), managed, supplier, 403);
+  }
+
+  @Test
+  void standaloneOauthAndNewCustomConnectionsAreRetiredWhileLegacyConfigRemainsEditable() throws Exception {
+    Client admin = client("ADMIN"); ObjectNode legacy = target();
+    for (String action : List.of("link", "complete"))
+      mvc.perform(post("/api/resource-targets/" + legacy.path("id").asText() + "/oauth/" + action)
+          .session(admin.session).header("X-CSRF-TOKEN", admin.csrf)
+          .contentType("application/json").content("{}"))
+          .andExpect(status().isGone()).andExpect(jsonPath("$.code").value("UPSTREAM_FEATURE_RETIRED"));
+    mvc.perform(post("/api/resource-targets").session(admin.session).header("X-CSRF-TOKEN", admin.csrf)
+        .contentType("application/json").content(store.object().put("name", "New compatibility connection").put("baseUrl", "https://example.invalid").put("protocol", "CUSTOM").toString()))
+        .andExpect(status().isGone());
+    ObjectNode edited = save("/api/resource-targets/" + legacy.path("id").asText(),
+        store.object().put("name", "Renamed compatibility connection").put("version", legacy.path("version").asLong()), admin, 200);
+    assertEquals("CUSTOM", edited.path("protocol").asText());
+    assertFalse(edited.has("apiKey"));
+    assertTrue(edited.path("apiKeyConfigured").asBoolean());
+    save("/api/resource-targets/" + legacy.path("id").asText(),
+        store.object().put("protocol", "NEWAPI").put("newApiUserId", "2"), admin, 409);
+    assertTrue(store.list("native-oauth", "GLOBAL").isEmpty());
   }
 }
