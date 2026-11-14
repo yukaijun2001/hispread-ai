@@ -7456,7 +7456,10 @@ function jt({
                   step: e.step || `any`,
                   placeholder: e.placeholder,
                   value: d[e.name] || ``,
-                  onChange: t => y(e, t.target.value)
+                  onChange: t => {
+                    e.onChange?.(t.target.value, d);
+                    y(e, t.target.value);
+                  }
                 }), ` `, e.hint && (0, P.jsx)(`small`, {
                   children: e.hint
                 })]

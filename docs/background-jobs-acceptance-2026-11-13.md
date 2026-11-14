@@ -155,3 +155,24 @@ mvn -q '-Dtest=BackgroundJobExecutionIntegrationTest,ExplicitJobConfigurationTes
 本机证据位于忽略目录 `.run/background-jobs-deployed-cce6cef/`，包括 `target-preservation.json`、`renewal-validation.json`、`renewal-automatic-run.json`、`renewal-generated.json`、`renewal-cleanup.json`、`reminder-ui.json`、`renewal-run-records.json`、`final-state.json` 及截图。最终状态文件只保留核对白名单字段，不提交认证信息、上游响应正文或本机运行产物。
 
 本轮交付仅更新本验收报告，检查文档差异和 `git diff --check`，无需重新部署应用。剩余真实集成条件见「真实服务仍待验收」，没有以未配置、空集合成功或本地 fixture 冒充线上完成。
+
+## 第四轮参数边界与HTTP许可复验 — 2026-11-14
+
+继续验收时只读检查了线上后台任务、监控源、企微配置、5 条财务观测及结算单；发现监控源仍为 0、结算单为 0、5 条财务观测均为 PENDING/version=0。所有 5 个任务均停用、没有正在运行的任务，下次运行时间为空。
+
+### 线上参数探测
+
+对线上**已停用**的日账任务发送两次不改变预期值的边界输入：`intervalMinutes=10.5` 与 `enabled="false"`。原实现将二者分别截断/强制转换成 `10` 与 `false` 并接受保存；两次保存都没有启用任务或改变目标和周期，但任务版本从 33 增至 35。该任务最终仍为停用、10 分钟、`targetId=null`、`nextRunAt=null`，没有新增执行记录或数据采集。本探测的版本增量保留为审计历史，不做回滚。
+
+同一次只读 HTTP 监控配置探测发现，后端未将请求中的 `allowHttp` 纳入保存白名单，即使提交明确的 `allowHttp=true` 也会按默认 HTTPS 规则拒绝。此前线上没有监控源，本轮没有添加、启用或刷新线上源。
+
+### 本地修复与隔离回归
+
+已在当前工作区修复，尚未部署到线上：
+
+- 定时任务周期仅接受 1–1440 的 JSON 整数，启停开关仅接受 JSON 布尔值，版本仅接受非负整数。小数、字符串、布尔数值混用和整数溢出均拒绝，失败请求不写入任务。
+- 监控保存白名单包含 `allowHttp`，并严格验证周期、排序值和各开关的 JSON 类型。HTTP 许可在表单默认关闭；只在 HTTP 地址下出现，并绑定当前地址。编辑已有 HTTP 地址时必须再次明确许可；更换 HTTP 地址会清除前端临时许可，后端也拒绝未同时提交新许可的变更。HTTPS 地址不需要 HTTP 许可。
+- 独立 PostgreSQL/PostgreSQL session 和 localhost Vue 浏览器复验通过：周期 `10.5`、`"10"`、溢出值及字符串/数值启停值均返回 400；许可默认关闭、当前地址许可可以切换、更换地址会重置许可、HTTPS 时隐藏许可项。临时 HTTP 监控源保持 `enabled=false`、`state=PENDING`；未保存验收表单、未发起采集，验收结束删除临时数据库和进程。
+- 相关后端测试 **22 项通过**（后台执行 11、任务配置 5、监控契约 6）；前端 `npm run check` 与 `npm run build` 通过，`git diff --check` 与 Python 脚本语法检查通过。
+
+本机浏览器验收脚本为 `scripts/verify-background-config.py`；脱敏、非 Git 证据保存在 `.run/background-jobs-2026-11-14/`。线上最后回读时，除日账任务版本增加到 35 外，其余任务、5 条 PENDING 财务观测、0 结算单和 0 监控源与探测前状态相同。自动化修复仍需提交、部署后复验；本报告不将本地通过计为线上通过。

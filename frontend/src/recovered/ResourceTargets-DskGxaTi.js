@@ -290,6 +290,8 @@ function O({
     label: a.categoryName || a.category,
     detail: a.category
   });
+  const httpFieldId = (0, S.useId)();
+  const [allowedHttpEndpoint, setAllowedHttpEndpoint] = (0, S.useState)(a?.allowHttp === true ? a.endpoint.trim() : ``);
   let s = [{
     name: `name`,
     label: h(`站点展示名称`),
@@ -309,6 +311,7 @@ function O({
     label: h(`监控接口地址`),
     type: `url`,
     full: !0,
+    onChange: () => setAllowedHttpEndpoint(``),
     placeholder: `https://example.com/api/monitoring`
   }, {
     name: `authType`,
@@ -419,11 +422,38 @@ function O({
     },
     onClose: r,
     submitLabel: h(`保存配置`),
-    extra: () => n ? (0, C.jsxs)(u, {
-      tone: `red`,
-      children: [h(`品类读取失败：`), n]
-    }) : null,
+    extra: values => (0, C.jsxs)(C.Fragment, {
+      children: [values.endpoint.trim().toLowerCase().startsWith(`http://`) && (0, C.jsxs)(`label`, {
+        className: `settings-switch target-config-switch`,
+        htmlFor: httpFieldId,
+        children: [(0, C.jsxs)(`span`, {
+          children: [(0, C.jsx)(`strong`, {
+            id: `${httpFieldId}-label`,
+            children: h(`允许此 HTTP 监控地址`)
+          }), (0, C.jsx)(`small`, {
+            id: `${httpFieldId}-hint`,
+            children: h(`仅批准当前填写的监控地址。HTTP 会以明文传输监控数据与认证令牌。`)
+          })]
+        }), (0, C.jsx)(`input`, {
+          id: httpFieldId,
+          name: `allowHttp`,
+          type: `checkbox`,
+          "aria-labelledby": `${httpFieldId}-label`,
+          "aria-describedby": `${httpFieldId}-hint`,
+          checked: allowedHttpEndpoint === values.endpoint.trim(),
+          onChange: event => setAllowedHttpEndpoint(event.target.checked ? values.endpoint.trim() : ``)
+        }), (0, C.jsx)(`span`, {
+          className: `settings-switch-track`,
+          "aria-hidden": `true`
+        })]
+      }), n && (0, C.jsxs)(u, {
+        tone: `red`,
+        children: [h(`品类读取失败：`), n]
+      })]
+    }),
     onSubmit: async e => {
+      const http = e.endpoint.trim().toLowerCase().startsWith(`http://`);
+      if (http && allowedHttpEndpoint !== e.endpoint.trim()) throw Error(h(`使用 HTTP 监控地址前，请勾选允许当前地址`));
       if (!e.rpmPath.trim() && !e.tpmPath.trim()) throw Error(h(`请至少设置 RPM 或 TPM 字段路径`));
       if (e.authType !== `NONE` && !e.token.trim() && !a?.tokenConfigured) throw Error(h(`请填写监控令牌`));
       let t = Number(e.intervalSeconds),
@@ -435,6 +465,7 @@ function O({
         category: e.category,
         groupName: e.groupName.trim(),
         endpoint: e.endpoint.trim(),
+        allowHttp: http && allowedHttpEndpoint === e.endpoint.trim(),
         authType: e.authType,
         authHeader: e.authType === `HEADER` ? e.authHeader.trim() : null,
         newApiUserId: e.newApiUserId.trim() || null,

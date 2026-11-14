@@ -32,6 +32,14 @@ public class MonitoringService {
   }
 
   public void validate(ObjectNode source) {
+    for (String field : List.of("allowHttp", "enabled", "supplierVisible", "includeInTotal"))
+      if (source.has(field) && !source.path(field).isBoolean())
+        throw new ApiException(400, "监控开关须为布尔值：" + field);
+    for (String field : List.of("intervalSeconds", "sortOrder"))
+      if (source.has(field)
+          && (!source.path(field).isIntegralNumber()
+              || !source.path(field).canConvertToInt()))
+        throw new ApiException(400, "监控周期和显示顺序须为整数");
     if (!Set.of("NONE", "BEARER", "HEADER").contains(source.path("authType").asText("NONE")))
       throw new ApiException(400, "无效监控认证方式");
     if (!source.path("authType").asText("NONE").equals("NONE") && text(source, "token").isBlank())
@@ -47,7 +55,8 @@ public class MonitoringService {
           && (!path.matches("[A-Za-z0-9_-]+(?:\\.[A-Za-z0-9_-]+)*") || path.length() > 256))
         throw new ApiException(400, "监控字段路径格式无效");
     }
-    if (source.path("sortOrder").asInt() < 0) throw new ApiException(400, "显示顺序不能为负数");
+    if (source.has("sortOrder") && source.path("sortOrder").asInt() < 0)
+      throw new ApiException(400, "显示顺序不能为负数");
     if (!text(source, "newApiUserId").isBlank()
         && !text(source, "newApiUserId").matches("[1-9][0-9]{0,18}"))
       throw new ApiException(400, "NewAPI用户ID须为正整数");

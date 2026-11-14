@@ -121,7 +121,13 @@ public class SystemJobService {
 
   private ObjectNode updateConfig(String key, ObjectNode body) {
     ObjectNode task = s.get("scheduled-task", key, null), patch = s.object();
-    if (body.has("version")) patch.set("version", body.get("version"));
+    if (body.has("version")) {
+      if (!body.path("version").isIntegralNumber()
+          || !body.path("version").canConvertToLong()
+          || body.path("version").asLong() < 0)
+        throw new ApiException(409, "任务配置已变化");
+      patch.set("version", body.get("version"));
+    }
     if (eq(task, "type", "QUOTE_AUTO_RENEWAL")) {
       if (body.has("autoRenewEnabled") && !body.path("autoRenewEnabled").isBoolean())
         throw new ApiException(400, "续期规则开关须为布尔值");
@@ -190,6 +196,9 @@ public class SystemJobService {
       patch.set("targetId", body.get("targetId"));
     }
     if (body.has("intervalMinutes")) {
+      if (!body.path("intervalMinutes").isIntegralNumber()
+          || !body.path("intervalMinutes").canConvertToInt())
+        throw new ApiException(400, "运行周期须为1–1440分钟的整数");
       int interval = body.path("intervalMinutes").asInt();
       if (interval < 1 || interval > 1440) throw new ApiException(400, "运行周期须为1–1440分钟");
       patch.put("intervalMinutes", interval);
@@ -200,6 +209,7 @@ public class SystemJobService {
       patch.put("name", text(body, "name"));
     }
     if (body.has("enabled")) {
+      if (!body.path("enabled").isBoolean()) throw new ApiException(400, "任务开关须为布尔值");
       ObjectNode candidate = task.deepCopy();
       candidate.setAll(patch);
       if (body.path("enabled").asBoolean() && !ready(candidate))

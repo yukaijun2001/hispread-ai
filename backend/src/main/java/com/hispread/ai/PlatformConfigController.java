@@ -358,6 +358,7 @@ public class PlatformConfigController {
                 "windowSecondsPath",
                 "updatedAtPath",
                 "intervalSeconds",
+                "allowHttp",
                 "sortOrder",
                 "enabled",
                 "supplierVisible",
@@ -375,6 +376,10 @@ public class PlatformConfigController {
                 "adminUsername",
                 "defaultTarget",
                 "timeoutMs")) if (body.has(field)) out.set(field, body.get(field));
+    if (monitoring && previous != null && !body.has("allowHttp")
+        && body.has("endpoint")
+        && !text(previous, "endpoint").equals(text(body, "endpoint")))
+      out.put("allowHttp", false);
     String secret = monitoring ? "token" : "apiKey";
     if (body.has(secret) && !text(body, secret).isBlank()) out.put(secret, text(body, secret));
     if (body.path("clearToken").asBoolean() || body.path("clearApiKey").asBoolean())
@@ -384,6 +389,10 @@ public class PlatformConfigController {
     required(out, "name", monitoring ? "endpoint" : "baseUrl");
     if (text(out, "name").length() > 160) throw new ApiException(400, "配置名称过长");
     if (monitoring) {
+      if (out.has("intervalSeconds")
+          && (!out.path("intervalSeconds").isIntegralNumber()
+              || !out.path("intervalSeconds").canConvertToInt()))
+        throw new ApiException(400, "采集周期须为2至3600秒的整数");
       int interval = out.path("intervalSeconds").asInt(30);
       if (interval < 2 || interval > 3600) throw new ApiException(400, "采集周期须为2至3600秒");
       out.put("intervalSeconds", interval);
