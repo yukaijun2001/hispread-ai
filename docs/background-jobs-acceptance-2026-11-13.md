@@ -197,6 +197,12 @@ mvn -q '-Dtest=BackgroundJobExecutionIntegrationTest,ExplicitJobConfigurationTes
 
 本轮没有足够的受控配置来继续真实监控采集、企微送达、CUSTOM 自动轮换或到期结算自动确认；这些项目保持待验收。
 
+## 第八轮全量回归 — 2026-11-14
+
+为检查本轮配置校验修复的回归范围，在独立 PostgreSQL 数据库中补入测试所需的全局 `settings` 默认记录后运行全量 Maven 后端套件：**218 项通过，0 失败、0 错误、0 跳过**。覆盖后台任务执行与配置、监控契约、资源/上游适配器、权限边界、财务与结算等测试类。隔离数据库在结束时删除，生产数据未参与测试。
+
+第一次全量尝试因 production bootstrap 不创建 demo 所有的 `settings` 行，有 6 个 `ResourceIntegrationTest` 在夹具读取默认设置时抛 `IndexOutOfBoundsException`；补入测试夹具要求的默认记录后，全量 218 项通过。这是全量套件夹具差异，不是通过修改业务代码或放宽断言规避。
+
 ## 第七轮剩余任务运行验收 — 2026-11-14
 
 线上版本为 `0.8.122`，使用现有平台管理员会话；未新增监控配置、未启用任务、未调用就绪任务的执行接口。
