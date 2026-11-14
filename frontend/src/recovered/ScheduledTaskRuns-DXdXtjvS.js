@@ -57,7 +57,7 @@ function w(e) {
 function T() {
   let {
     refresh: a
-  } = t(), o = i(`/system/scheduled-tasks`), m = e(`task`), _ = o.data?.find(e => e.key === m) || o.data?.[0] || null, [T, E] = (0, b.useState)(1), [D, O] = (0, b.useState)(10), [k, A] = (0, b.useState)(``), [j, M] = (0, b.useState)(``), [N, P] = (0, b.useState)(d), [F, I] = (0, b.useState)(d), L = !!(N && F && N > F), R = new URLSearchParams({
+  } = t(), o = i(`/system/scheduled-tasks/history`), m = e(`task`), _ = o.data?.find(e => e.key === m) || o.data?.[0] || null, [T, E] = (0, b.useState)(1), [D, O] = (0, b.useState)(10), [k, A] = (0, b.useState)(``), [j, M] = (0, b.useState)(``), [N, P] = (0, b.useState)(d), [F, I] = (0, b.useState)(d), L = !!(N && F && N > F), R = new URLSearchParams({
     page: String(T),
     size: String(D)
   });
@@ -72,7 +72,7 @@ function T() {
     children: [(0, x.jsxs)(`div`, {
       className: `scheduled-tasks-toolbar`,
       children: [(0, x.jsx)(`p`, {
-        children: p(`查看各服务任务的自动与手动执行结果，按开始时间倒序。`)
+        children: p(`查看交付状态同步及旧任务的历史记录；已停用任务仅供查阅。`)
       }), (0, x.jsx)(f, {
         title: p(`执行记录`),
         children: (0, x.jsx)(h, {
@@ -115,7 +115,7 @@ function T() {
             onChange: e => n(`scheduled-task-runs?task=${encodeURIComponent(e)}`),
             options: o.data.map(e => ({
               value: e.key,
-              label: y(e)
+              label: e.retired ? `${y(e)}（历史）` : y(e)
             }))
           })]
         }), (0, x.jsxs)(`div`, {

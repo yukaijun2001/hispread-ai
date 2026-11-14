@@ -138,13 +138,13 @@ function M({
       }), J.state === `PENDING` && J.confirmationDeadline && (0, A.jsx)(m, {
         tone: `amber`,
         children: Y ? (0, A.jsxs)(A.Fragment, {
-          children: [v(`本单确认截止时间已到，请刷新查看最新状态。 `), X && v(`当前不能再添加人工调整。`), (0, A.jsx)(`button`, {
+          children: [v(`已超过建议核对时间，仍需供应商手动确认或提出异议。 `), X && v(`当前不能再添加人工调整。`), (0, A.jsx)(`button`, {
             className: `text-button`,
             onClick: w,
             children: v(`刷新状态 `)
           })]
         }) : (0, A.jsxs)(A.Fragment, {
-          children: [v(`请于 `), o(J.confirmationDeadline), ` `, v(`前完成确认或提出异议；逾期未处理将默认确认无误。 `)]
+          children: [v(`请于 `), o(J.confirmationDeadline), ` `, v(`前核对；到期后仍需手动确认或提出异议。 `)]
         })
       }), J.state === `CONFIRMED` && J.supplierConfirmed && !N && g(`payment.create`) && !s.some(e => e === J.currency) && a(J.total, J.reservedAmount) > 0 && (0, A.jsx)(m, {
         tone: `amber`,

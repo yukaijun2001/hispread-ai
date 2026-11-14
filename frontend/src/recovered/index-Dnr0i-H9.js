@@ -8209,6 +8209,11 @@ var bn = [{
     label: S(`API 文档`),
     icon: `quote`,
     permission: ``
+  }, {
+    id: `scheduled-tasks`,
+    label: S(`上号与交付任务`),
+    icon: `audit`,
+    permission: `resource.read`
   }],
   xn = [{
     id: `users`,
@@ -8236,13 +8241,8 @@ var bn = [{
     icon: `settings`,
     permission: `system.settings`
   }, {
-    id: `scheduled-tasks`,
-    label: S(`任务列表`),
-    icon: `grid`,
-    permission: `system.settings`
-  }, {
     id: `scheduled-task-runs`,
-    label: S(`执行记录`),
+    label: S(`同步历史`),
     icon: `audit`,
     permission: `system.settings`
   }, {
@@ -8620,38 +8620,7 @@ function On() {
             className: `nav-submenu`,
             role: `group`,
             "aria-label": S(`系统管理子菜单`),
-            children: ye.map(e => e.id === `scheduled-task-runs` ? null : e.id === `scheduled-tasks` ? (0, P.jsxs)(`div`, {
-              className: `nav-nested`,
-              children: [(0, P.jsxs)(`button`, {
-                className: `nav-nested-parent ${j===`scheduled-tasks`||j===`scheduled-task-runs`?`current`:``}`,
-                "aria-label": S(`定时任务`),
-                "aria-expanded": w,
-                onClick: () => ne(e => !e),
-                children: [(0, P.jsx)(F, {
-                  name: `settings`
-                }), (0, P.jsx)(`span`, {
-                  children: S(`定时任务`)
-                }), (0, P.jsx)(F, {
-                  name: `down`,
-                  size: 13
-                })]
-              }), w && (0, P.jsx)(`div`, {
-                className: `nav-nested-submenu`,
-                role: `group`,
-                "aria-label": S(`定时任务子菜单`),
-                children: ye.filter(e => [`scheduled-tasks`, `scheduled-task-runs`].includes(e.id)).map(e => (0, P.jsxs)(`button`, {
-                  title: e.label,
-                  "aria-label": e.label,
-                  className: j === e.id ? `active` : ``,
-                  onClick: () => Ze(e.id),
-                  children: [(0, P.jsx)(F, {
-                    name: e.icon
-                  }), (0, P.jsx)(`span`, {
-                    children: e.label
-                  })]
-                }, e.id))
-              })]
-            }, e.id) : (0, P.jsxs)(`button`, {
+            children: ye.map(e => (0, P.jsxs)(`button`, {
               title: e.label,
               "aria-label": e.label,
               className: j === e.id ? `active` : ``,

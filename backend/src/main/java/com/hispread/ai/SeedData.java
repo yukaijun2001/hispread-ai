@@ -173,10 +173,7 @@ public class SeedData implements CommandLineRunner {
     }
     for (String key :
         List.of(
-            "CCMAX_DAILY_SYNC",
-            "CCMAX_STATUS_SYNC",
-            "QUOTE_AUTO_RENEWAL",
-            "WORKBENCH_WECOM_REMINDER")) {
+            "CCMAX_STATUS_SYNC")) {
       ObjectNode task =
           store
               .object()
@@ -198,7 +195,7 @@ public class SeedData implements CommandLineRunner {
               .put("ready", false)
               .put("enabled", false)
               .put("running", false)
-              .put("intervalMinutes", 10)
+              .put("intervalMinutes", 30)
               .put("unavailableReason", "本地环境未配置自动任务执行器");
       store.seed("scheduled-task", "GLOBAL", task);
     }

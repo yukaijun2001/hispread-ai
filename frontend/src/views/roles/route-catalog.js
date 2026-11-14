@@ -45,8 +45,8 @@ export const ROUTE_CATALOG = Object.freeze([
   route('roles', '角色与权限', 'Roles-BkB5m-qF.js', 'system.roles'),
   route('audits', '审计日志', 'Audits-BxINf5wz.js', 'audit.read'),
   route('settings', '系统参数', 'SystemSettings-CtOVlrw5.js', 'system.settings'),
-  route('scheduled-tasks', '任务列表', 'ScheduledTasks-DQG4VARN.js', 'system.settings'),
-  route('scheduled-task-runs', '执行记录', 'ScheduledTaskRuns-DXdXtjvS.js', 'system.settings'),
+  route('scheduled-tasks', '上号与交付任务', 'ScheduledTasks-DQG4VARN.js', 'resource.read', 'both'),
+  route('scheduled-task-runs', '同步历史', 'ScheduledTaskRuns-DXdXtjvS.js', 'system.settings'),
   route('payout-providers', '资金通道', 'PayoutProviders-D9Kgf-te.js', 'payout.provider.read'),
   route('payout-recipients', '收款人汇总', 'SupplierAccounts-CMP57Xp2.js', 'account.read'),
   route('payout-calls', '付款状态', 'PayoutCallLogs-DpLZK7rw.js', 'payout.call.read'),
@@ -102,7 +102,7 @@ export function landingRouteFor(user) {
 export function navigationGroupsFor(user) {
   const views = accessibleRoutesFor(user);
   const finance = new Set(['payout-providers', 'payout-recipients', 'payout-calls']);
-  const system = new Set(['users', 'roles', 'audits', 'notice-admin', 'settings', 'resource-targets', 'scheduled-tasks', 'scheduled-task-runs']);
+  const system = new Set(['users', 'roles', 'audits', 'notice-admin', 'settings', 'resource-targets', 'scheduled-task-runs']);
   return {
     business: views.filter(view => !finance.has(view.id) && !system.has(view.id) && !['notifications', 'supplier-accounts'].includes(view.id)),
     finance: views.filter(view => finance.has(view.id)),

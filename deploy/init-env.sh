@@ -6,7 +6,6 @@ if [[ -e "$output" ]]; then echo "Refusing to overwrite existing $output" >&2; e
 umask 077
 db_password="$(openssl rand -hex 32)"
 admin_password='wutong@Qq1.'
-wecom_encryption_key="$(openssl rand -base64 32)"
 cat > "$output" <<ENV
 DATABASE_PASSWORD=$db_password
 ADMIN_USERNAME=wutong
@@ -16,9 +15,7 @@ COOKIE_SECURE=false
 HTTP_BIND=127.0.0.1
 HTTP_PORT=8088
 IMAGE_TAG=local
-WECOM_ENCRYPTION_KEY=$wecom_encryption_key
 PAYMENT_SANDBOX_ENABLED=false
-MONITORING_SCHEDULING_ENABLED=true
 ENV
 chmod 600 "$output"
-echo "Created $output. Database and WeCom keys are random; platform admin is wutong. Set PUBLIC_ORIGIN and COOKIE_SECURE before public HTTPS deployment."
+echo "Created $output. Database password is random; platform admin is wutong. Set PUBLIC_ORIGIN and COOKIE_SECURE before public HTTPS deployment."

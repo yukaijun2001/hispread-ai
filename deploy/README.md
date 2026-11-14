@@ -14,7 +14,7 @@ cd /opt/hispread-ai
 ./deploy.sh --origin http://你的服务器公网IP:10001
 ```
 
-后续更新在相同目录执行 `./deploy.sh`。默认使用仓库的origin和main分支，自动fetch并仅fast-forward更新，然后构建镜像、更新容器、等待健康检查，验证前端、数据库就绪及CSRF接口；任一步失败均以非零状态退出。脚本不会自动安装Docker。首次生成随机数据库密码和企业微信密钥，并写入 `.env.production`（600权限、Git忽略）；以后保留这些密钥及命名卷。平台管理员固定为 `wutong` / `wutong@Qq1.`。若现有文件仍是旧默认用户名 `admin`，下次部署会改成这个账号；已经改成其他用户名时不覆盖密码。运行时使用文件中的凭据，避免当前Shell的开发凭据覆盖生产配置。
+后续更新在相同目录执行 `./deploy.sh`。默认使用仓库的origin和main分支，自动fetch并仅fast-forward更新，然后构建镜像、更新容器、等待健康检查，验证前端、数据库就绪及CSRF接口；任一步失败均以非零状态退出。脚本不会自动安装Docker。首次生成随机数据库密码，并写入 `.env.production`（600权限、Git忽略）；以后保留现有配置及命名卷。平台管理员固定为 `wutong` / `wutong@Qq1.`。若现有文件仍是旧默认用户名 `admin`，下次部署会改成这个账号；已经改成其他用户名时不覆盖密码。运行时使用文件中的凭据，避免当前Shell的开发凭据覆盖生产配置。
 
 脚本强制生成 `.run/deploy/ports.yml`，并验证最终Compose配置：前端仅 `0.0.0.0:10001 → 8080/tcp`；backend及postgres不发布任何宿主机端口。Nginx通过Docker网络访问backend，backend通过Docker网络访问PostgreSQL。基础Compose中的默认8088绑定以及其他覆盖文件均不影响这个一键入口。
 
@@ -112,7 +112,7 @@ docker compose -p hispread-demo --env-file .env.demo -f docker-compose.yml -f do
 
 ## 7. 外部服务
 
-最新接口与配置请优先阅读 [接口补齐与验证](../docs/interface-completion-2026-11-09.md)。`deploy.sh`会生成并保留企业微信Webhook加密密钥`WECOM_ENCRYPTION_KEY`；`PAYMENT_SANDBOX_ENABLED`默认false，开启后也只操作独立模拟记录。监控默认启动定时采集，只处理管理员已启用的配置。
+最新接口与配置请优先阅读 [接口补齐与验证](../docs/interface-completion-2026-11-09.md)。`PAYMENT_SANDBOX_ENABLED`默认false，开启后也只操作独立模拟记录。后台只保留可选的交付状态同步；升级默认停用旧计划。网关监控、自动权重轮换、企微外发和财务自动确认已移除。
 
 资源/CCMAX功能通过管理员维护的resource-target适配器接入。目标需HTTPS（HTTP需显式允许）、真实API凭据和本项目约定的上游操作协议；未配置返回503，网络失败/上游拒绝/未知结果会保存可查状态。接口适配测试使用本地fixture，不代表已经连接原站私有服务。
 

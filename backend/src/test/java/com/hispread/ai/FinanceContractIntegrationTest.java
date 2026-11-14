@@ -211,7 +211,7 @@ class FinanceContractIntegrationTest {
   }
 
   @Test
-  void deadlineConfirmationAndOwnerKpiUsePersistedSettlements() throws Exception {
+  void overdueRequiresManualConfirmationAndOwnerKpiReadsConfirmedHistory() throws Exception {
     Client c = admin();
     ObjectNode owner = supplier("Deadline supplier");
     String oid = owner.path("id").asText();
@@ -238,10 +238,13 @@ class FinanceContractIntegrationTest {
             .put("total", "1000")
             .put("sourceChanged", true)
             .put("confirmationDeadline", Instant.now().minusSeconds(30).toString()));
-    assertEquals(1, workflow.confirmOverdue());
+    assertEquals(0, workflow.confirmOverdue());
     assertEquals(0, workflow.confirmOverdue());
     ObjectNode confirmed = s.get("settlement", due.path("id").asText(), oid);
-    assertEquals("AUTO_DEADLINE", confirmed.path("confirmationMode").asText());
+    assertEquals("PENDING", confirmed.path("state").asText());
+    assertFalse(confirmed.has("confirmationMode"));
+    s.update("settlement", due.path("id").asText(), oid, s.object().put("state", "CONFIRMED")
+        .put("confirmationMode", "MANUAL").put("confirmedAt", Instant.now().toString()));
     ObjectNode kpi =
         reports.operatorKpi(
             Map.of(

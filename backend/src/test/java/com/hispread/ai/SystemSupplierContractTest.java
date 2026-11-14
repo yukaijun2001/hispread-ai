@@ -197,45 +197,20 @@ class SystemSupplierContractTest {
   }
 
   @Test
-  void localDeadlineTaskActuallyConfirmsAndRecordsRun() throws Exception {
+  void historicalDeadlineTasksCannotConfirmMoneyButTheirHistoryRemainsReadable() throws Exception {
     C c = admin();
-    jobs.tasks();
-    String owner = "deadline-" + UUID.randomUUID();
-    s.create(
-        "supplier",
-        owner,
-        s.object().put("id", owner).put("name", "Deadline supplier").put("enabled", true));
-    ObjectNode st =
-        s.create(
-            "settlement",
-            owner,
-            s.object()
-                .put("supplierId", owner)
-                .put("state", "PENDING")
-                .put("sourceChanged", false)
-                .put("confirmationDeadline", Instant.now().minusSeconds(60).toString())
-                .put("total", "12")
-                .put("paidAmount", "0")
-                .put("currency", "USD"));
-    ObjectNode run =
-        write(
-            "POST", "/api/system/scheduled-tasks/SETTLEMENT_AUTO_CONFIRM/run", s.object(), c, 200);
-    assertEquals("SUCCESS", run.path("state").asText());
-    assertEquals(
-        "CONFIRMED", s.get("settlement", st.path("id").asText(), owner).path("state").asText());
-    assertEquals(
-        1,
-        read(
-                "/api/system/scheduled-tasks/SETTLEMENT_AUTO_CONFIRM/runs?state=SUCCESS&triggerKind=MANUAL",
-                c)
-            .path("total")
-            .asInt());
-    write(
-        "PUT",
-        "/api/system/scheduled-tasks/QUOTE_AUTO_RENEWAL",
-        s.object().put("enabled", true),
-        c,
-        503);
+    String owner = "retired-finance-" + UUID.randomUUID();
+    s.create("supplier", owner, s.object().put("id", owner).put("name", "QA").put("enabled", true));
+    ObjectNode settlement = s.create("settlement", owner, s.object().put("supplierId", owner)
+        .put("state", "PENDING").put("total", "12").put("currency", "USD")
+        .put("confirmationDeadline", Instant.now().minusSeconds(60).toString()));
+    s.create("scheduled-task", "GLOBAL", s.object().put("id", "SETTLEMENT_AUTO_CONFIRM")
+        .put("key", "SETTLEMENT_AUTO_CONFIRM").put("type", "SETTLEMENT_AUTO_CONFIRM").put("enabled", true));
+    write("POST", "/api/system/scheduled-tasks/SETTLEMENT_AUTO_CONFIRM/run", s.object(), c, 410);
+    write("POST", "/api/system/scheduled-tasks/priority-support", s.object(), c, 410);
+    write("PUT", "/api/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings", s.object(), c, 410);
+    assertEquals(settlement, s.get("settlement", settlement.path("id").asText(), owner));
+    assertEquals(0, read("/api/system/scheduled-tasks/SETTLEMENT_AUTO_CONFIRM/runs", c).path("total").asInt());
   }
 
   @Test

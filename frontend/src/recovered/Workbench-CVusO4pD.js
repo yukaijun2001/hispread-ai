@@ -39,6 +39,7 @@ function A(e) {
     SUPPLIER_REVIEW: _(`资质待审核`),
     ACCOUNT_REVIEW: _(`收款账户待审核`),
     QUOTE_NEW: _(`新报价待审`),
+    QUOTE_EXPIRING: _(`报价即将到期`),
     QUOTE_CHANGE: _(`改价待审`),
     SETTLEMENT_CONFIRM: _(`待确认应收金额`),
     PAYMENT_CREATE: _(`待申请付款`),
@@ -67,130 +68,6 @@ function P(e) {
 }
 var F = D(d(), 1),
   I = l();
-
-function L(e, t = !1) {
-  if (typeof e != `string` || e.length > 256 || !/^\d+(?:\.\d+)?$/.test(e)) return `—`;
-  let [n, r] = e.split(`.`);
-  return (t ? (BigInt(n) + (r && /[1-9]/.test(r) ? 1n : 0n)).toString() : n).replace(/\B(?=(\d{3})+(?!\d))/g, `,`) + (!t && r ? `.${r}` : ``)
-}
-
-function R(e) {
-  return e.queriedAt || e.lastAttemptAt || e.dataUpdatedAt || ``
-}
-
-function z() {
-  let e = S(),
-    {
-      user: n,
-      has: i,
-      refresh: o
-    } = t(),
-    c = s(i(`workbench.monitoring.read`) ? `/workbench/monitoring` : null, 1e4);
-  if (!i(`workbench.monitoring.read`)) return null;
-  let l = c.data || [];
-  return (0, I.jsxs)(`section`, {
-    className: `panel workbench-monitoring`,
-    "aria-labelledby": `workbench-monitoring-title`,
-    children: [(0, I.jsxs)(`div`, {
-      className: `panel-section-head`,
-      children: [(0, I.jsxs)(`div`, {
-        children: [(0, I.jsx)(`h2`, {
-          id: `workbench-monitoring-title`,
-          children: _(`站点 RPM / TPM`)
-        }), (0, I.jsx)(`span`, {
-          className: `muted small`,
-          children: _(`参考数据`)
-        })]
-      }), !n.supplierId && i(`workbench.monitoring.configure`) && (0, I.jsxs)(`button`, {
-        className: `text-button`,
-        onClick: () => r(`resource-targets`),
-        children: [_(`配置工作台展示 `), (0, I.jsx)(u, {
-          name: `arrow`,
-          size: 15
-        })]
-      })]
-    }), c.error && (0, I.jsxs)(m, {
-      tone: `red`,
-      children: [_(`运行情况读取失败：`), c.error, c.data && _(`；正在显示上次读取的数据。`), (0, I.jsx)(w, {
-        onClick: o,
-        children: _(`重试`)
-      })]
-    }), c.loading && !c.data ? (0, I.jsx)(`p`, {
-      className: `workbench-monitoring-message`,
-      children: _(`正在读取运行情况…`)
-    }) : l.length ? e ? (0, I.jsx)(`div`, {
-      className: `workbench-monitoring-list`,
-      children: l.map(e => (0, I.jsxs)(`article`, {
-        children: [(0, I.jsx)(`h3`, {
-          children: e.categoryName || e.category
-        }), (0, I.jsxs)(`dl`, {
-          children: [(0, I.jsxs)(`div`, {
-            children: [(0, I.jsx)(`dt`, {
-              children: _(`参考 RPM`)
-            }), (0, I.jsx)(`dd`, {
-              children: L(e.rpm, !0)
-            })]
-          }), (0, I.jsxs)(`div`, {
-            children: [(0, I.jsx)(`dt`, {
-              children: _(`参考 TPM`)
-            }), (0, I.jsx)(`dd`, {
-              children: L(e.tpm)
-            })]
-          })]
-        }), (0, I.jsxs)(`p`, {
-          children: [_(`最新刷新时间`), _(`：`), (0, I.jsx)(`time`, {
-            children: R(e) ? a(R(e)) : `—`
-          })]
-        })]
-      }, e.category))
-    }) : (0, I.jsx)(f, {
-      ariaLabel: _(`站点运行情况`),
-      children: (0, I.jsxs)(`table`, {
-        className: `workbench-monitoring-table`,
-        children: [(0, I.jsx)(`thead`, {
-          children: (0, I.jsxs)(`tr`, {
-            children: [(0, I.jsx)(`th`, {
-              children: _(`品类`)
-            }), (0, I.jsx)(`th`, {
-              className: `monitoring-number`,
-              children: _(`参考 RPM`)
-            }), (0, I.jsx)(`th`, {
-              className: `monitoring-number`,
-              children: _(`参考 TPM`)
-            }), (0, I.jsx)(`th`, {
-              children: _(`最新刷新时间`)
-            })]
-          })
-        }), (0, I.jsx)(`tbody`, {
-          children: l.map(e => (0, I.jsxs)(`tr`, {
-            children: [(0, I.jsx)(`td`, {
-              children: (0, I.jsx)(`strong`, {
-                children: e.categoryName || e.category
-              })
-            }), (0, I.jsx)(`td`, {
-              className: `monitoring-number`,
-              children: (0, I.jsx)(`strong`, {
-                children: L(e.rpm, !0)
-              })
-            }), (0, I.jsx)(`td`, {
-              className: `monitoring-number`,
-              children: (0, I.jsx)(`strong`, {
-                children: L(e.tpm)
-              })
-            }), (0, I.jsx)(`td`, {
-              children: (0, I.jsx)(`time`, {
-                children: R(e) ? a(R(e)) : `—`
-              })
-            })]
-          }, e.category))
-        })]
-      })
-    }) : !c.error && (0, I.jsx)(`p`, {
-      className: `workbench-monitoring-message`,
-      children: _(`暂无已发布的参考数据`)
-    })]
-  })
-}
 
 function B() {
   let {
@@ -801,7 +678,7 @@ function J() {
           })
         })]
       })]
-    }), n && (0, I.jsx)(Z, {}), A, (0, I.jsx)(z, {}), !n && (0, I.jsx)(Z, {}), (0, I.jsx)(B, {}), (0, I.jsxs)(`div`, {
+    }), n && (0, I.jsx)(Z, {}), A, !n && (0, I.jsx)(Z, {}), (0, I.jsx)(B, {}), (0, I.jsxs)(`div`, {
       className: `workbench-summary`,
       children: [o(`settlement.read`) && (0, I.jsxs)(`section`, {
         className: `panel balance-panel`,

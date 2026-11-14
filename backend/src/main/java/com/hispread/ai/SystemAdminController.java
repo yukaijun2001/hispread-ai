@@ -436,6 +436,12 @@ public class SystemAdminController {
     return jobs.tasks();
   }
 
+  @GetMapping("/system/scheduled-tasks/history")
+  public Object taskHistory(HttpServletRequest r) {
+    guard(r, "system.settings");
+    return jobs.historyTasks();
+  }
+
   @PutMapping({
     "/system/scheduled-tasks/{key}",
     "/system/scheduled-tasks/{key}/schedule",
@@ -477,6 +483,6 @@ public class SystemAdminController {
   @PutMapping("/system/scheduled-tasks/WORKBENCH_WECOM_REMINDER/reminder-settings")
   public Object reminder(@RequestBody ObjectNode body, HttpServletRequest r) {
     guard(r, "system.settings");
-    return wecom.save(body);
+    throw TaskScope.retired();
   }
 }

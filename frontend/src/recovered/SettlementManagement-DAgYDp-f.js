@@ -714,7 +714,7 @@ function w({
         label: g(`供应商确认截止时间`),
         type: `datetime-local`,
         full: !0,
-        hint: g(`截止时间前可确认或提出异议；逾期未处理将按无异议自动确认。`)
+        hint: g(`请核对后手动确认或提出异议；到期不会自动确认。`)
       }, {
         name: `currency`,
         section: g(`结算金额`),

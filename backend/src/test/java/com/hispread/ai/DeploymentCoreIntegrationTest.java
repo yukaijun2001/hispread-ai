@@ -24,6 +24,36 @@ class DeploymentCoreIntegrationTest {
   @Autowired Store store;
 
   @Test
+  void deliveryScopeMigrationStopsOldPlansWithoutChangingFinancialHistory() throws Exception {
+    jdbc.update("delete from hub_entity where kind in ('scheduled-task','scheduled-run','monitoring-source','quote')");
+    var quote = store.create("quote","migration-owner",store.object().put("state","APPROVED")
+        .put("effectiveTo","2026-12-01").put("multiplier","0.25").put("autoRenewEnabled",true));
+    for (String type : java.util.List.of("CCMAX_STATUS_SYNC","CCMAX_DAILY_SYNC","CCMAX_PRIORITY_ROTATION",
+        "QUOTE_AUTO_RENEWAL","WORKBENCH_WECOM_REMINDER","SETTLEMENT_AUTO_CONFIRM"))
+      store.create("scheduled-task","GLOBAL",store.object().put("id",type).put("key",type).put("type",type)
+          .put("enabled",true).put("running",true).put("nextRunAt","2026-12-01T00:00:00Z"));
+    var run=store.create("scheduled-run","GLOBAL",store.object().put("state","RUNNING").put("taskKey","CCMAX_DAILY_SYNC"));
+    store.create("monitoring-source","GLOBAL",store.object().put("enabled",true));
+    var settlement=store.create("settlement","migration-owner",store.object().put("state","PENDING").put("total","20"));
+    var input=store.create("input","migration-owner",store.object().put("state","PENDING").put("originalAmount","20"));
+    try (var stream=new org.springframework.core.io.ClassPathResource("db/migration/V3__delivery_task_scope.sql").getInputStream()) {
+      jdbc.execute(new String(stream.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8));
+    }
+    for (var task:store.list("scheduled-task",null)) {
+      assertFalse(task.path("enabled").asBoolean());assertFalse(task.path("running").asBoolean());
+      assertTrue(task.path("nextRunAt").isNull());
+      assertEquals(!TaskScope.supported(task.path("type").asText()),task.path("retired").asBoolean());
+    }
+    assertFalse(store.list("monitoring-source",null).get(0).path("enabled").asBoolean());
+    assertEquals("TIMED_OUT",store.get("scheduled-run",run.path("id").asText(),null).path("state").asText());
+    var savedQuote=store.get("quote",quote.path("id").asText(),"migration-owner");
+    assertFalse(savedQuote.path("autoRenewEnabled").asBoolean());assertEquals("APPROVED",savedQuote.path("state").asText());
+    assertEquals("2026-12-01",savedQuote.path("effectiveTo").asText());assertEquals("0.25",savedQuote.path("multiplier").asText());
+    assertEquals(settlement,store.get("settlement",settlement.path("id").asText(),"migration-owner"));
+    assertEquals(input,store.get("input",input.path("id").asText(),"migration-owner"));
+  }
+
+  @Test
   void readinessAndMigrationsAreAvailableBeforeLogin() throws Exception {
     mvc.perform(get("/api/health/live"))
         .andExpect(status().isOk())
@@ -32,7 +62,7 @@ class DeploymentCoreIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.database").value("UP"));
     assertEquals(
-        2,
+        3,
         jdbc.queryForObject(
             "select count(*) from flyway_schema_history where success and type='SQL'",
             Integer.class));

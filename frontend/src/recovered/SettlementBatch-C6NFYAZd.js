@@ -295,7 +295,7 @@ function w({
           tone: `red`,
           children: [h(`该期间有 `), j.incompleteDays, ` `, h(`天存在采集异常。本次只结算已拉取的日账，不代表该期间已全部结清。 `)]
         }), j.state === `PREVIEW` && (0, x.jsxs)(`p`, {
-          children: [h(`供应商确认截止时间：`), a(j.confirmationDeadline), h(`。逾期未提出异议将自动确认。 `)]
+          children: [h(`供应商确认截止时间：`), a(j.confirmationDeadline), h(`。请供应商核对后手动确认。 `)]
         }), j.state === `QUEUED` && (0, x.jsx)(d, {
           children: h(`后台正在处理，关闭页面后仍会继续。可在“最近批量结算”查看结果。`)
         }), ge && (0, x.jsxs)(d, {

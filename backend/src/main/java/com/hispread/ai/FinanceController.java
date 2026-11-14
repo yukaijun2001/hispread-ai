@@ -141,9 +141,6 @@ public class FinanceController {
     ObjectNode old = detail(id, req);
     if (!eq(old, "state", "PENDING")) throw new ApiException(409, "结算单已不处于待确认状态");
     if (old.path("sourceChanged").asBoolean()) throw new ApiException(409, "来源金额或归属已变化，当前结算单暂停确认");
-    String deadline = text(old, "confirmationDeadline");
-    if (!deadline.isBlank() && Instant.parse(deadline).isBefore(Instant.now()))
-      throw new ApiException(409, "确认截止时间已到，请刷新查看最新状态");
     if (!body.has("version")) throw new ApiException(400, "请提供结算单版本");
     boolean approved = body.path("approved").asBoolean();
     if (!approved && text(body, "note").isBlank()) throw new ApiException(400, "提出异议时请填写说明");

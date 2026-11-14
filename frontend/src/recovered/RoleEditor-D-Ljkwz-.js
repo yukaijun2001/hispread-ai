@@ -81,7 +81,7 @@ var u = l(r(), 1),
     pageNames: [o(`工作台`)],
     section: `business`,
     icon: `grid`,
-    permissions: [`workbench.read`, `workbench.tasks.read`, `workbench.monitoring.read`, `workbench.monitoring.configure`, `turnover.read`, `turnover.write`]
+    permissions: [`workbench.read`, `workbench.tasks.read`, `turnover.read`, `turnover.write`]
   }, {
     code: `suppliers`,
     name: o(`供应商管理`),
@@ -166,7 +166,7 @@ var u = l(r(), 1),
   }, {
     code: `settings`,
     name: o(`系统参数`),
-    pageNames: [o(`系统参数`), o(`任务列表`), o(`执行记录`)],
+    pageNames: [o(`系统参数`), o(`交付状态同步`), o(`同步历史`)],
     section: `system`,
     icon: `settings`,
     permissions: [`system.settings`]
@@ -198,6 +198,7 @@ function m({
   onClose: l,
   onSaved: m
 }) {
+  r = r.filter(permission => !permission.startsWith(`workbench.monitoring.`));
   let h = e => e.toUpperCase().replace(/[^A-Z0-9_]+/g, `_`).replace(/_+/g, `_`).slice(0, 60),
     [g, _] = (0, u.useState)(t === `new` ? `` : t.name),
     [v, y] = (0, u.useState)(t === `new` ? `` : t.code),

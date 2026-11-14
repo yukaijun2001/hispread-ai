@@ -207,7 +207,7 @@ function x({
         })
       }), (0, v.jsx)(`p`, {
         className: `muted`,
-        children: d(`截止时间前可确认或提出异议，逾期未处理将按无异议自动确认。`)
+        children: d(`请核对后手动确认或提出异议；到期不会自动确认。`)
       })]
     }), (0, v.jsxs)(`div`, {
       className: `settlement-batch-actions`,
