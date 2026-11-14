@@ -221,107 +221,49 @@ class ResourcePriorityDurabilityIntegrationTest {
     return store.parse(response.getResponse().getContentAsString());
   }
 
-  String preview() throws Exception {
-    ObjectNode input = store.object().put("targetId", targetId).put("priority", 11)
-        .put("requestKey", UUID.randomUUID().toString());
-    input.putArray("resourceIds").add(first).add(second);
-    ObjectNode preview = postJson("/api/cc-intake/admin/priority/jobs", input, 200);
-    String id = preview.path("id").asText();
-    jobs.add(id);
-    return id;
-  }
-
-  CompletableFuture<ObjectNode> run(String path) {
-    return CompletableFuture.supplyAsync(() -> {
-      try { return postJson(path, store.object(), 200); }
-      catch (Exception failure) { throw new CompletionException(failure); }
-    }, executor);
+  String historicalPriority(String state, boolean durable) {
+    ObjectNode request = store.object().put("priority", 11);
+    for (String[] account : List.of(new String[] {first, "first"}, new String[] {second, "second"}))
+      request.withArray("items").addObject().put("resourceId", account[0]).put("laneId", account[1]).put("resourceVersion", 0);
+    ObjectNode op = store.object().put("type", "PRIORITY").put("protocol", "CCMAX_NATIVE")
+        .put("supplierId", "GLOBAL").put("targetId", targetId).put("requestKey", UUID.randomUUID().toString())
+        .put("state", state).put("total", 2);
+    if (durable) op.put("writeIntentVersion", 1);
+    op.set("request", request); op.set("result", request.deepCopy());
+    String id = store.create("resource-operation", "GLOBAL", op).path("id").asText();
+    jobs.add(id); return id;
   }
 
   @Test
-  void commitsUnknownBeforeSendAndRejectsConcurrentStartRetryAndReconcile() throws Exception {
-    String id = preview(), path = "/api/cc-intake/admin/priority/jobs/" + id;
-    CompletableFuture<ObjectNode> running = run(path + "/start");
-    try {
-      assertTrue(received.await(5, TimeUnit.SECONDS));
-      ObjectNode committed = store.get("resource-operation", id, "GLOBAL");
-      assertEquals("UNKNOWN", committed.path("state").asText());
-      assertEquals(2, committed.path("result").path("counts").path("UNKNOWN").asInt());
-      mvc.perform(get(path).session(session)).andExpect(status().isOk())
-          .andExpect(jsonPath("$.state").value("UNKNOWN"));
-      for (String action : List.of("start", "retry", "reconcile"))
-        assertEquals("RESOURCE_JOB_ALREADY_RUNNING", postJson(path + "/" + action, store.object(), 409).path("code").asText());
-    } finally {
-      release.countDown();
-    }
-    assertEquals("COMPLETED", running.get(10, TimeUnit.SECONDS).path("state").asText());
-    postJson(path + "/start", store.object(), 200);
-    postJson(path + "/retry", store.object(), 200);
-    postJson(path + "/reconcile", store.object(), 200);
-    assertEquals(1, writes.get("first"));
-    assertEquals(1, writes.get("second"));
-  }
-
-  @Test
-  void retryCommitsOnlyFailedItemsAsUnknownAndPreservesSuccessfulItems() throws Exception {
-    blockedAccount.set("");
-    rejectSecond.set(true);
-    String id = preview(), path = "/api/cc-intake/admin/priority/jobs/" + id;
-    assertEquals("PARTIAL_FAILED", postJson(path + "/start", store.object(), 200).path("state").asText());
-    rejectSecond.set(false);
-    blockedAccount.set("second");
-    CompletableFuture<ObjectNode> retry = run(path + "/retry");
-    try {
-      assertTrue(received.await(5, TimeUnit.SECONDS));
-      ObjectNode committed = store.get("resource-operation", id, "GLOBAL");
-      assertEquals("UNKNOWN", committed.path("state").asText());
-      assertEquals(1, committed.path("result").path("counts").path("SUCCESS").asInt());
-      assertEquals(1, committed.path("result").path("counts").path("UNKNOWN").asInt());
-      assertEquals(0, committed.path("result").path("counts").path("FAILED").asInt());
-      assertEquals("RESOURCE_JOB_ALREADY_RUNNING", postJson(path + "/retry", store.object(), 409).path("code").asText());
-    } finally {
-      release.countDown();
-    }
-    assertEquals("COMPLETED", retry.get(10, TimeUnit.SECONDS).path("state").asText());
-    postJson(path + "/retry", store.object(), 200);
-    assertEquals(1, writes.get("first"));
-    assertEquals(2, writes.get("second"));
-  }
-
-  @Test
-  void successfulRemoteWriteCannotBeProjectedToChangedLocalMapping() throws Exception {
-    String id = preview(), path = "/api/cc-intake/admin/priority/jobs/" + id;
-    CompletableFuture<ObjectNode> running = run(path + "/start");
-    try {
-      assertTrue(received.await(5, TimeUnit.SECONDS));
-      store.update("resource", first, owner, store.object().put("upstreamAccountId", "replaced-account"));
-    } finally {
-      release.countDown();
-    }
-    ObjectNode result = running.get(10, TimeUnit.SECONDS);
-    assertEquals("UNKNOWN", result.path("state").asText());
-    JsonNode changed = null;
-    for (JsonNode item : result.path("items"))
-      if (item.path("resourceId").asText().equals(first)) changed = item;
-    assertNotNull(changed);
-    assertEquals("RESOURCE_MAPPING_CHANGED", changed.path("errorCode").asText());
-    assertFalse(store.get("resource", first, owner).has("upstreamPriority"));
-    assertEquals(1, writes.get("first"));
-    assertEquals(1, writes.get("second"));
-  }
-
-  @Test
-  void legacyPreviewWithoutDurableIntentCannotBeBlindlyStarted() throws Exception {
-    String id = preview(), path = "/api/cc-intake/admin/priority/jobs/" + id;
-    store.update("resource-operation", id, "GLOBAL", store.object().putNull("writeIntentVersion"));
-    ObjectNode result = postJson(path + "/start", store.object(), 200);
-    assertEquals("UNKNOWN", result.path("state").asText());
+  void retiredPriorityCannotCreateStartOrRetryAndHistoryRecoveryOnlyReads() throws Exception {
+    String id = historicalPriority("UNKNOWN", true), path = "/api/cc-intake/admin/priority/jobs/" + id;
+    assertEquals("UPSTREAM_FEATURE_RETIRED", postJson("/api/cc-intake/admin/priority/jobs", store.object(), 410).path("code").asText());
+    for (String action : List.of("start", "retry")) postJson(path + "/" + action, store.object(), 410);
     assertTrue(writes.isEmpty());
-    postJson(path + "/retry", store.object(), 200);
-    assertTrue(writes.isEmpty());
-    weights.put("first", 11);
-    weights.put("second", 11);
+    weights.put("first", 11); weights.put("second", 11);
     assertEquals("COMPLETED", postJson(path + "/reconcile", store.object(), 200).path("state").asText());
+    postJson(path + "/reconcile", store.object(), 200);
+    assertTrue(writes.isEmpty());
+    assertEquals(11, store.get("resource", first, owner).path("upstreamPriority").asInt());
+  }
+
+  @Test
+  void historicalPriorityRecoveryRejectsReplacementMappingWithoutWriting() throws Exception {
+    String id = historicalPriority("UNKNOWN", true), path = "/api/cc-intake/admin/priority/jobs/" + id;
+    store.update("resource", first, owner, store.object().put("upstreamAccountId", "replacement"));
+    postJson(path + "/reconcile", store.object(), 409);
+    assertTrue(writes.isEmpty());
+    assertFalse(store.get("resource", first, owner).has("upstreamPriority"));
+  }
+
+  @Test
+  void durablePreviewCannotExecuteAndLegacyUncertainPreviewCanOnlyBeRead() throws Exception {
+    String durable = historicalPriority("PREVIEW", true), legacy = historicalPriority("PREVIEW", false);
+    String base = "/api/cc-intake/admin/priority/jobs/";
+    assertEquals("PREVIEW", postJson(base + durable + "/reconcile", store.object(), 200).path("state").asText());
+    assertEquals("UNKNOWN", postJson(base + legacy + "/reconcile", store.object(), 200).path("state").asText());
+    for (String id : List.of(durable, legacy)) for (String action : List.of("start", "retry"))
+      postJson(base + id + "/" + action, store.object(), 410);
     assertTrue(writes.isEmpty());
   }
 

@@ -4,7 +4,6 @@ import static com.hispread.ai.BusinessSupport.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.*;
-import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.*;
@@ -13,10 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/**
- * Validated resource-observation and recoverable priority-rotation adapter. See
- * docs/job-executor-protocols.md.
- */
+/** Lightweight delivery-state observation and explicit cleanup of old rotation snapshots. */
 @Service
 public class BackgroundResourceJobService {
   private final Store s;
@@ -115,20 +111,6 @@ public class BackgroundResourceJobService {
       throw new ApiException(502, "资源上游未确认执行成功", "RESOURCE_UPSTREAM_REJECTED");
   }
 
-  private BigDecimal number(JsonNode node, String field) {
-    try {
-      BigDecimal value = new BigDecimal(text(node, field));
-      if (value.signum() < 0
-          || value.precision() > 30
-          || value.scale() > 8
-          || value.scale() < -30
-          || value.precision() - value.scale() > 30) throw new NumberFormatException();
-      return value;
-    } catch (NumberFormatException e) {
-      throw new ApiException(502, "上游金额或数量无效", "RESOURCE_UPSTREAM_INVALID_RESPONSE");
-    }
-  }
-
   private ObjectNode requested(JsonNode row, Map<String, ObjectNode> requested) {
     ObjectNode resource = requested.get(text(row, "resourceId"));
     if (resource == null || !eq(resource, "supplierId", text(row, "supplierId")))
@@ -136,18 +118,17 @@ public class BackgroundResourceJobService {
     return resource;
   }
 
-  public ObjectNode syncNativeTarget(String targetId) {
+  public ObjectNode syncTarget(String targetId) {
     ObjectNode target = gateway.requireConfigured(targetId);
-    if (!eq(target, "protocol", "CCMAX_NATIVE"))
-      throw new ApiException(400, "请选择CCMAX原生目标");
+    if (!Set.of("CUSTOM", "CCMAX_NATIVE").contains(target.path("protocol").asText("CUSTOM")))
+      throw new ApiException(400, "此接入类型不支持批量账号状态查询，请在资源详情查询", "RESOURCE_OPERATION_UNSUPPORTED");
     ObjectNode result = sync(s.object().put("type", "CCMAX_STATUS_SYNC").put("targetId", targetId), UUID.randomUUID().toString());
     ArrayNode rows = result.putArray("resources");
     for (ObjectNode resource : resources(target)) {
       ObjectNode row = s.object().put("resourceId", text(resource, "id")).put("supplierId", text(resource, "supplierId"))
           .put("operationalState", text(resource, "operationalState"));
-      for (String field : List.of("usage", "resourceData", "dailyConsumption"))
-        if (resource.has(field)) row.set(field, resource.get(field));
-      if (resource.has("upstreamPriority")) row.set("priority", resource.get("upstreamPriority"));
+      if (resource.path("resourceData").has("health"))
+        row.putObject("resourceData").set("health", resource.path("resourceData").get("health"));
       rows.add(row);
     }
     return result.put("state", "SUCCESS");
@@ -171,9 +152,8 @@ public class BackgroundResourceJobService {
                 .put("projectId", text(r, "projectId"))
                 .put("laneId", text(r, "laneId")));
       }
-      payload.put(
-          "businessDate", LocalDate.now(ZoneId.of("Asia/Shanghai")).minusDays(1).toString());
-      if (task.path("deliveryStatusOnly").asBoolean()) payload.put("deliveryStatusOnly", true);
+      // Old clients cannot opt into log collection or weight projection by omitting a flag.
+      payload.put("deliveryStatusOnly", true);
       ObjectNode response =
           gateway.exchange(
               target,
@@ -189,33 +169,13 @@ public class BackgroundResourceJobService {
       Set<String> duplicate = new HashSet<>();
       for (JsonNode row : rows) {
         ObjectNode r = requested(row, requested);
-        JsonNode statusObservation = row;
-        if (task.path("deliveryStatusOnly").asBoolean()) {
-          // Unrelated cost/weight fields are neither validated nor persisted by status-only jobs.
-          ObjectNode copy = ((ObjectNode) row).deepCopy();
-          copy.remove(List.of("usage", "dailyConsumption", "priority"));
-          statusObservation = copy;
-        }
-        ObjectNode preparedRow = statusRow(r, statusObservation);
-        if (task.path("deliveryStatusOnly").asBoolean()) {
-          preparedRow.remove(List.of("usage", "dailyConsumption", "priority", "upstreamPriority"));
-          if (preparedRow.path("resourceData").isObject()) {
-            ObjectNode healthOnly = s.object();
-            if (preparedRow.path("resourceData").has("health"))
-              healthOnly.set("health", preparedRow.path("resourceData").path("health"));
-            // Preserve previously collected data while only refreshing account health.
-            ObjectNode merged = r.path("resourceData").isObject()
-                ? ((ObjectNode) r.path("resourceData")).deepCopy() : s.object();
-            merged.setAll(healthOnly);
-            preparedRow.set("resourceData", merged);
-          }
-        }
+        ObjectNode preparedRow = statusRow(r, row);
         String key = text(r, "id");
         if (!duplicate.add(key))
           throw new ApiException(502, "上游响应包含重复记录", "RESOURCE_UPSTREAM_INVALID_RESPONSE");
         prepared.add(preparedRow);
       }
-      // Validate the complete batch before writing any resource or financial observation.
+      // Validate the complete batch before persisting account state.
       processed +=
           tx.execute(
               status -> {
@@ -253,30 +213,13 @@ public class BackgroundResourceJobService {
             .put("supplierId", text(resource, "supplierId"))
             .put("operationalState", state)
             .put("statusSyncedAt", Instant.now().toString());
-    if (row.has("priority")) {
-      if (!row.path("priority").isIntegralNumber()
-          || !row.path("priority").canConvertToInt()
-          || row.path("priority").asInt(-1) < 0
-          || row.path("priority").asInt() > 1000)
-        throw new ApiException(502, "上游优先级无效", "RESOURCE_UPSTREAM_INVALID_RESPONSE");
-      patch.set("priority", row.get("priority"));
-      if (eq(resource, "upstreamProtocol", "CCMAX_NATIVE")) patch.set("upstreamPriority", row.get("priority"));
-    }
-    if (row.has("usage")) {
-      JsonNode usage = row.path("usage");
-      if (!Set.of("USD", "CNY", "USDT").contains(text(usage, "currency")))
-        throw new ApiException(502, "上游费用币种无效", "RESOURCE_UPSTREAM_INVALID_RESPONSE");
-      patch
-          .putObject("usage")
-          .put("amount", number(usage, "amount").toPlainString())
-          .put("currency", text(usage, "currency"))
-          .put("queriedAt", Instant.now().toString());
-    }
-    // Only the provider-owned native adapter produces these allowlisted runtime snapshots.
     if (eq(resource, "upstreamProtocol", "CCMAX_NATIVE")) {
       patch.put("laneState", state);
-      if (row.path("resourceData").isObject()) patch.set("resourceData", row.path("resourceData"));
-      if (row.path("dailyConsumption").isObject()) patch.set("dailyConsumption", row.path("dailyConsumption"));
+      ObjectNode merged = resource.path("resourceData").isObject()
+          ? ((ObjectNode) resource.path("resourceData")).deepCopy() : s.object();
+      if (row.path("resourceData").path("health").isObject())
+        merged.set("health", row.path("resourceData").path("health"));
+      patch.set("resourceData", merged);
     }
     return patch;
   }

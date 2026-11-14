@@ -257,7 +257,7 @@ class SystemSupplierContractTest {
             "POST",
             "/api/resource-targets",
             s.object()
-                .put("name", "Secret target")
+                .put("name", "Secret target").put("protocol", "NEWAPI").put("newApiUserId", "2")
                 .put("baseUrl", "https://example.com")
                 .put("apiKey", "server-only-key")
                 .put("enabled", false),

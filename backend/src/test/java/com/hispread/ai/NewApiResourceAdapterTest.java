@@ -39,57 +39,28 @@ class NewApiResourceAdapterTest {
     assertEquals(List.of("POST /channel/148/status", "GET /channel/148"), paths);
   }
 
-  @Test void batchPriorityUsesMappedChannelsAndReadOnlyReconciliation() {
+  @Test void gatewayWritesAreRetiredButHistoricalPriorityCanBeReadWithoutWriting() {
     Store store = mock(Store.class); when(store.object()).thenAnswer(call -> obj());
     when(store.get("resource", "local", null)).thenReturn(obj().put("upstreamChannelId", "148"));
-    AtomicInteger priority = new AtomicInteger(3);
-    AtomicInteger writes = new AtomicInteger();
+    AtomicBoolean denyRead = new AtomicBoolean(true);
+    List<String> paths = new ArrayList<>();
     NewApiResourceAdapter adapter = new NewApiResourceAdapter(store, (config, method, path, body, key) -> {
-      if (method.equals("PUT")) {
-        assertEquals("/channel/", path);
-        assertEquals(148, body.path("id").asInt());
-        assertFalse(body.has("status"));
-        priority.set(body.path("priority").asInt()); writes.incrementAndGet();
-        return obj().put("success", true);
-      }
-      ObjectNode reply = obj().put("success", true);
-      reply.putObject("data").put("id", 148).put("status", 1).put("priority", priority.get());
-      return reply;
-    });
-    ObjectNode request = obj().put("priority", 7);
-    request.putArray("items").add(obj().put("resourceId", "local"));
-    assertEquals("COMPLETED", adapter.exchange(config(), "POST", "/priority-batch", request, "priority").path("state").asText());
-    assertEquals(1, writes.get());
-    assertEquals("COMPLETED", adapter.exchange(config(), "GET", "/priority-batch/reconcile", request, "priority").path("state").asText());
-    assertEquals(1, writes.get());
-  }
-
-  @Test void acceptedPriorityWriteWithRejectedReadbackRemainsUnknown() {
-    Store store = mock(Store.class); when(store.object()).thenAnswer(call -> obj());
-    when(store.get("resource", "local", null)).thenReturn(obj().put("upstreamChannelId", "148"));
-    AtomicInteger writes = new AtomicInteger();
-    AtomicBoolean blockRead = new AtomicBoolean(true);
-    NewApiResourceAdapter adapter = new NewApiResourceAdapter(store, (config, method, path, body, key) -> {
-      if (method.equals("PUT")) {
-        writes.incrementAndGet();
-        return obj().put("success", true);
-      }
-      if (writes.get() > 0 && blockRead.get()) throw new ApiException(403, "fixture read denied");
+      paths.add(method + " " + path);
+      assertEquals("GET", method);
+      if (denyRead.get()) throw new ApiException(403, "fixture read denied");
       ObjectNode reply = obj().put("success", true);
       reply.putObject("data").put("id", 148).put("status", 1).put("priority", 7);
       return reply;
     });
-    ObjectNode request = obj().put("priority", 7);
-    request.putArray("items").add(obj().put("resourceId", "local"));
-    ObjectNode uncertain = adapter.exchange(config(), "POST", "/priority-batch", request, "priority");
-    assertEquals("UNKNOWN", uncertain.path("state").asText());
-    assertEquals(0, uncertain.path("counts").path("FAILED").asInt());
-    ObjectNode readDenied = adapter.exchange(config(), "GET", "/priority-batch/reconcile", request, "priority");
-    assertEquals("UNKNOWN", readDenied.path("state").asText());
-    assertEquals(0, readDenied.path("counts").path("FAILED").asInt());
-    blockRead.set(false);
-    assertEquals("COMPLETED", adapter.exchange(config(), "GET", "/priority-batch/reconcile", request, "priority").path("state").asText());
-    assertEquals(1, writes.get());
+    ObjectNode request = obj().put("priority", 7); request.putArray("items").add(obj().put("resourceId", "local"));
+    for (String path : List.of("/priority-batch", "/resources/local/priority", "/resources/local/say-hi"))
+      assertEquals("UPSTREAM_FEATURE_RETIRED", assertThrows(ApiException.class,
+          () -> adapter.exchange(config(), "POST", path, request, "old")).code);
+    assertTrue(paths.isEmpty());
+    assertEquals("UNKNOWN", adapter.exchange(config(), "GET", "/priority-batch/reconcile", request, "old").path("state").asText());
+    denyRead.set(false);
+    assertEquals("COMPLETED", adapter.exchange(config(), "GET", "/priority-batch/reconcile", request, "old").path("state").asText());
+    assertEquals(List.of("GET /channel/148", "GET /channel/148"), paths);
   }
 
   @Test void acceptedStatusWriteWithRejectedReadbackRemainsUnknown() {
@@ -160,8 +131,6 @@ class NewApiResourceAdapterTest {
     AtomicReference<JsonNode> sent = new AtomicReference<>();
     AtomicReference<ObjectNode> reply = new AtomicReference<>(obj().put("success", true));
     NewApiResourceAdapter adapter = new NewApiResourceAdapter(store, (c, m, p, body, key) -> { path.set(p); method.set(m); sent.set(body); assertEquals("/api", c.path("upstreamPathPrefix").asText()); return reply.get(); });
-    adapter.exchange(config(), "POST", "/resources/local/priority", obj().put("priority", 123), "stable");
-    assertEquals("PUT", method.get()); assertEquals("/channel/", path.get()); assertEquals(42, sent.get().path("id").asLong()); assertEquals(123, sent.get().path("priority").asInt());
     ObjectNode request = obj().put("action", "PAUSE"); request.putArray("items").add(obj().put("resourceId", "local"));
     reply.set(obj().put("success", true)); reply.get().putObject("data").put("id",42).put("status",2);
     ObjectNode result = adapter.exchange(config(), "POST", "/resource-lifecycle-jobs", request, "stable");
@@ -178,7 +147,7 @@ class NewApiResourceAdapterTest {
     NewApiResourceAdapter adapter = new NewApiResourceAdapter(store, (c,m,p,b,k) -> { calls.incrementAndGet(); return obj().put("success",false).put("message","SECRET diagnostic"); });
     assertEquals("RESOURCE_OPERATION_UNSUPPORTED", assertThrows(ApiException.class, () -> adapter.exchange(config(), "POST", "/resources/oauth/supplier-authorize", obj(), "key")).code);
     assertEquals(0,calls.get());
-    ApiException rejected = assertThrows(ApiException.class, () -> adapter.exchange(config(),"POST","/resources/local/say-hi",obj(),"key"));
+    ApiException rejected = assertThrows(ApiException.class, () -> adapter.exchange(config(),"POST","/resources/local/usage",obj(),"key"));
     assertEquals("RESOURCE_PROVIDER_REJECTED", rejected.code); assertFalse(rejected.getMessage().contains("SECRET"));
     when(store.get("resource", "local", null)).thenReturn(obj().put("laneId", "unmapped-private-id"));
     assertEquals("RESOURCE_CHANNEL_NOT_MAPPED", assertThrows(ApiException.class, () -> adapter.exchange(config(),"POST","/resources/local/usage",obj(),"key")).code);

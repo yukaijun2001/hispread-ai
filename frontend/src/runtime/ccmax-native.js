@@ -15,7 +15,6 @@ export function NativeCcmaxDialog({ resource, onClose, onChanged }) {
   const [busy, setBusy] = hooks.useState(false);
   const [error, setError] = hooks.useState('');
   const [confirmation, setConfirmation] = hooks.useState('');
-  const [weight, setWeight] = hooks.useState(String(resource.upstreamPriority ?? ''));
   const [oauth, setOauth] = hooks.useState(null);
   const [callback, setCallback] = hooks.useState('');
   const [pendingOperation, setPendingOperation] = hooks.useState(null);
@@ -55,9 +54,7 @@ export function NativeCcmaxDialog({ resource, onClose, onChanged }) {
       if (pendingOperation && action !== 'reconcile-pending') throw new Error('原操作尚未确认，请先核对原操作');
       if (action === 'reconcile-pending') {
         const original = pendingOperation;
-        result = original.kind === 'priority'
-          ? await post(`/cc-intake/admin/priority/jobs/${encodeURIComponent(original.id)}/reconcile`, {})
-          : original.kind === 'reauthorization'
+        result = original.kind === 'reauthorization'
             ? await get(`/resources/${encodeURIComponent(current.id)}/reauthorizations/${encodeURIComponent(original.id)}`)
           : original.kind === 'operation'
             ? await post(`/resources/${encodeURIComponent(current.id)}/operations/${encodeURIComponent(original.id)}/reconcile`, {})
@@ -91,13 +88,6 @@ export function NativeCcmaxDialog({ resource, onClose, onChanged }) {
       } else if (['PAUSE', 'RESUME', 'REMOVE'].includes(action)) {
         result = await post('/resource-lifecycle-jobs', { requestKey: crypto.randomUUID(), action, items: [{ resourceId: current.id, resourceVersion: latest.version }] });
         if (result.state !== 'COMPLETED') { setPendingOperation({ kind: 'lifecycle', id: result.id }); throw new Error(`操作未完成：${result.state}，请核对原操作`); }
-      } else if (action === 'priority') {
-        if (!/^\d+$/.test(weight) || Number(weight) > 1000) throw new Error('权重须为0至1000的整数');
-        const preview = await post('/cc-intake/admin/priority/jobs', { resourceIds: [current.id], targetId: current.targetId, priority: Number(weight), requestKey: crypto.randomUUID() });
-        setPendingOperation({ kind: 'priority', id: preview.id });
-        result = await post(`/cc-intake/admin/priority/jobs/${encodeURIComponent(preview.id)}/start`, {});
-        if (result.state !== 'COMPLETED') throw new Error(`权重未确认：${result.state}，请核对原任务`);
-        setPendingOperation(null);
       } else if (action === 'reauthorize') {
         result = await post(`/resources/${encodeURIComponent(current.id)}/reauthorizations`, { requestKey: crypto.randomUUID() });
         setOauth(result); setCallback('');
@@ -131,9 +121,9 @@ export function NativeCcmaxDialog({ resource, onClose, onChanged }) {
     finally { setBusy(false); setConfirmation(''); }
   }
   return jsx(Dialog, { title: 'CCMAX 原生账号详情', onClose, children: [
-    jsx(Details, { items: [['资源名称', current.name], ['上游账号 ID', current.upstreamAccountId || current.laneId], ['供应商', current.supplierName || '—'], ['项目', current.projectName], ['账号状态', stateLabel(current)], ['调度权重', String(current.upstreamPriority ?? '未查询')]] }),
-    jsx(Notice, { children: '关联上游已有账号不代表新建交付；累计用量仅作观察，不会自动生成或结算账单。原生“移除”对应上游归档。' }),
-    current.usage && jsx('p', { children: `上游累计费用：${current.usage.amount ?? '未查询'} ${current.usage.currency || ''}；查询时间：${current.usage.queriedAt || '未查询'}` }),
+    jsx(Details, { items: [['资源名称', current.name], ['上游账号 ID', current.upstreamAccountId || current.laneId], ['供应商', current.supplierName || '—'], ['项目', current.projectName], ['账号状态', stateLabel(current)]] }),
+    jsx(Notice, { children: '关联已有账号不代表新建交付。状态和额度取自上游已有快照，查询时间不代表上游实时采集时间。' }),
+    jsx('p', { className: 'muted', children: `最近查询：${current.usage?.queriedAt || current.statusSyncedAt || '未查询'}` }),
     error && jsx('div', { role: 'alert', children: jsx(Notice, { tone: 'red', children: error }) }),
     pendingOperation && jsx(Button, { disabled: busy, onClick: () => run('reconcile-pending'), children: pendingOperation.kind === 'reauthorization' ? '查询原授权结果（不再次兑换）' : '核对原操作（不重复写入）' }),
     refreshUncertain && jsx(Notice, { tone: 'amber', children: '原凭据刷新结果尚未确认。账号可读取不能证明刷新成功，请核对原操作，勿重新刷新。' }),
@@ -149,10 +139,9 @@ export function NativeCcmaxDialog({ resource, onClose, onChanged }) {
       jsx(Button, { disabled: busy || removed || !!pendingOperation || blockedByRefresh || !canReauthorize, onClick: () => run('reauthorize'), children: '生成重新授权链接' }),
       user.role === 'ADMIN' && jsx(Button, { disabled: busy || removed || !!pendingOperation || blockedByRefresh || !canRemove, onClick: () => setConfirmation('REMOVE'), children: '归档账号' }),
     ] }),
-    confirmation && jsx(Notice, { tone: 'amber', children: [confirmation === 'REMOVE' ? '确认归档该真实账号？归档后将退出调度。' : confirmation === 'credential-refresh' ? '确认刷新该真实账号凭据？' : '确认修改该真实账号启停状态？', jsx(Button, { disabled: busy || !confirmationAllowed, onClick: () => run(confirmation), children: '确认执行' }), jsx(Button, { disabled: busy, onClick: () => setConfirmation(''), children: '取消' })] }),
-    user.role === 'ADMIN' && jsx('section', { className: 'subsection', children: [field('调度权重（0–1000）', jsx('input', { type: 'number', min: 0, max: 1000, value: weight, disabled: busy || removed || !!pendingOperation || blockedByRefresh, onChange: event => setWeight(event.target.value) })), jsx(Button, { disabled: busy || removed || !!pendingOperation || blockedByRefresh, onClick: () => run('priority'), children: '保存调度权重' })] }),
+    confirmation && jsx(Notice, { tone: 'amber', children: [confirmation === 'REMOVE' ? '确认归档该上游账号？' : confirmation === 'credential-refresh' ? '确认刷新该真实账号凭据？' : '确认修改该真实账号启停状态？', jsx(Button, { disabled: busy || !confirmationAllowed, onClick: () => run(confirmation), children: '确认执行' }), jsx(Button, { disabled: busy, onClick: () => setConfirmation(''), children: '取消' })] }),
     oauth && !pendingOperation && jsx('section', { className: 'subsection', children: [jsx('p', { children: `授权有效至 ${oauth.expiresAt || '以官方页面为准'}` }), jsx('textarea', { readOnly: true, rows: 4, value: oauth.authUrl }), jsx('a', { href: oauth.authUrl, target: '_blank', rel: 'noopener noreferrer', children: '打开官方授权页面' }), field('完整回调地址或 code#state', jsx('textarea', { rows: 3, value: callback, onChange: event => setCallback(event.target.value) })), jsx(Button, { disabled: busy || !callback.trim(), onClick: () => run('reauthorize-complete'), children: '回填并更新原账号凭据' })] }),
-    jsx('footer', { className: 'dialog-footer', children: [has('resource.usage') && jsx(Button, { disabled: busy || removed || !!pendingOperation || blockedByRefresh, onClick: () => run('usage'), children: busy ? '处理中…' : '刷新上游用量' }), jsx(Button, { onClick: onClose, children: '关闭' })] }),
+    jsx('footer', { className: 'dialog-footer', children: [has('resource.usage') && jsx(Button, { disabled: busy || removed || !!pendingOperation || blockedByRefresh, onClick: () => run('usage'), children: busy ? '处理中…' : '查询状态和额度' }), jsx(Button, { onClick: onClose, children: '关闭' })] }),
   ] });
 }
 

@@ -1,5 +1,7 @@
 # Resource integration adapter
 
+> Current scope from `0.8.124`: see [resource upstream scope](resource-upstream-scope.md). New connections use NEWAPI or CCMAX_NATIVE; existing CUSTOM connections remain editable and keep their original account bindings. Model tests, priority writes, concurrency tuning, target-level OAuth and log-based daily collection are retired (`410 UPSTREAM_FEATURE_RETIRED`). The broader contracts below describe the historical adapter and do not re-enable retired endpoints.
+
 Resource operations use the real JSON request/response contracts recovered from the frontend. The original private CCMAX server implementation and its administrator API were not supplied. A configured resource target therefore points to an adapter implementing these documented endpoints; this package does not claim compatibility with an unseen private protocol.
 
 Only ADMIN can create or edit a saved `resource-target`. Configuration includes `baseUrl`, `apiKey`, `enabled`, optional `defaultTarget`, optional `upstreamPathPrefix` (default `/api`), `allowHttp` and `timeoutMs`. Multiple active targets require either explicit `targetId` or one unique default target. Supplier/operator requests cannot supply arbitrary destination URLs. Tokens are read from raw server storage by the gateway and are omitted by configuration GET projections.

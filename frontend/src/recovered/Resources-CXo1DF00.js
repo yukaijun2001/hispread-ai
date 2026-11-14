@@ -2180,82 +2180,7 @@ function vt({
   })
 }
 
-function yt({
-  resource: e,
-  supplierSide: t
-}) {
-  let {
-    has: n
-  } = r(), [i, o] = (0, R.useState)(!1), [s, l] = (0, R.useState)(!1), u = (0, R.useRef)(!1), [d, f] = (0, R.useState)(null), [p, m] = (0, R.useState)(``);
-  if (e.readOnly || e.resourceType !== `CCMAX` || e.state !== `DELIVERED` || e.dispatchState !== `SUCCESS` || !e.laneId || !n(`resource.read`) || !n(t ? `resource.write` : `resource.dispatch`)) return null;
-  async function h() {
-    if (!u.current) {
-      u.current = !0, l(!0), f(null), m(``), o(!0);
-      try {
-        f(await k(`/resources/${encodeURIComponent(e.id)}/say-hi`, {}))
-      } catch (e) {
-        m(e instanceof Error ? e.message : T(`测试请求失败`))
-      } finally {
-        u.current = !1, l(!1)
-      }
-    }
-  }
-  return (0, z.jsxs)(`span`, {
-    className: `resource-say-hi`,
-    onClick: e => e.stopPropagation(),
-    children: [(0, z.jsx)(`button`, {
-      type: `button`,
-      className: `resource-action-link`,
-      disabled: s,
-      title: T(`测试此账号的连通性，可能消耗上游额度`),
-      onClick: e => {
-        e.stopPropagation(), h()
-      },
-      children: s ? T(`测试中…`) : `Say Hi`
-    }), i && (0, z.jsx)(a, {
-      title: `Say Hi · ${e.name}`,
-      onClose: () => o(!1),
-      children: (0, z.jsxs)(`div`, {
-        onClick: e => e.stopPropagation(),
-        "aria-live": `polite`,
-        children: [s && (0, z.jsx)(y, {
-          children: T(`正在测试此账号，最长约 70 秒，请勿重复点击。`)
-        }), p && (0, z.jsx)(y, {
-          tone: `red`,
-          children: p
-        }), d && (0, z.jsxs)(z.Fragment, {
-          children: [(0, z.jsx)(y, {
-            tone: d.ok ? `green` : `red`,
-            children: d.ok ? T(`测试成功`) : T(`测试失败`)
-          }), (0, z.jsx)(C, {
-            items: [
-              [T(`账号`), e.accountName || d.laneId],
-              [T(`测试时间`), c(d.checkedAt)],
-              [T(`耗时`), d.latencyMs == null ? `—` : `${d.latencyMs} ms`],
-              [T(`模型`), d.model],
-              [T(`Worker 状态码`), d.status],
-              [T(`上游状态码`), d.upstreamStatus]
-            ]
-          }), d.text && (0, z.jsx)(`pre`, {
-            className: `say-hi-output`,
-            children: d.text
-          }), !d.ok && (0, z.jsxs)(z.Fragment, {
-            children: [(0, z.jsx)(`p`, {
-              children: d.failure || d.error || T(`未返回具体错误说明`)
-            }), d.failure && d.error && (0, z.jsx)(`p`, {
-              children: d.error
-            }), d.rawError && (0, z.jsx)(`pre`, {
-              className: `say-hi-output`,
-              children: d.rawError
-            })]
-          })]
-        })]
-      })
-    })]
-  })
-}
-var bt = (0, R.lazy)(() => x(() => import(`./IntakeReviewDialog-C9xZ8Ftb.js`), __vite__mapDeps([3, 1, 2, 4]))),
-  xt = (0, R.lazy)(() => x(() => import(`./PriorityBatchDialog-DWPDEDJI.js`), __vite__mapDeps([5, 1, 2, 6, 7, 4])));
+var bt = (0, R.lazy)(() => x(() => import(`./IntakeReviewDialog-C9xZ8Ftb.js`), __vite__mapDeps([3, 1, 2, 4])));
 
 function St({
   supplierSide: s,
@@ -2264,7 +2189,7 @@ function St({
 }) {
   const [linkChannel, setLinkChannel] = R.useState(false);
   const [linkNativeAccount, setLinkNativeAccount] = R.useState(false);
-  let [d, p] = (0, R.useState)(!1), [h, _] = (0, R.useState)(!1), [v, x] = (0, R.useState)(!1), [S, C] = (0, R.useState)(new Map), [E, D] = (0, R.useState)(null), [ee, ne] = (0, R.useState)(!1), [ce, le] = (0, R.useState)(null), {
+  let [d, p] = (0, R.useState)(!1), [v, x] = (0, R.useState)(!1), [S, C] = (0, R.useState)(new Map), [E, D] = (0, R.useState)(null), [ee, ne] = (0, R.useState)(!1), [ce, le] = (0, R.useState)(null), {
     has: N,
     notify: P,
     refresh: F,
@@ -2602,10 +2527,7 @@ function St({
       })]
     }) : (0, z.jsxs)(`div`, {
       className: `resource-row-actions`,
-      children: [(0, z.jsx)(yt, {
-        resource: e,
-        supplierSide: s
-      }), Un(e), On.rowActions(e), H && Ge(e) && (0, z.jsx)(`button`, {
+      children: [Un(e), On.rowActions(e), H && Ge(e) && (0, z.jsx)(`button`, {
         type: `button`,
         className: `resource-action-link`,
         onClick: t => {
@@ -2768,9 +2690,6 @@ function St({
           children: [On.toolbar([...S.values()]), Xe && (0, z.jsx)(A, {
             onClick: () => p(!0),
             children: T(`核对上号计数`)
-          }), Xe && de.role === `ADMIN` && (0, z.jsx)(A, {
-            onClick: () => _(!0),
-            children: T(`批量调整优先级`)
           }), H && (0, z.jsxs)(A, {
             disabled: !S.size || [...S.values()].some(row => isNewApi(row) || isNativeCcmax(row)),
             title: [...S.values()].some(isNewApi) ? T(`New API 渠道不支持替换代理`) : void 0,
@@ -3028,13 +2947,6 @@ function St({
       fallback: (0, z.jsx)(b, {}),
       children: (0, z.jsx)(bt, {
         onClose: () => p(!1)
-      })
-    }), h && Xe && de.role === `ADMIN` && (0, z.jsx)(R.Suspense, {
-      fallback: (0, z.jsx)(b, {}),
-      children: (0, z.jsx)(xt, {
-        selectedIds: [...S.keys()],
-        filterQuery: ln.toString(),
-        onClose: () => _(!1)
       })
     }), Ze && (0, z.jsx)(pt, {
       resource: Ze,

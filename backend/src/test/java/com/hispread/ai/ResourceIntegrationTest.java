@@ -582,7 +582,7 @@ class ResourceIntegrationTest {
   }
 
   @Test
-  void genericUsageOrSayHiSuccessCannotCreateDeliverySuccess() throws Exception {
+  void usageCannotCreateDeliverySuccessAndModelTestsAreRetired() throws Exception {
     Client c = supplier();
     ObjectNode draft =
         store.create(
@@ -616,7 +616,7 @@ class ResourceIntegrationTest {
         "/api/resources/" + id + "/say-hi",
         store.object().put("requestKey", UUID.randomUUID().toString()),
         c,
-        200);
+        410);
     assertEquals("DRAFT", store.get("resource", id, c.owner).path("state").asText());
     assertEquals("PENDING", store.get("resource", id, c.owner).path("dispatchState").asText());
   }
@@ -696,7 +696,7 @@ class ResourceIntegrationTest {
     return new Client(session, csrf, "GLOBAL", uid);
   }
 
-  @Test void newApiPriorityUsesPreviewStartReplayAndReadbackWithoutChangingDelivery() throws Exception {
+  @Test void newApiBindingAndMaintenanceRemainAvailableWhileRoutingWritesAreRetired() throws Exception {
     Client supplier = supplier(), admin = administrator();
     ObjectNode input = submission(supplier);
     ObjectNode draft = store.create("resource", supplier.owner, store.object().put("supplierId", supplier.owner).put("projectId", input.path("input").path("projectId").asText()).put("resourceType", "CCMAX").put("state", "DRAFT").put("dispatchState", "NOT_SUBMITTED").put("name", "New API fixture"));
@@ -716,19 +716,13 @@ class ResourceIntegrationTest {
     mvc.perform(get("/api/resources/" + rid).session(admin.session)).andExpect(jsonPath("$.resourceType").value("NEWAPI_CHANNEL"));
     ObjectNode request = store.object().put("priority", 7).put("requestKey", UUID.randomUUID().toString());
     request.putArray("resourceIds").add(rid);
-    ObjectNode preview = write("/api/cc-intake/admin/priority/jobs", request, admin, 200);
-    assertEquals("PREVIEW", preview.path("state").asText()); assertEquals(0, writes.get());
-    ObjectNode replay = write("/api/cc-intake/admin/priority/jobs", request, admin, 200);
-    assertEquals(preview.path("id"), replay.path("id"));
-    String job = "/api/cc-intake/admin/priority/jobs/" + preview.path("id").asText();
-    ObjectNode started = write(job + "/start", store.object(), admin, 200);
-    assertEquals("COMPLETED", started.path("state").asText()); assertEquals(1, writes.get());
-    assertEquals(7, store.get("resource", rid, supplier.owner).path("upstreamPriority").asInt());
-    write(job + "/start", store.object(), admin, 200); assertEquals(1, writes.get());
-    write(job + "/reconcile", store.object(), admin, 200); assertEquals(1, writes.get());
-    assertEquals("DRAFT", store.get("resource", rid, supplier.owner).path("state").asText());
-    request.put("priority", 8); write("/api/cc-intake/admin/priority/jobs", request, admin, 409);
-    write(job + "/start", store.object(), supplier, 403);
+    int beforeRetired = calls.get();
+    assertEquals("UPSTREAM_FEATURE_RETIRED", write("/api/cc-intake/admin/priority/jobs", request, admin, 410).path("code").asText());
+    write("/api/cc-intake/admin/priority/jobs/old/start", store.object(), admin, 410);
+    write("/api/cc-intake/admin/priority/jobs/old/retry", store.object(), admin, 410);
+    assertEquals(beforeRetired, calls.get());
+    assertEquals(0, writes.get());
+    write("/api/cc-intake/admin/priority/jobs/old/start", store.object(), supplier, 403);
     ObjectNode pause = store.object().put("action", "PAUSE").put("requestKey", UUID.randomUUID().toString());
     pause.putArray("items").add(store.object().put("resourceId", rid));
     assertEquals("COMPLETED", write("/api/resource-lifecycle-jobs", pause, admin, 200).path("state").asText());
@@ -751,9 +745,6 @@ class ResourceIntegrationTest {
         .put("upstreamChannelId", "148").put("resourceType", "CCMAX")
         .put("state", "DRAFT").put("dispatchState", "NOT_SUBMITTED").put("operationalState", "ACTIVE"));
     String resourceId = resource.path("id").asText();
-    ObjectNode priorityInput = store.object().put("priority", 0).put("requestKey", UUID.randomUUID().toString());
-    priorityInput.putArray("resourceIds").add(resourceId);
-    ObjectNode pendingPriority = write("/api/cc-intake/admin/priority/jobs", priorityInput, admin, 200);
     AtomicInteger deletes = new AtomicInteger();
     responder.set((request, body) -> {
       if (request.equals("DELETE /api/channel/148")) {
@@ -775,7 +766,7 @@ class ResourceIntegrationTest {
     assertEquals(callsAfterDelete, calls.get());
     write("/api/resource-lifecycle-jobs", removal, admin, 200);
     assertEquals(1, deletes.get());
-    for (String action : List.of("usage", "say-hi")) {
+    for (String action : List.of("usage")) {
       ObjectNode error = write("/api/resources/" + resourceId + "/" + action,
           store.object().put("requestKey", UUID.randomUUID().toString()), admin, 409);
       assertEquals("RESOURCE_CHANNEL_REMOVED", error.path("code").asText());
@@ -784,8 +775,7 @@ class ResourceIntegrationTest {
     ((ObjectNode) repeat.path("items").get(0)).put("version",
         store.get("resource", resourceId, supplier.owner).path("version").asLong());
     write("/api/resource-lifecycle-jobs", repeat, admin, 409);
-    write("/api/cc-intake/admin/priority/jobs/" + pendingPriority.path("id").asText() + "/start",
-        store.object(), admin, 409);
+    write("/api/cc-intake/admin/priority/jobs/old/start", store.object(), admin, 410);
     assertEquals(callsAfterDelete, calls.get());
     assertEquals("GONE", store.get("resource", resourceId, supplier.owner).path("operationalState").asText());
   }
@@ -847,7 +837,7 @@ class ResourceIntegrationTest {
   }
 
   @Test
-  void nativeConfigurationConnectionBindingUsageLifecycleAndPriorityAreSecretSafe() throws Exception {
+  void nativeConfigurationConnectionBindingUsageAndMaintenanceRemainSecretSafe() throws Exception {
     nativeTarget();
     Client supplier = supplier(), admin = administrator(), other = supplier();
     AtomicInteger logins = new AtomicInteger(), status = new AtomicInteger(1), weight = new AtomicInteger(10);
@@ -882,195 +872,17 @@ class ResourceIntegrationTest {
     write("/api/resource-lifecycle-jobs/" + paused.path("id").asText() + "/reconcile", store.object(), admin, 200);
     action.put("action", "RESUME").put("requestKey", UUID.randomUUID().toString());
     write("/api/resource-lifecycle-jobs", action, admin, 200); assertEquals(1, status.get());
-    ObjectNode priority = store.object().put("priority", 7).put("requestKey", UUID.randomUUID().toString());
-    priority.putArray("resourceIds").add(id);
-    ObjectNode preview = write("/api/cc-intake/admin/priority/jobs", priority, admin, 200);
-    String path = "/api/cc-intake/admin/priority/jobs/" + preview.path("id").asText();
-    assertEquals("CCMAX_NATIVE", preview.path("protocol").asText());
-    write(path + "/start", store.object(), admin, 200); assertEquals(7, weight.get());
-    before = calls.get(); write(path + "/start", store.object(), admin, 200); assertEquals(before, calls.get());
-    write(path + "/reconcile", store.object(), admin, 200);
+    int beforeRetired = calls.get();
+    write("/api/cc-intake/admin/priority/jobs", store.object().put("priority", 7), admin, 410);
+    assertEquals(beforeRetired, calls.get());
+    assertEquals(10, weight.get());
     assertEquals(1, logins.get());
   }
 
-  @Test
-  void nativePriorityRetryOnlyResendsExplicitlyRejectedItems() throws Exception {
-    nativeTarget(); Client supplier = supplier(), admin = administrator();
-    AtomicInteger weight = new AtomicInteger(10), secondWeight = new AtomicInteger(10);
-    AtomicInteger firstWrites = new AtomicInteger(), secondWrites = new AtomicInteger();
-    AtomicBoolean rejectSecond = new AtomicBoolean(true);
-    nativeResponder(new AtomicInteger(), new AtomicInteger(1), weight);
-    var original = responder.get();
-    responder.set((request, body) -> {
-      httpStatus.set(200);
-      if (request.equals("PATCH /api/admin/oauth-accounts/native-148")) firstWrites.incrementAndGet();
-      if (request.equals("PATCH /api/admin/oauth-accounts/native-second")) {
-        secondWrites.incrementAndGet();
-        if (rejectSecond.get()) { httpStatus.set(422); return "{\"error\":\"fixture rejection\"}"; }
-        secondWeight.set(body.path("weight").asInt());
-        return "{\"ok\":true}";
-      }
-      if (request.equals("GET /api/admin/oauth-accounts/native-second"))
-        return "{\"account\":{\"id\":\"native-second\",\"status\":\"active\",\"weight\":" + secondWeight.get() + "}}";
-      return original.apply(request, body);
-    });
-    ObjectNode first = nativeResource(supplier), second = nativeResource(supplier);
-    store.update("resource", first.path("id").asText(), supplier.owner,
-        store.object().put("targetId", target.path("id").asText()).put("upstreamAccountId", "native-148"));
-    store.update("resource", second.path("id").asText(), supplier.owner,
-        store.object().put("targetId", target.path("id").asText()).put("upstreamAccountId", "native-second"));
-    ObjectNode input = store.object().put("priority", 11).put("requestKey", UUID.randomUUID().toString());
-    input.putArray("resourceIds").add(first.path("id").asText()).add(second.path("id").asText());
-    ObjectNode preview = write("/api/cc-intake/admin/priority/jobs", input, admin, 200);
-    String path = "/api/cc-intake/admin/priority/jobs/" + preview.path("id").asText();
-    ObjectNode partial = write(path + "/start", store.object(), admin, 200);
-    assertEquals("PARTIAL_FAILED", partial.path("state").asText());
-    assertEquals(1, partial.path("counts").path("SUCCESS").asInt());
-    assertEquals(1, partial.path("counts").path("FAILED").asInt());
-    assertEquals(0, partial.path("counts").path("UNKNOWN").asInt());
-    write(path + "/start", store.object(), admin, 200);
-    assertEquals(1, firstWrites.get()); assertEquals(1, secondWrites.get());
-    rejectSecond.set(false);
-    ObjectNode retried = write(path + "/retry", store.object(), admin, 200);
-    assertEquals("COMPLETED", retried.path("state").asText());
-    assertEquals(2, retried.path("counts").path("SUCCESS").asInt());
-    assertEquals(1, firstWrites.get()); assertEquals(2, secondWrites.get());
-    write(path + "/retry", store.object(), admin, 200);
-    assertEquals(1, firstWrites.get()); assertEquals(2, secondWrites.get());
-  }
 
-  @Test
-  void nativePriorityLegacyLaneMappingSurvivesPreviewExecutionAndProjection() throws Exception {
-    nativeTarget();
-    Client supplier = supplier(), admin = administrator();
-    AtomicInteger weight = new AtomicInteger(10), writes = new AtomicInteger();
-    nativeResponder(new AtomicInteger(), new AtomicInteger(1), weight);
-    var original = responder.get();
-    responder.set((request, body) -> {
-      if (request.equals("PATCH /api/admin/oauth-accounts/native-148")) writes.incrementAndGet();
-      return original.apply(request, body);
-    });
-    ObjectNode resource = nativeResource(supplier);
-    String resourceId = resource.path("id").asText();
-    store.update("resource", resourceId, supplier.owner, store.object()
-        .put("targetId", target.path("id").asText())
-        .put("upstreamProtocol", "CCMAX_NATIVE")
-        .put("laneId", "native-148")
-        .put("state", "DELIVERED")
-        .put("dispatchState", "SUCCESS")
-        .put("operationalState", "ACTIVE"));
 
-    ObjectNode supplierScope = store.object().put("priority", 11).put("requestKey", UUID.randomUUID().toString());
-    supplierScope.putArray("supplierIds").add(supplier.owner);
-    ObjectNode preview = write("/api/cc-intake/admin/priority/jobs", supplierScope, admin, 200);
-    assertEquals(1, preview.path("total").asInt());
-    assertEquals("native-148", preview.path("items").path(0).path("laneId").asText());
 
-    ObjectNode laneScope = store.object().put("priority", 11).put("requestKey", UUID.randomUUID().toString());
-    laneScope.putArray("laneIds").add("native-148");
-    ObjectNode lanePreview = write("/api/cc-intake/admin/priority/jobs", laneScope, admin, 200);
-    assertEquals("CCMAX_NATIVE", lanePreview.path("protocol").asText());
-    assertEquals(resourceId, lanePreview.path("items").path(0).path("resourceId").asText());
 
-    ObjectNode completed = write("/api/cc-intake/admin/priority/jobs/" + preview.path("id").asText() + "/start",
-        store.object(), admin, 200);
-    assertEquals("COMPLETED", completed.path("state").asText());
-    assertEquals(1, writes.get());
-    assertEquals(11, weight.get());
-    assertEquals(11, store.get("resource", resourceId, supplier.owner).path("upstreamPriority").asInt());
-  }
-
-  @Test
-  void nativePriorityBroadScopesExcludeRemovedAndUseCcmaxTargetInsteadOfNewApiDefault() throws Exception {
-    nativeTarget();
-    Client supplier = supplier(), admin = administrator();
-    String tid = target.path("id").asText();
-    store.update("resource-target", tid, "GLOBAL", store.object().put("defaultTarget", false));
-    store.create("resource-target", "GLOBAL", store.object().put("protocol", "NEWAPI").put("enabled", true)
-        .put("defaultTarget", true).put("baseUrl", "http://127.0.0.1:" + server.getAddress().getPort()).put("newApiUserId", "2").put("timeoutMs", 15000));
-    ObjectNode active = nativeResource(supplier), removed = nativeResource(supplier), draining = nativeResource(supplier);
-    for (ObjectNode row : List.of(active, removed, draining))
-      store.update("resource", row.path("id").asText(), supplier.owner, store.object()
-          .put("targetId", tid).put("upstreamProtocol", "CCMAX_NATIVE").put("laneId", row.path("id").asText())
-          .put("state", "DELIVERED").put("dispatchState", "SUCCESS")
-          .put("operationalState", row == active ? "ACTIVE" : row == removed ? "GONE" : "DRAINING"));
-    ObjectNode scoped = store.object().put("priority", 10).put("requestKey", UUID.randomUUID().toString());
-    scoped.putArray("supplierIds").add(supplier.owner);
-    ObjectNode preview = write("/api/cc-intake/admin/priority/jobs", scoped, admin, 200);
-    assertEquals("CCMAX_NATIVE", preview.path("protocol").asText());
-    assertEquals(1, preview.path("total").asInt());
-    assertEquals(active.path("id"), preview.path("items").path(0).path("resourceId"));
-    assertEquals(0, calls.get());
-    scoped.put("targetId", tid).put("requestKey", UUID.randomUUID().toString());
-    assertEquals(1, write("/api/cc-intake/admin/priority/jobs", scoped, admin, 200).path("total").asInt());
-    ObjectNode selected = store.object().put("priority", 10).put("targetId", tid).put("requestKey", UUID.randomUUID().toString());
-    selected.putArray("resourceIds").add(removed.path("id").asText());
-    write("/api/cc-intake/admin/priority/jobs", selected, admin, 409);
-    assertEquals(0, calls.get());
-  }
-
-  @Test
-  void nativePriorityFiltersUseCanonicalAllQuotaAndFailureReasonStates() throws Exception {
-    nativeTarget();
-    Client supplier = supplier(), admin = administrator();
-    ObjectNode exhausted = nativeResource(supplier), healthy = nativeResource(supplier);
-    for (ObjectNode row : List.of(exhausted, healthy)) {
-      ObjectNode patch = store.object().put("targetId", target.path("id").asText())
-          .put("upstreamProtocol", "CCMAX_NATIVE").put("laneId", row.path("id").asText())
-          .put("state", "DELIVERED").put("dispatchState", "SUCCESS").put("operationalState", "ACTIVE");
-      patch.putObject("resourceData").putObject("usage").put("fiveHourPercent", row == exhausted ? 100 : 4);
-      if (row == exhausted) patch.with("resourceData").putObject("health").put("credentialFailureReason", "FIXTURE_REASON");
-      store.update("resource", row.path("id").asText(), supplier.owner, patch);
-    }
-    ObjectNode request = store.object().put("targetId", target.path("id").asText()).put("priority", 10)
-        .put("requestKey", UUID.randomUUID().toString());
-    request.putObject("filters").put("operationalStatus", "ALL");
-    ObjectNode all = write("/api/cc-intake/admin/priority/jobs", request, admin, 200);
-    assertEquals(2, all.path("total").asInt());
-    request.put("requestKey", UUID.randomUUID().toString());
-    ((ObjectNode) request.path("filters")).put("operationalStatus", "FIVE_HOUR_EXHAUSTED");
-    ObjectNode quota = write("/api/cc-intake/admin/priority/jobs", request, admin, 200);
-    assertEquals(1, quota.path("total").asInt());
-    assertEquals(exhausted.path("id"), quota.path("items").path(0).path("resourceId"));
-    request.put("requestKey", UUID.randomUUID().toString());
-    ((ObjectNode) request.path("filters")).put("operationalStatus", "ALL").put("failureReason", "FIXTURE_REASON");
-    ObjectNode reason = write("/api/cc-intake/admin/priority/jobs", request, admin, 200);
-    assertEquals(1, reason.path("total").asInt());
-    assertEquals(exhausted.path("id"), reason.path("items").path(0).path("resourceId"));
-    assertEquals(0, calls.get());
-  }
-
-  @Test
-  void priorityLaneScopeResolvesItsMappingAndAmbiguousNativeScopesFailWithoutRemoteCalls() throws Exception {
-    nativeTarget();
-    Client supplier = supplier(), admin = administrator();
-    String nativeId = target.path("id").asText();
-    store.update("resource-target", nativeId, "GLOBAL", store.object().put("defaultTarget", false));
-    ObjectNode channelTarget = store.create("resource-target", "GLOBAL", store.object().put("protocol", "NEWAPI")
-        .put("enabled", true).put("defaultTarget", true)
-        .put("baseUrl", "http://127.0.0.1:" + server.getAddress().getPort()).put("newApiUserId", "2").put("timeoutMs", 15000));
-    ObjectNode account = nativeResource(supplier), channel = nativeResource(supplier);
-    store.update("resource", account.path("id").asText(), supplier.owner, store.object()
-        .put("targetId", nativeId).put("upstreamProtocol", "CCMAX_NATIVE").put("upstreamAccountId", "native-scope")
-        .put("operationalState", "ACTIVE"));
-    store.update("resource", channel.path("id").asText(), supplier.owner, store.object()
-        .put("targetId", channelTarget.path("id").asText()).put("upstreamProtocol", "NEWAPI")
-        .put("upstreamChannelId", "148").put("operationalState", "ACTIVE"));
-    for (String[] expected : List.of(new String[] {"native-scope", "CCMAX_NATIVE"}, new String[] {"148", "NEWAPI"})) {
-      ObjectNode request = store.object().put("priority", 10).put("requestKey", UUID.randomUUID().toString());
-      request.putArray("laneIds").add(expected[0]);
-      assertEquals(expected[1], write("/api/cc-intake/admin/priority/jobs", request, admin, 200).path("protocol").asText());
-    }
-    store.create("resource-target", "GLOBAL", store.object().put("protocol", "CCMAX_NATIVE").put("enabled", true)
-        .put("baseUrl", "http://127.0.0.1:" + server.getAddress().getPort()));
-    ObjectNode broad = store.object().put("priority", 10).put("requestKey", UUID.randomUUID().toString());
-    broad.putArray("supplierIds").add(supplier.owner);
-    assertEquals("RESOURCE_TARGET_AMBIGUOUS", write("/api/cc-intake/admin/priority/jobs", broad, admin, 409).path("code").asText());
-    ObjectNode mixed = store.object().put("priority", 10).put("requestKey", UUID.randomUUID().toString());
-    mixed.putArray("laneIds").add("native-scope").add("148");
-    assertEquals("RESOURCE_TARGET_AMBIGUOUS", write("/api/cc-intake/admin/priority/jobs", mixed, admin, 409).path("code").asText());
-    assertEquals(0, calls.get());
-  }
 
   @Test
   void nativePriorityReadbackFailureStaysUnknownAndReconcilesWithoutWriting() throws Exception {
@@ -1090,23 +902,24 @@ class ResourceIntegrationTest {
     ObjectNode resource = nativeResource(supplier);
     store.update("resource", resource.path("id").asText(), supplier.owner,
         store.object().put("targetId", target.path("id").asText()).put("upstreamAccountId", "native-148"));
-    ObjectNode input = store.object().put("priority", 11).put("requestKey", UUID.randomUUID().toString());
-    input.putArray("resourceIds").add(resource.path("id").asText());
-    ObjectNode preview = write("/api/cc-intake/admin/priority/jobs", input, admin, 200);
-    String path = "/api/cc-intake/admin/priority/jobs/" + preview.path("id").asText();
-    ObjectNode uncertain = write(path + "/start", store.object(), admin, 200);
-    assertEquals("UNKNOWN", uncertain.path("state").asText());
-    assertEquals(1, uncertain.path("counts").path("UNKNOWN").asInt());
-    write(path + "/retry", store.object(), admin, 200); assertEquals(1, writes.get());
+    ObjectNode request = store.object().put("priority", 10);
+    request.putArray("items").addObject().put("resourceId", resource.path("id").asText()).put("laneId", "native-148");
+    ObjectNode legacy = store.object().put("type", "PRIORITY").put("supplierId", "GLOBAL").put("protocol", "CCMAX_NATIVE")
+        .put("targetId", target.path("id").asText()).put("state", "UNKNOWN").put("total", 1).put("requestKey", "historical-key");
+    legacy.set("request", request); legacy.set("result", request.deepCopy());
+    ObjectNode saved = store.create("resource-operation", "GLOBAL", legacy);
+    String path = "/api/cc-intake/admin/priority/jobs/" + saved.path("id").asText();
+    assertEquals("UNKNOWN", write(path + "/reconcile", store.object(), admin, 200).path("state").asText());
+    write(path + "/retry", store.object(), admin, 410);
     readUnavailable.set(false);
     ObjectNode reconciled = write(path + "/reconcile", store.object(), admin, 200);
     assertEquals("COMPLETED", reconciled.path("state").asText());
     assertEquals(1, reconciled.path("counts").path("SUCCESS").asInt());
-    assertEquals(1, writes.get());
+    assertEquals(0, writes.get());
   }
 
   @Test
-  void positiveExhaustedAndCredentialFailureFiltersAgreeAcrossListOverviewAndPriority() throws Exception {
+  void positiveExhaustedAndCredentialFailureFiltersAgreeAcrossListAndOverview() throws Exception {
     nativeTarget(); Client supplier = supplier(), admin = administrator();
     nativeResponder(new AtomicInteger(), new AtomicInteger(1), new AtomicInteger(10));
     var original = responder.get();
@@ -1128,9 +941,7 @@ class ResourceIntegrationTest {
           .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.items[0].id").value(rid));
       mvc.perform(get("/api/resources/overview").session(supplier.session).param("failureReason", "revoked").param("operationalStatus", status))
           .andExpect(status().isOk()).andExpect(jsonPath("$.counts.total").value(1)).andExpect(jsonPath("$.fiveHour.exhaustedCount").value(1));
-      ObjectNode request = store.object().put("priority", 10).put("targetId", target.path("id").asText()).put("requestKey", UUID.randomUUID().toString());
-      request.putObject("filters").put("failureReason", "revoked").put("operationalStatus", status);
-      assertEquals(rid, write("/api/cc-intake/admin/priority/jobs", request, admin, 200).path("items").path(0).path("resourceId").asText());
+
     }
     mvc.perform(get("/api/resources").session(supplier.session).param("failureReason", "token_error"))
         .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(0));
@@ -1166,15 +977,13 @@ class ResourceIntegrationTest {
       for (ObjectNode row : List.of(first, second)) write("/api/resources/" + row.path("id").asText() + "/upstream-account", store.object()
           .put("version", 0).put("accountId", "native-148").put("targetId", row == first ? target.path("id").asText() : otherTarget.path("id").asText()), admin, 200);
       int before = calls.get();
-      ObjectNode request = store.object().put("priority", 43).put("targetId", otherTarget.path("id").asText()).put("requestKey", UUID.randomUUID().toString());
-      request.putArray("resourceIds").add(second.path("id").asText());
-      ObjectNode preview = write("/api/cc-intake/admin/priority/jobs", request, admin, 200);
-      assertEquals("COMPLETED", write("/api/cc-intake/admin/priority/jobs/" + preview.path("id").asText() + "/start", store.object(), admin, 200).path("state").asText());
-      assertEquals(before, calls.get()); assertEquals(1, secondWrites.get()); assertEquals(1, secondLogins.get());
+      ObjectNode refreshed = write("/api/resources/" + second.path("id").asText() + "/usage",
+          store.object().put("requestKey", UUID.randomUUID().toString()), supplier, 200);
+      assertEquals("UPDATED", refreshed.path("state").asText());
+      assertEquals(before, calls.get()); assertEquals(0, secondWrites.get()); assertEquals(1, secondLogins.get());
       assertEquals(10, store.get("resource", first.path("id").asText(), supplier.owner).path("upstreamPriority").asInt());
-      assertEquals(43, store.get("resource", second.path("id").asText(), supplier.owner).path("upstreamPriority").asInt());
-      request.remove("targetId"); request.remove("resourceIds"); request.put("requestKey", UUID.randomUUID().toString()); request.putArray("laneIds").add("native-148");
-      assertEquals("RESOURCE_TARGET_AMBIGUOUS", write("/api/cc-intake/admin/priority/jobs", request, admin, 409).path("code").asText());
+      assertEquals(30, store.get("resource", second.path("id").asText(), supplier.owner).path("upstreamPriority").asInt());
+
     } finally { other.stop(0); }
   }
 
@@ -1472,108 +1281,42 @@ class ResourceIntegrationTest {
   }
 
   @Test
-  void nativeQuotaStatsAndTodayConsumptionSurviveRefreshAndOverview() throws Exception {
-    nativeTarget();
-    Client supplier = supplier(), admin = administrator();
-    AtomicInteger logins = new AtomicInteger(), state = new AtomicInteger(1), weight = new AtomicInteger(10);
-    nativeResponder(logins, state, weight);
-    var original = responder.get();
-    String observed = "2026-11-13T00:57:33.425Z";
-    String reset = "2027-01-01T05:40:00Z";
-    String today = BusinessSupport.today();
-    String logTime = java.time.LocalDate.parse(today).atStartOfDay(java.time.ZoneId.of("Asia/Shanghai"))
-        .plusHours(1).toInstant().toString();
-    responder.set((request, input) -> {
-      if (request.equals("GET /api/admin/oauth-accounts/native-148")) {
-        ObjectNode reply = store.object();
-        reply.putObject("account").put("id", "native-148").put("status", "active")
-            .put("weight", 10).put("health_status", "healthy").put("total_cost", "12.5")
-            .put("access_token", "PRIVATE-DO-NOT-PROJECT");
-        ((ObjectNode) reply.path("account")).putObject("subscription_info").put("plan", "max")
-            .put("checked_at", observed).put("private_field", "PRIVATE-UNMAPPED");
-        ObjectNode stats = reply.putObject("stats");
-        stats.put("claude_utilization_updated_at", observed).put("daily_cost", 999999);
-        ObjectNode utilization = stats.putObject("claude_utilization");
-        utilization.putObject("five_hour").put("utilization", 0).put("resets_at", reset);
-        utilization.putObject("seven_day").put("utilization", 83).put("resets_at", reset);
-        return reply.toString();
-      }
-      if (request.equals("GET /api/admin/request-logs")) {
-        ObjectNode reply = store.object();
-        ArrayNode logs = reply.putArray("logs");
-        for (String[] log : List.of(new String[] {"log-1", "0.113479"}, new String[] {"log-2", "0.096663"}))
-          logs.addObject().put("id", log[0]).put("account_id", "native-148")
-              .put("created_at", logTime).put("request_model", "fixture-model")
-              .put("cost_official_usd", log[1]);
-        reply.putNull("cursor");
-        return reply.toString();
-      }
-      return original.apply(request, input);
-    });
-    ObjectNode local = nativeResource(supplier);
-    String id = local.path("id").asText();
-    write("/api/resources/" + id + "/upstream-account", store.object()
-        .put("targetId", target.path("id").asText()).put("accountId", "native-148").put("version", 0), admin, 200);
-    ObjectNode refreshed = write("/api/resources/" + id + "/usage", store.object()
-        .put("requestKey", UUID.randomUUID().toString()), supplier, 200);
-    assertEquals(0, refreshed.path("resourceData").path("usage").path("fiveHourPercent").asInt(-1));
-    assertEquals(83, refreshed.path("resourceData").path("usage").path("sevenDayPercent").asInt(-1));
-    assertEquals(reset, refreshed.path("resourceData").path("usage").path("fiveHourResetsAt").asText());
-    assertEquals(observed, refreshed.path("resourceData").path("usage").path("fiveHourObservedAt").asText());
-    assertEquals("max", refreshed.path("resourceData").path("usage").path("plan").path("tier").asText());
-    assertEquals("0.210142", refreshed.path("dailyConsumption").path("amount").asText());
-    assertEquals(today, refreshed.path("dailyConsumption").path("businessDate").asText());
-    assertFalse(refreshed.toString().contains("PRIVATE"));
-    assertFalse(refreshed.toString().contains("999999"));
-    ObjectNode batch = gateway.exchange(target, "POST", "/resources/sync", store.object(), "quota-sync");
-    assertEquals(0, batch.path("resources").path(0).path("resourceData").path("usage").path("fiveHourPercent").asInt(-1));
-    assertEquals("0.210142", batch.path("resources").path(0).path("dailyConsumption").path("amount").asText());
-    store.update("resource", id, supplier.owner, store.object().putNull("resourceData").putNull("dailyConsumption"));
-    ObjectNode syncResult = backgroundJobs.sync(store.object().put("type", "CCMAX_STATUS_SYNC")
-        .put("targetId", target.path("id").asText()), UUID.randomUUID().toString());
-    assertEquals(1, syncResult.path("processedCount").asInt());
-    ObjectNode persisted = store.get("resource", id, supplier.owner);
-    assertEquals(83, persisted.path("resourceData").path("usage").path("sevenDayPercent").asInt(-1));
-    assertEquals("0.210142", persisted.path("dailyConsumption").path("amount").asText());
-    assertEquals(0, store.list("bill", supplier.owner).size());
+  void nativeSnapshotQueriesNeverScanRequestLogsOrRefreshBilling() throws Exception {
+    nativeTarget(); Client supplier = supplier(), admin = administrator();
+    nativeResponder(new AtomicInteger(), new AtomicInteger(1), new AtomicInteger(10));
     var healthy = responder.get();
-    AtomicBoolean failRead = new AtomicBoolean(true);
-    AtomicInteger refreshRequests = new AtomicInteger();
+    AtomicInteger logs = new AtomicInteger(), refreshes = new AtomicInteger(), reads = new AtomicInteger();
     responder.set((request, input) -> {
-      if (request.endsWith("/refresh-usage")) refreshRequests.incrementAndGet();
-      if (request.equals("GET /api/admin/request-logs") && failRead.get()) {
-        httpStatus.set(503);
-        return "{\"error\":\"unavailable\"}";
+      if (request.contains("request-logs")) { logs.incrementAndGet(); throw new AssertionError("Unexpected log scan"); }
+      if (request.endsWith("refresh-usage")) { refreshes.incrementAndGet(); throw new AssertionError("Unexpected billing refresh"); }
+      if (request.equals("GET /api/admin/oauth-accounts/native-148")) {
+        reads.incrementAndGet();
+        ObjectNode reply = store.parse(healthy.apply(request, input));
+        ObjectNode stats = reply.putObject("stats");
+        stats.put("claude_utilization_updated_at", "2026-11-13T00:57:33.425Z");
+        stats.putObject("claude_utilization").putObject("five_hour").put("utilization", 83);
+        return reply.toString();
       }
-      httpStatus.set(200);
       return healthy.apply(request, input);
     });
-    long beforeFailure = store.get("resource", id, supplier.owner).path("version").asLong();
+    ObjectNode local = nativeResource(supplier); String rid = local.path("id").asText();
+    write("/api/resources/" + rid + "/upstream-account", store.object().put("targetId", target.path("id").asText())
+        .put("accountId", "native-148").put("version", 0), admin, 200);
     ObjectNode request = store.object().put("requestKey", UUID.randomUUID().toString());
-    write("/api/resources/" + id + "/usage", request, supplier, 503);
-    assertEquals(beforeFailure, store.get("resource", id, supplier.owner).path("version").asLong());
-    ObjectNode replay = write("/api/resources/" + id + "/usage", request, supplier, 200);
-    assertEquals("UNKNOWN", replay.path("state").asText());
-    assertEquals(1, refreshRequests.get());
-    failRead.set(false);
-    ObjectNode reconciled = write("/api/resource-lifecycle-jobs/" + replay.path("operationId").asText()
-        + "/reconcile", store.object(), supplier, 200);
-    assertEquals("UPDATED", reconciled.path("state").asText());
-    assertEquals(1, refreshRequests.get());
-    assertEquals("0.210142", store.get("resource", id, supplier.owner).path("dailyConsumption").path("amount").asText());
-    store.update("resource", id, supplier.owner, store.object().put("state", "DELIVERED").put("dispatchState", "SUCCESS"));
-    mvc.perform(get("/api/resources/overview").session(supplier.session).param("resourceType", "CCMAX"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.fiveHour.reportedCount").value(1))
-        .andExpect(jsonPath("$.fiveHour.averageUsedPercent").value(0))
-        .andExpect(jsonPath("$.fiveHour.missingCount").value(0))
-        .andExpect(jsonPath("$.sevenDay.averageUsedPercent").value(83))
-        .andExpect(jsonPath("$.dailyConsumption.amount").value("0.210142"))
-        .andExpect(jsonPath("$.dailyConsumption.reportedResourceCount").value(1));
+    ObjectNode observed = write("/api/resources/" + rid + "/usage", request, supplier, 200);
+    assertEquals(83, observed.path("resourceData").path("usage").path("fiveHourPercent").asInt());
+    assertFalse(observed.has("dailyConsumption"));
+    int before = reads.get();
+    write("/api/resources/" + rid + "/usage", request, supplier, 200);
+    assertEquals(before, reads.get());
+    backgroundJobs.sync(store.object().put("type", "CCMAX_STATUS_SYNC").put("targetId", target.path("id").asText()), "lightweight-check");
+    assertEquals(83, store.get("resource", rid, supplier.owner).path("resourceData").path("usage").path("fiveHourPercent").asInt());
+    assertEquals(0, logs.get()); assertEquals(0, refreshes.get());
+    assertTrue(store.list("bill", supplier.owner).isEmpty());
   }
 
   @Test
-  void nativeQuotaIgnoresInvalidOptionalTelemetryAndKeepsConfirmedZeroDailyUsage() throws Exception {
+  void nativeQuotaIgnoresInvalidOptionalTelemetryWithoutInventingDailyUsage() throws Exception {
     nativeTarget();
     Client supplier = supplier(), admin = administrator();
     nativeResponder(new AtomicInteger(), new AtomicInteger(1), new AtomicInteger(10));
@@ -1597,7 +1340,7 @@ class ResourceIntegrationTest {
     ObjectNode result = write("/api/resources/" + id + "/usage", store.object()
         .put("requestKey", UUID.randomUUID().toString()), supplier, 200);
     assertFalse(result.path("resourceData").has("usage"));
-    assertEquals("0", result.path("dailyConsumption").path("amount").asText());
+    assertFalse(result.has("dailyConsumption"));
     assertEquals("UPDATED", result.path("state").asText());
   }
 
@@ -1639,23 +1382,23 @@ class ResourceIntegrationTest {
     assertEquals(1, response.path("processedCount").asInt());
     assertEquals(initialVersion + 1, saved.path("version").asLong());
     assertEquals("ACTIVE", saved.path("operationalState").asText());
-    assertEquals(12, saved.path("resourceData").path("usage").path("fiveHourPercent").asInt());
-    assertEquals(10, saved.path("upstreamPriority").asInt());
-    assertEquals("0", saved.path("dailyConsumption").path("amount").asText());
+    assertFalse(saved.path("resourceData").has("usage"));
+    assertFalse(saved.has("upstreamPriority"));
+    assertFalse(saved.has("dailyConsumption"));
     assertFalse(saved.path("statusSyncedAt").asText().isBlank());
     assertEquals(archivedVersion, store.get("resource", archived.path("id").asText(), supplier.owner).path("version").asLong());
     assertFalse(response.toString().contains("PRIVATE"));
     assertEquals(0, store.list("bill", supplier.owner).size());
     mvc.perform(get("/api/resources/" + rid).session(supplier.session))
-        .andExpect(status().isOk()).andExpect(jsonPath("$.resourceData.usage.fiveHourPercent").value(12));
+        .andExpect(status().isOk()).andExpect(jsonPath("$.resourceData.usage").doesNotExist());
     failLogs.set(true);
-    write("/api/resource-targets/" + tid + "/sync", store.object(), admin, 503);
-    assertEquals(saved.path("version"), store.get("resource", rid, supplier.owner).path("version"));
+    write("/api/resource-targets/" + tid + "/sync", store.object(), admin, 200);
+    long latestVersion = store.get("resource", rid, supplier.owner).path("version").asLong();
     int beforeDisable = calls.get();
     store.update("resource-target", tid, "GLOBAL", store.object().put("enabled", false));
     write("/api/resource-targets/" + tid + "/sync", store.object(), admin, 503);
     assertEquals(beforeDisable, calls.get());
-    assertEquals(saved.path("version"), store.get("resource", rid, supplier.owner).path("version"));
+    assertEquals(latestVersion, store.get("resource", rid, supplier.owner).path("version").asLong());
   }
 
   @Test
@@ -1829,6 +1572,11 @@ class ResourceIntegrationTest {
     var original=responder.get(); AtomicInteger logs=new AtomicInteger();
     responder.set((request,body)->{
       if (request.equals("GET /api/admin/request-logs")) { logs.incrementAndGet();throw new AssertionError("Light status sync must not fetch request logs"); }
+      if (request.equals("GET /api/admin/oauth-accounts/native-148")) {
+        ObjectNode result = store.parse(original.apply(request, body));
+        ((ObjectNode) result.path("account")).put("total_cost", "invalid-unrelated-cost");
+        return result.toString();
+      }
       return original.apply(request,body);
     });
     ObjectNode result=backgroundJobs.sync(store.object().put("type","CCMAX_STATUS_SYNC")
@@ -1867,24 +1615,13 @@ class ResourceIntegrationTest {
   }
 
   @Test
-  void nativeDailySyncProducesScopedPendingObservationsWithoutCredentials() throws Exception {
-    nativeTarget(); Client supplier = supplier();
-    ObjectNode local = nativeResource(supplier);
-    local = store.update("resource", local.path("id").asText(), supplier.owner, store.object()
-        .put("targetId", target.path("id").asText()).put("upstreamAccountId", "native-148").put("laneId", "native-148"));
-    nativeResponder(new AtomicInteger(), new AtomicInteger(1), new AtomicInteger(10));
-    java.util.function.BiFunction<String,JsonNode,String> original = responder.get();
-    responder.set((request,body) -> {
-      if (request.equals("GET /api/admin/request-logs")) return "{\"logs\":[{\"id\":\"log-1\",\"created_at\":\"2026-11-10T01:00:00Z\",\"account_id\":\"native-148\",\"request_model\":\"fixture-model\",\"cost_official_usd\":0.25,\"session_key\":\"PRIVATE\"},{\"id\":\"other\",\"account_id\":\"unmapped\"}],\"cursor\":null}";
-      return original.apply(request,body);
-    });
-    ObjectNode body = store.object().put("businessDate", "2026-11-10");
-    body.putArray("resources").add(store.object().put("resourceId", local.path("id").asText()).put("supplierId", supplier.owner));
-    ObjectNode observations = gateway.exchange(target, "POST", "/jobs/ccmax/daily-sync", body, "daily");
-    assertEquals(1, observations.path("rows").size());
-    assertEquals("0.25", observations.path("rows").get(0).path("originalAmount").asText());
-    assertEquals(supplier.owner, observations.path("rows").get(0).path("supplierId").asText());
-    assertFalse(observations.toString().contains("PRIVATE"));
+  void retiredDailyCollectionNeverReadsLogsOrCreatesFinancialObservations() throws Exception {
+    nativeTarget(); int before = calls.get();
+    ApiException error = assertThrows(ApiException.class, () -> gateway.exchange(target, "POST",
+        "/jobs/ccmax/daily-sync", store.object().put("businessDate", "2026-11-10"), "retired-daily"));
+    assertEquals("UPSTREAM_FEATURE_RETIRED", error.code);
+    assertEquals(before, calls.get());
+    assertTrue(store.list("input", null).isEmpty());
   }
 
   @Test
@@ -1935,20 +1672,27 @@ class ResourceIntegrationTest {
     store.update("resource",local.path("id").asText(),supplier.owner,store.object()
         .put("targetId",target.path("id").asText()).put("upstreamAccountId","native-148").put("laneId","native-148"));
     nativeResponder(new AtomicInteger(),new AtomicInteger(1),new AtomicInteger(10));
-    var previous = responder.get(); AtomicInteger refreshes = new AtomicInteger();
+    var previous = responder.get(); AtomicInteger reads = new AtomicInteger();
+    AtomicBoolean unavailable = new AtomicBoolean(true);
     responder.set((request,body)->{
-      if(request.endsWith("/refresh-usage")){refreshes.incrementAndGet();httpStatus.set(504);return "{}";}
+      if(request.equals("GET /api/admin/oauth-accounts/native-148")) {
+        reads.incrementAndGet();
+        if (unavailable.get()) { httpStatus.set(504); return "{}"; }
+      }
+      if (request.endsWith("/refresh-usage") || request.contains("request-logs"))
+        throw new AssertionError("Snapshot query attempted gateway collection");
       httpStatus.set(200);return previous.apply(request,body);
     });
     ObjectNode payload = store.object().put("requestKey",UUID.randomUUID().toString());
     write("/api/resources/"+local.path("id").asText()+"/usage",payload,supplier,504);
     ObjectNode repeated = write("/api/resources/"+local.path("id").asText()+"/usage",payload,supplier,200);
     assertEquals("UNKNOWN",repeated.path("state").asText());
-    assertEquals(1,refreshes.get());
+    assertEquals(1,reads.get());
+    unavailable.set(false);
     ObjectNode operation = store.list("resource-operation",supplier.owner).get(0);
     ObjectNode reconciled = write("/api/resource-lifecycle-jobs/"+operation.path("id").asText()+"/reconcile",store.object(),supplier,200);
     assertEquals("UPDATED",reconciled.path("state").asText());
-    assertEquals(1,refreshes.get());
+    assertEquals(2,reads.get());
   }
 
   @Test

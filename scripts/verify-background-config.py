@@ -3,7 +3,8 @@
 
 Build backend first, run this script, then use the printed browser URL with the
 credentials in the private fixture file. Signal completion by writing
-browser-done.json in the printed output directory. No real upstream is called.
+browser-done.json in the printed output directory. No real upstream is called. Pass --upstream to seed connection and account snapshots
+for the streamlined upstream pages; use .invalid addresses and do not run upstream actions.
 """
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -16,6 +17,7 @@ import os
 import secrets
 import socket
 import subprocess
+import sys
 import time
 import uuid
 
@@ -30,6 +32,7 @@ def port():
 
 
 def main():
+    upstream_scope = "--upstream" in sys.argv
     db = "hispread_job_config_" + uuid.uuid4().hex[:12]
     out = ROOT / ".run" / db
     out.mkdir(parents=True)
@@ -126,6 +129,27 @@ def main():
                     "projectName":"Delivery QA project","state":"APPROVED","currency":"USD","multiplier":"0.25",
                     "effectiveFrom":today,"effectiveTo":today}),
             ]
+            if upstream_scope:
+                rows += [
+                    ("resource-target", "GLOBAL", {"id":"qa-native-target","name":"QA CCMAX","protocol":"CCMAX_NATIVE",
+                        "baseUrl":"https://ccmax.example.invalid","enabled":True,"adminUsername":"fixture-admin",
+                        "adminPassword":"LOCAL-FIXTURE-PASSWORD","defaultTarget":True,"timeoutMs":60000}),
+                    ("resource-target", "GLOBAL", {"id":"qa-newapi-target","name":"QA New API","protocol":"NEWAPI",
+                        "baseUrl":"https://newapi.example.invalid","enabled":True,"newApiUserId":"2","apiKey":"LOCAL-FIXTURE-KEY"}),
+                    ("resource-target", "GLOBAL", {"id":"qa-custom-target","name":"QA compatibility","protocol":"CUSTOM",
+                        "baseUrl":"https://custom.example.invalid","enabled":False,"apiKey":"LOCAL-COMPATIBILITY-KEY","upstreamPathPrefix":"/legacy","timeoutMs":25000}),
+                    ("resource", "delivery-qa", {"id":"qa-native-account","supplierId":"delivery-qa","name":"QA existing CCMAX",
+                        "resourceType":"CCMAX","state":"DELIVERED","dispatchState":"SUCCESS","upstreamProtocol":"CCMAX_NATIVE",
+                        "targetId":"qa-native-target","upstreamAccountId":"existing-native","laneId":"existing-native",
+                        "operationalState":"ACTIVE","projectId":"delivery-project","upstreamPriority":50}),
+                    ("resource", "delivery-qa", {"id":"qa-channel","supplierId":"delivery-qa","name":"QA existing New API",
+                        "resourceType":"NEWAPI_CHANNEL","state":"DRAFT","dispatchState":"NOT_SUBMITTED","upstreamProtocol":"NEWAPI",
+                        "targetId":"qa-newapi-target","upstreamChannelId":"148","operationalState":"ACTIVE","projectId":"delivery-project","upstreamPriority":50}),
+                    ("resource-operation", "GLOBAL", {"id":"qa-legacy-priority","supplierId":"GLOBAL","type":"PRIORITY",
+                        "protocol":"CCMAX_NATIVE","state":"COMPLETED","total":1,"result":{"items":[{
+                            "resourceId":"qa-native-account","resourceName":"QA existing CCMAX","priority":50,"state":"SUCCESS"}],
+                            "counts":{"SUCCESS":1}}}),
+                ]
             for kind, owner, data in rows:
                 data.update(version=0,createdAt=datetime.now(timezone.utc).isoformat())
                 literal=lambda value: "'"+str(value).replace("'","''")+"'"
@@ -141,7 +165,7 @@ def main():
                 json.dump({"url": frontend_origin, "username": "isolated_config_admin",
                            "loginSecret": login_secret}, file)
             print(json.dumps({"ready": True, "url": frontend_origin,
-                              "outputDirectory": str(out), "typedTaskChecks": checks}), flush=True)
+                              "outputDirectory": str(out), "upstreamScope":upstream_scope, "typedTaskChecks": checks}), flush=True)
             deadline = time.monotonic() + 900
             while not done.exists():
                 if time.monotonic() > deadline or backend.poll() is not None or frontend.poll() is not None:
@@ -153,8 +177,16 @@ def main():
             assert code == 200 and sources == []
             assert sql("select count(*) from hub_entity where kind in ('scheduled-run','input','settlement','payment','notification')") == "0"
             assert sql("select count(*) from hub_entity where kind='quote'") == "1"
+            if upstream_scope:
+                assert sql("select count(*) from hub_entity where kind='resource-target'") == "4"
+                assert sql("select data->>'apiKey' from hub_entity where kind='resource-target' and id='qa-newapi-target'") == "LOCAL-FIXTURE-KEY"
+                assert sql("select data->>'adminPassword' from hub_entity where kind='resource-target' and id='qa-native-target'") == "LOCAL-FIXTURE-PASSWORD"
+                assert sql("select data->>'upstreamPathPrefix' from hub_entity where kind='resource-target' and id='qa-custom-target'") == "/legacy"
+                assert sql("select data->>'timeoutMs' from hub_entity where kind='resource-target' and id='qa-custom-target'") == "25000"
+                assert sql("select count(*) from hub_entity where kind in ('native-oauth','resource-operation') and id not in ('delivery-receipt','qa-legacy-priority')") == "0"
             result = {"at":datetime.now(timezone.utc).isoformat(),"allPassed":True,
                       "typedTaskChecks":checks,"browser":browser,"noExecutionOrFinancialWrites":True,
+                      "upstreamScope":upstream_scope,
                       "isolatedDatabaseDeletedOnExit":True}
             (out / "result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2)+"\n")
             print(json.dumps(result, ensure_ascii=False, indent=2), flush=True)
