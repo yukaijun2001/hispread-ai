@@ -35,6 +35,108 @@ class MonitoringContractIntegrationTest {
   @Autowired MockMvc mvc;
   @Autowired ObjectMapper json;
   @Autowired MonitoringService monitoring;
+  @Autowired ResourceIntegrationGateway gateway;
+
+  private MockHttpSession admin() {
+    String id = UUID.randomUUID().toString();
+    ObjectNode user = s.object().put("id", id).put("username", "monitor_" + id)
+        .put("role", "ADMIN").putNull("supplierId").put("version", 0);
+    user.set("permissions", a.allPermissions());
+    a.createUser(user, "MonitorTest@123");
+    MockHttpSession session = new MockHttpSession();
+    session.setAttribute("uid", id);
+    session.setAttribute("sv", 0L);
+    return session;
+  }
+
+  private String csrf(MockHttpSession session) throws Exception {
+    return json.readTree(mvc.perform(get("/api/auth/csrf").session(session))
+        .andExpect(status().isOk()).andReturn().getResponse().getContentAsString())
+        .path("token").asText();
+  }
+
+  @Test
+  void httpMonitoringRequiresExplicitOptInAndPersistsItThroughEdits() throws Exception {
+    MockHttpSession session = admin();
+    String csrf = csrf(session);
+    boolean previous = gateway.allowPrivateTargets;
+    gateway.allowPrivateTargets = false;
+    try {
+      ObjectNode body = s.object().put("name", "Stopped HTTP configuration")
+          .put("category", "ANTHROPIC")
+          .put("endpoint", "http://1.1.1.1/metrics").put("authType", "NONE")
+          .put("rpmPath", "data.rpm").put("intervalSeconds", 60)
+          .put("enabled", false).put("includeInTotal", false).put("supplierVisible", false);
+      int before = s.list("monitoring-source", null).size();
+      mvc.perform(post("/api/workbench-monitoring/sources").session(session)
+          .header("X-CSRF-TOKEN", csrf).contentType("application/json")
+          .content(body.toString())).andExpect(status().isBadRequest());
+      assertEquals(before, s.list("monitoring-source", null).size());
+
+      body.put("allowHttp", true);
+      body.put("endpoint", "http://1.0.0.1/metrics");
+      JsonNode created = json.readTree(mvc.perform(post("/api/workbench-monitoring/sources")
+          .session(session).header("X-CSRF-TOKEN", csrf).contentType("application/json")
+          .content(body.toString())).andExpect(status().isOk())
+          .andReturn().getResponse().getContentAsString());
+      String id = created.path("id").asText();
+      assertTrue(created.path("allowHttp").asBoolean());
+      assertFalse(created.path("enabled").asBoolean());
+      assertFalse(created.has("queriedAt"));
+      JsonNode edited = json.readTree(mvc.perform(put("/api/workbench-monitoring/sources/" + id)
+          .session(session).header("X-CSRF-TOKEN", csrf).contentType("application/json")
+          .content(s.object().put("name", "Renamed HTTP configuration")
+              .put("version", 0).toString())).andExpect(status().isOk())
+          .andReturn().getResponse().getContentAsString());
+      assertTrue(edited.path("allowHttp").asBoolean());
+      assertEquals(1, edited.path("version").asLong());
+      mvc.perform(put("/api/workbench-monitoring/sources/" + id).session(session)
+          .header("X-CSRF-TOKEN", csrf).contentType("application/json")
+          .content(s.object().put("allowHttp", false).put("version", 1).toString()))
+          .andExpect(status().isBadRequest());
+      assertEquals(1, s.get("monitoring-source", id, null).path("version").asLong());
+      assertTrue(s.get("monitoring-source", id, null).path("allowHttp").asBoolean());
+      mvc.perform(put("/api/workbench-monitoring/sources/" + id).session(session)
+          .header("X-CSRF-TOKEN", csrf).contentType("application/json")
+          .content(s.object().put("endpoint", "http://1.0.0.2/metrics")
+              .put("version", 1).toString())).andExpect(status().isBadRequest());
+      assertEquals(1, s.get("monitoring-source", id, null).path("version").asLong());
+      assertEquals("http://1.0.0.1/metrics", s.get("monitoring-source", id, null).path("endpoint").asText());
+      assertTrue(s.get("monitoring-source", id, null).path("allowHttp").asBoolean());
+    } finally {
+      gateway.allowPrivateTargets = previous;
+    }
+  }
+
+  @Test
+  void monitoringConfigurationRejectsCoercedFlagsAndNumbersWithoutWriting() throws Exception {
+    MockHttpSession session = admin();
+    String csrf = csrf(session);
+    ObjectNode base = s.object().put("name", "Typed monitoring configuration")
+        .put("endpoint", "https://1.1.1.1/metrics").put("authType", "NONE")
+        .put("rpmPath", "rpm").put("intervalSeconds", 60).put("enabled", false);
+    int before = s.list("monitoring-source", null).size();
+    for (ObjectNode patch : List.of(
+        s.object().put("intervalSeconds", 60.5),
+        s.object().put("intervalSeconds", "60"),
+        s.object().put("intervalSeconds", 4294967356L),
+        s.object().putNull("intervalSeconds"),
+        s.object().put("sortOrder", 1.5),
+        s.object().put("sortOrder", "1"),
+        s.object().put("sortOrder", -1),
+        s.object().put("sortOrder", 4294967296L),
+        s.object().put("allowHttp", "true"),
+        s.object().put("enabled", "false"),
+        s.object().put("supplierVisible", "true"),
+        s.object().put("includeInTotal", 1))) {
+      ObjectNode body = base.deepCopy();
+      body.setAll(patch);
+      mvc.perform(post("/api/workbench-monitoring/sources").session(session)
+          .header("X-CSRF-TOKEN", csrf).contentType("application/json")
+          .content(body.toString())).andExpect(status().isBadRequest());
+      assertEquals(before, s.list("monitoring-source", null).size(), patch.toString());
+    }
+  }
 
   @Test
   void configuredMonitoringActuallyFetchesNestedFieldsWithoutReturningToken() throws Exception {
