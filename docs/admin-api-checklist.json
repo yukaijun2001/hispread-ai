@@ -616,6 +616,16 @@
     {
       "route": "resource-targets",
       "module": "resources/resource-targets__ResourceTargets.js",
+      "method": "DELETE",
+      "path": "/api/resource-targets/{id}?version={version}",
+      "responseShape": "object",
+      "requiredFields": ["deleted"],
+      "when": "confirmed delete",
+      "notes": "Rejects the target while any non-deleted resource still references it."
+    },
+    {
+      "route": "resource-targets",
+      "module": "resources/resource-targets__ResourceTargets.js",
       "method": "GET",
       "path": "/api/workbench-monitoring/sources",
       "responseShape": "array",
@@ -834,6 +844,16 @@
       ],
       "when": "row opened",
       "notes": ""
+    },
+    {
+      "route": "audits",
+      "module": "system/Audits.js",
+      "method": "DELETE",
+      "path": "/api/system/audits",
+      "responseShape": "object",
+      "requiredFields": ["deleted"],
+      "when": "confirmed clear",
+      "notes": "Clears every audit record. The request itself remains as the next audit entry."
     },
     {
       "route": "notice-admin",

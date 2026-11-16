@@ -449,6 +449,14 @@ public class SystemAdminController {
     return s.get("audit", id, null);
   }
 
+  @DeleteMapping("/system/audits")
+  @Transactional
+  public Object clearAudits(HttpServletRequest r) {
+    guard(r, "audit.read");
+    int removed = s.jdbc.update("delete from hub_entity where kind='audit'");
+    return Map.of("deleted", removed);
+  }
+
   @GetMapping("/system/scheduled-tasks")
   public Object tasks(HttpServletRequest r) {
     guard(r, "system.settings");

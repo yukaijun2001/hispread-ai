@@ -276,4 +276,60 @@ class SystemSupplierContractTest {
         s.get("resource-target", t.path("id").asText(), null).path("apiKey").asText());
     write("POST", "/api/payout-providers/OKX_USDT/test", s.object(), c, 410);
   }
+
+  @Test
+  void unusedResourceTargetCanBeDeletedButALinkedTargetIsKept() throws Exception {
+    C c = admin();
+    ObjectNode target =
+        write(
+            "POST",
+            "/api/resource-targets",
+            s.object()
+                .put("name", "Disposable")
+                .put("protocol", "NEWAPI")
+                .put("newApiUserId", "2")
+                .put("baseUrl", "https://example.com")
+                .put("apiKey", "server-only-key")
+                .put("enabled", false),
+            c,
+            200);
+    String id = target.path("id").asText();
+    s.create("native-oauth", "GLOBAL", s.object().put("targetId", id).put("state", "PENDING"));
+    mvc.perform(delete("/api/resource-targets/" + id).param("version", "0").session(c.session)
+        .header("X-CSRF-TOKEN", c.csrf)).andExpect(status().isOk());
+    assertThrows(ApiException.class, () -> s.get("resource-target", id, null));
+    assertTrue(s.list("native-oauth", null).stream().noneMatch(row -> id.equals(row.path("targetId").asText())));
+
+    ObjectNode kept =
+        write(
+            "POST",
+            "/api/resource-targets",
+            s.object()
+                .put("name", "In use")
+                .put("protocol", "NEWAPI")
+                .put("newApiUserId", "3")
+                .put("baseUrl", "https://example.com")
+                .put("apiKey", "another-key")
+                .put("enabled", true),
+            c,
+            200);
+    String keptId = kept.path("id").asText();
+    String owner = "target-owner-" + UUID.randomUUID();
+    s.create("supplier", owner, s.object().put("id", owner).put("enabled", true).put("state", "APPROVED"));
+    s.create("resource", owner, s.object().put("supplierId", owner).put("targetId", keptId).put("deleted", false));
+    mvc.perform(delete("/api/resource-targets/" + keptId).param("version", "0").session(c.session)
+        .header("X-CSRF-TOKEN", c.csrf)).andExpect(status().isConflict());
+    assertEquals(keptId, s.get("resource-target", keptId, null).path("id").asText());
+  }
+
+  @Test
+  void clearingAuditsRemovesHistoryAndKeepsTheClearAction() throws Exception {
+    C c = admin();
+    s.create("audit", "GLOBAL", s.object().put("action", "OLD").put("outcome", "SUCCESS"));
+    mvc.perform(delete("/api/system/audits").session(c.session).header("X-CSRF-TOKEN", c.csrf))
+        .andExpect(status().isOk());
+    assertFalse(s.list("audit", null).stream().anyMatch(row -> row.path("action").asText().equals("OLD")));
+    assertTrue(s.list("audit", null).stream()
+        .anyMatch(row -> row.path("action").asText().contains("DELETE /api/system/audits")));
+  }
 }

@@ -467,6 +467,26 @@ public class PlatformConfigController {
             configInput(body, s.get("resource-target", id, null), false)));
   }
 
+  @DeleteMapping("/resource-targets/{id}")
+  @Transactional
+  public Object deleteTarget(
+      @PathVariable String id, @RequestParam long version, HttpServletRequest r) {
+    guard(r, "resource.config.write");
+    ObjectNode target = s.get("resource-target", id, null);
+    if (target.path("version").asLong() != version)
+      throw new ApiException(409, "接入配置已变化，请刷新后重试");
+    Integer linked =
+        s.jdbc.queryForObject(
+            "select count(*) from hub_entity where kind='resource'"
+                + " and coalesce(data->>'deleted','') <> 'true' and data->>'targetId'=?",
+            Integer.class,
+            id);
+    if (linked != null && linked > 0) throw new ApiException(409, "仍有资源使用此接入，不能删除");
+    s.jdbc.update("delete from hub_entity where kind='native-oauth' and data->>'targetId'= ?", id);
+    s.delete("resource-target", id, null);
+    return Map.of("deleted", true);
+  }
+
   @PostMapping({
     "/resource-targets/{id}/test",
     "/resource-targets/{id}/sync",
