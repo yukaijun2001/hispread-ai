@@ -365,8 +365,7 @@ public class SystemAdminController {
             .put("initialPasswordPrefix", "")
             .put("forceInitialChange", true)
             .put("loginMaxFailures", 10)
-            .put("loginLockMinutes", 15)
-            .put("allowSamePersonReview", false);
+            .put("loginLockMinutes", 15);
     d.set("policy", policy);
     return singleton("settings", d);
   }
@@ -374,7 +373,13 @@ public class SystemAdminController {
   @GetMapping("/system/settings")
   public Object settings(HttpServletRequest r) {
     guard(r, "system.settings");
-    return settings();
+    return publicSettings(settings());
+  }
+
+  private ObjectNode publicSettings(ObjectNode stored) {
+    ObjectNode out = stored.deepCopy();
+    if (out.path("policy").isObject()) ((ObjectNode) out.path("policy")).remove("allowSamePersonReview");
+    return out;
   }
 
   @PutMapping("/system/settings")
@@ -386,8 +391,21 @@ public class SystemAdminController {
           || value.asInt() < 1 || value.asInt() > (field.equals("ccmaxIntakeConcurrencyLimit") ? 1000 : 300)))
         throw new ApiException(400, "上号并发与超时须为范围内的整数");
     }
-    JsonNode policy = body.path("policy");
-    if (policy.isObject()) {
+    ObjectNode current = settings(), patch = body.deepCopy();
+    if (body.has("policy")) {
+      if (!body.path("policy").isObject()) throw new ApiException(400, "安全策略须为对象");
+      JsonNode submitted = body.path("policy");
+      if (submitted.has("allowSamePersonReview")) {
+        if (!submitted.path("allowSamePersonReview").isBoolean())
+          throw new ApiException(400, "审核策略值须为布尔值");
+        if (submitted.path("allowSamePersonReview").asBoolean())
+          throw new ApiException(410, "审核人与提交人必须独立，此规则不可配置", "REVIEW_POLICY_FIXED");
+      }
+      ObjectNode policy = current.path("policy").isObject()
+          ? (ObjectNode) current.path("policy").deepCopy() : s.object();
+      submitted.fields().forEachRemaining(field -> {
+        if (!field.getKey().equals("allowSamePersonReview")) policy.set(field.getKey(), field.getValue());
+      });
       int min = policy.path("passwordMinLength").asInt(8),
           max = policy.path("passwordMaxLength").asInt(64);
       if (min < 8
@@ -398,8 +416,9 @@ public class SystemAdminController {
           || policy.path("loginMaxFailures").asInt(10) < 3
           || policy.path("loginLockMinutes").asInt(15) < 1)
         throw new ApiException(400, "密码或会话策略超出范围");
+      patch.set("policy", policy);
     }
-    return s.update("settings", text(settings(), "id"), null, body);
+    return publicSettings(s.update("settings", text(current, "id"), null, patch));
   }
 
   @GetMapping("/system/audit-actions")

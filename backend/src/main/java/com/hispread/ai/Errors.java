@@ -22,6 +22,7 @@ public class Errors {
     body.put("status", e.status);
     body.put("traceId", trace());
     if (e.code != null) body.put("code", e.code);
+    if (e.operationId != null) body.put("operationId", e.operationId);
     return ResponseEntity.status(e.status).body(body);
   }
 

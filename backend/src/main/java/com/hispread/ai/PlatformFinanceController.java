@@ -124,6 +124,10 @@ public class PlatformFinanceController {
               .findFirst()
               .orElse(null);
       if (repeated != null) {
+        boolean existingDirect = eq(repeated, "pricingType", "DIRECT")
+            || eq(repeated.path("quoteSnapshot"), "pricingType", "DIRECT");
+        if (direct != existingDirect)
+          throw new ApiException(409, "来源单号已用于不同计价方式，请核对原记录或使用新来源单号");
         for (String field :
             List.of(
                 "periodStart",
@@ -980,9 +984,23 @@ public class PlatformFinanceController {
           "sourceRef",
           "currency",
           "originalAmount",
-          "calculatedPayable");
+          "confirmedPayable",
+          "reviewStatusLabel",
+          "settlementStatusLabel",
+          "pendingCalculatedPayable");
   private static final List<String> EXPORT_HEADERS =
-      List.of("账务日期", "供应商", "项目", "来源单号", "币种", "原始金额", "应付金额");
+      List.of("账务日期", "供应商", "项目", "来源单号", "币种", "原始金额", "已确认应付", "核对状态", "结算状态", "待核对计算金额");
+
+  private ObjectNode exportRow(ObjectNode source) {
+    ObjectNode row = source.deepCopy();
+    boolean pending = eq(row, "reviewStatus", "PENDING") || eq(row, "state", "PENDING");
+    row.put("confirmedPayable", pending ? "0" : text(row, "calculatedPayable"))
+        .put("pendingCalculatedPayable", pending ? text(row, "calculatedPayable") : "0")
+        .put("reviewStatusLabel", pending ? "待核对" : "已确认")
+        .put("settlementStatusLabel", pending ? "待核对"
+            : eq(row, "state", "AVAILABLE") ? "待结算" : "已纳入结算");
+    return row;
+  }
 
   private Map<String, String> filter(JsonNode value) {
     Map<String, String> result = new LinkedHashMap<>();
@@ -995,8 +1013,8 @@ public class PlatformFinanceController {
     platform(req, "usage.read");
     List<ObjectNode> rows =
         store.list("export", auth.userId(req)).stream()
-            .filter(x -> b.match(x, query, "type", "type") && b.match(x, query, "state", "state"))
             .map(this::publicExport)
+            .filter(x -> b.match(x, query, "type", "type") && b.match(x, query, "state", "state"))
             .toList();
     ObjectNode page = b.page(rows, query);
     page.put("activeCount", 0);
@@ -1007,6 +1025,8 @@ public class PlatformFinanceController {
     ObjectNode out = data.deepCopy();
     out.remove("contentBase64");
     out.remove("previewRows");
+    if (eq(out, "state", "COMPLETED") && !text(out, "expiresAt").isBlank()
+        && Instant.parse(text(out, "expiresAt")).isBefore(Instant.now())) out.put("state", "EXPIRED");
     return out;
   }
 
@@ -1041,6 +1061,8 @@ public class PlatformFinanceController {
         || !Set.of("DETAIL", "SUMMARY", "SUPPLIER").contains(text(body, "type")))
       throw new ApiException(400, "无效的导出类型或格式");
     List<ObjectNode> rows = dailyRows(filter(body.path("filter")), req);
+    int sourceCount = rows.size();
+    ObjectNode snapshotTotals = aggregate(rows);
     if (!eq(body, "type", "DETAIL")) {
       Map<String, List<ObjectNode>> grouped = new LinkedHashMap<>();
       for (ObjectNode r : rows) {
@@ -1056,7 +1078,11 @@ public class PlatformFinanceController {
                 + ":"
                 + text(r, "settlementMultiplier")
                 + ":"
-                + text(r, "settlementUnitPrice");
+                + text(r, "settlementUnitPrice")
+                + ":"
+                + text(r, "reviewStatus")
+                + ":"
+                + text(r, "state");
         grouped.computeIfAbsent(group, k -> new ArrayList<>()).add(r);
       }
       List<ObjectNode> summaryRows = new ArrayList<>();
@@ -1080,7 +1106,8 @@ public class PlatformFinanceController {
       rows = summaryRows;
     }
     ArrayNode values = store.json.createArrayNode();
-    for (ObjectNode row : rows) {
+    for (ObjectNode source : rows) {
+      ObjectNode row = exportRow(source);
       ArrayNode record = values.addArray();
       for (String f : EXPORT_FIELDS) record.add(text(row, f));
     }
@@ -1091,7 +1118,7 @@ public class PlatformFinanceController {
     String now = Instant.now().toString();
     data.put("requestFingerprint", exportFingerprint)
         .put("state", "COMPLETED")
-        .put("sourceCount", rows.size())
+        .put("sourceCount", sourceCount)
         .put("resultCount", rows.size())
         .put("processedCount", rows.size())
         .put("snapshotAt", now)
@@ -1100,7 +1127,7 @@ public class PlatformFinanceController {
         .put("contentBase64", Base64.getEncoder().encodeToString(bytes));
     data.set("previewRows", values);
     data.set("headers", b.arr(EXPORT_HEADERS));
-    data.set("snapshotTotals", aggregate(rows));
+    data.set("snapshotTotals", snapshotTotals);
     ObjectNode labels =
         b.obj()
             .put("supplier", text(body.path("filter"), "supplier"))
@@ -1122,7 +1149,7 @@ public class PlatformFinanceController {
     platform(req, "usage.read");
     ObjectNode data = store.get("export", id, auth.userId(req)),
         out = b.obj().put("total", data.path("resultCount").asInt());
-    out.set("headers", b.arr(EXPORT_HEADERS));
+    out.set("headers", data.has("headers") ? data.path("headers") : b.arr(EXPORT_HEADERS));
     ArrayNode rows = out.putArray("rows");
     int index = 0;
     for (JsonNode row : data.path("previewRows")) {

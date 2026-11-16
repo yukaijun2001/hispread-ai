@@ -450,6 +450,11 @@ public class ResourcesController {
     return b.page(rows, q);
   }
 
+  @GetMapping("/resource-lifecycle-jobs/by-request/{requestKey}")
+  public ObjectNode lifecycleByRequest(@PathVariable String requestKey, HttpServletRequest req) {
+    return operations.lifecycleByRequest(requestKey, req);
+  }
+
   @GetMapping({"/resource-lifecycle-jobs/{id}", "/resource-proxy-replacements/{id}"})
   public ObjectNode operationDetail(@PathVariable String id, HttpServletRequest req) {
     auth.require(req, "resource.read");

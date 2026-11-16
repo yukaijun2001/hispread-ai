@@ -211,6 +211,121 @@ class FinanceContractIntegrationTest {
   }
 
   @Test
+  void exportKeepsPendingAndConfirmedAmountsSeparateRegardlessOfSourceOrder() throws Exception {
+    Client c = admin();
+    for (boolean pendingFirst : List.of(false, true)) {
+      String owner = supplier("Mixed review export").path("id").asText();
+      String day = BusinessSupport.today();
+      for (String suffix : List.of("confirmed-one", "confirmed-two", "pending", "allocated")) {
+        boolean pending = suffix.equals("pending");
+        String order = pending == pendingFirst ? "a-" : "z-";
+        String original = switch (suffix) { case "confirmed-one" -> "10"; case "confirmed-two" -> "20";
+          case "pending" -> "100"; default -> "40"; };
+        String payable = switch (suffix) { case "confirmed-one" -> "5"; case "confirmed-two" -> "10";
+          case "pending" -> "50"; default -> "20"; };
+        s.create("input", owner, s.object().put("id", owner + order + suffix)
+            .put("supplierId", owner).put("supplierName", "Mixed review export")
+            .put("projectId", "mixed-project").put("projectName", "Mixed project")
+            .put("sourceRef", suffix).put("periodStart", day).put("periodEnd", day)
+            .put("currency", "USD").put("pricingType", "DISCOUNT").put("settlementMultiplier", "0.5")
+            .put("originalAmount", original).put("calculatedPayable", payable)
+            .put("state", pending ? "PENDING" : suffix.equals("allocated") ? "ALLOCATED" : "AVAILABLE")
+            .put("reviewStatus", pending ? "PENDING" : "CONFIRMED"));
+      }
+      for (String type : List.of("DETAIL", "SUMMARY", "SUPPLIER")) {
+        String format = type.equals("SUPPLIER") ? "XLSX" : "CSV";
+        ObjectNode body = s.object().put("type", type).put("format", format)
+            .put("requestKey", UUID.randomUUID().toString());
+        body.set("filter", s.object().put("supplier", owner));
+        JsonNode job = post("/api/accounting/daily/exports", body, c, 200);
+        assertEquals(4, job.path("sourceCount").asInt());
+        assertEquals(type.equals("DETAIL") ? 4 : 3, job.path("resultCount").asInt());
+        JsonNode totals = job.path("snapshotTotals");
+        assertEquals("70", totals.path("confirmedOriginal").asText());
+        assertEquals("100", totals.path("pendingConsumption").asText());
+        assertEquals("35", totals.path("payableTotal").asText());
+        assertEquals("15", totals.path("unsettledPayable").asText());
+        assertEquals(3, totals.path("confirmedCount").asInt());
+        assertEquals(1, totals.path("pendingCount").asInt());
+        String path = "/api/accounting/daily/exports/" + job.path("id").asText();
+        JsonNode preview = get(path + "/preview", c);
+        assertEquals("已确认应付", preview.path("headers").get(6).asText());
+        assertEquals("核对状态", preview.path("headers").get(7).asText());
+        assertEquals("待核对计算金额", preview.path("headers").get(9).asText());
+        int pendingRows = 0;
+        for (JsonNode row : preview.path("rows")) {
+          if (row.get(7).asText().equals("待核对")) {
+            pendingRows++;
+            assertEquals("0", row.get(6).asText());
+            assertEquals("50", row.get(9).asText());
+          } else assertEquals("0", row.get(9).asText());
+        }
+        assertEquals(1, pendingRows);
+        byte[] bytes = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                .get(path + "/download").session(c.session)).andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsByteArray();
+        String content = "";
+        if (format.equals("CSV")) content = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+        else try (var zip = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(bytes))) {
+          java.util.zip.ZipEntry entry;
+          while ((entry = zip.getNextEntry()) != null)
+            if (entry.getName().endsWith("sheet1.xml"))
+              content = new String(zip.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        }
+        assertTrue(content.contains("核对状态"));
+        assertTrue(content.contains("待核对计算金额"));
+        assertTrue(content.contains("待核对"));
+      }
+    }
+  }
+
+  @Test
+  void sourceReferenceReplayCannotChangeBetweenQuotedAndDirectPricing() throws Exception {
+    Client c = admin();
+    String owner = supplier("Pricing replay").path("id").asText(), day = BusinessSupport.today();
+    String project = s.create("project", "GLOBAL", s.object().put("name", "Replay project")
+        .put("enabled", true)).path("id").asText();
+    s.create("quote", owner, s.object().put("supplierId", owner).put("projectId", project)
+        .put("state", "APPROVED").put("currency", "USD").put("pricingType", "DISCOUNT")
+        .put("multiplier", "0.5").put("effectiveFrom", day).put("effectiveTo", day));
+    for (boolean direct : List.of(false, true)) {
+      ObjectNode body = s.object().put("supplierId", owner).put("projectId", project);
+      body.putArray("rows").add(s.object().put("sourceRef", "pricing-mode-" + direct)
+          .put("periodStart", day).put("periodEnd", day).put("currency", "USD")
+          .put("originalAmount", "10").put("baseReference", "Invoice replay"));
+      String original = "/api/settlement-inputs/" + (direct ? "manual-direct" : "manual");
+      String changed = "/api/settlement-inputs/" + (direct ? "manual" : "manual-direct");
+      assertEquals(1, post(original, body, c, 200).path("inserted").asInt());
+      assertEquals(1, post(original, body, c, 200).path("skipped").asInt());
+      post(changed, body, c, 409);
+    }
+    assertEquals(2, s.list("input", owner).size());
+    for (ObjectNode input : s.list("input", owner))
+      assertEquals(input.path("sourceRef").asText().endsWith("true") ? "10" : "5.0",
+          input.path("calculatedPayable").asText());
+  }
+
+  @Test
+  void expiredExportReadsTruthfullyWithoutChangingStoredSnapshotOrLegacyHeaders() throws Exception {
+    Client c = admin();
+    ObjectNode saved = s.object().put("state", "COMPLETED").put("type", "DETAIL")
+        .put("expiresAt", Instant.now().minusSeconds(1).toString()).put("contentBase64", "YQ==")
+        .put("requestKey", "old-export");
+    saved.putArray("headers").add("历史列");
+    saved.putArray("previewRows").addArray().add("历史值");
+    saved.putArray("files").add(s.object().put("name", "legacy.csv"));
+    String id = s.create("export", c.uid, saved).path("id").asText();
+    assertEquals("EXPIRED", get("/api/accounting/daily/exports/" + id, c).path("state").asText());
+    assertEquals(1, get("/api/accounting/daily/exports?state=EXPIRED", c).path("total").asInt());
+    assertEquals("历史列", get("/api/accounting/daily/exports/" + id + "/preview", c)
+        .path("headers").get(0).asText());
+    assertEquals("COMPLETED", s.get("export", id, c.uid).path("state").asText());
+    mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+            .get("/api/accounting/daily/exports/" + id + "/download").session(c.session))
+        .andExpect(status().isGone());
+  }
+
+  @Test
   void overdueRequiresManualConfirmationAndOwnerKpiReadsConfirmedHistory() throws Exception {
     Client c = admin();
     ObjectNode owner = supplier("Deadline supplier");

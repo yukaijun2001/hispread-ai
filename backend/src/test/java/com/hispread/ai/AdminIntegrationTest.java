@@ -155,6 +155,39 @@ class AdminIntegrationTest {
   }
 
   @Test
+  void independentReviewPolicyIsFixedAndLegacyFalseDoesNotEraseSecuritySettings() throws Exception {
+    Client admin = client(true);
+    ObjectNode visible = (ObjectNode) getJson("/api/system/settings", admin);
+    String id = visible.path("id").asText();
+    ObjectNode policy = (ObjectNode) visible.path("policy").deepCopy();
+    assertFalse(policy.has("allowSamePersonReview"));
+    policy.put("passwordMinLength", 18).put("loginLockMinutes", 37).put("allowSamePersonReview", false);
+    s.update("settings", id, null, s.object().set("policy", policy));
+    ObjectNode before = s.get("settings", id, null);
+    ObjectNode forbidden = s.object();
+    forbidden.putObject("policy").put("allowSamePersonReview", true);
+    mvc.perform(put("/api/system/settings").session(admin.session).header("X-CSRF-TOKEN", admin.csrf)
+        .contentType("application/json").content(forbidden.toString()))
+        .andExpect(status().isGone()).andExpect(jsonPath("$.code").value("REVIEW_POLICY_FIXED"));
+    assertEquals(before, s.get("settings", id, null));
+    ObjectNode compatible = s.object();
+    compatible.putObject("policy").put("allowSamePersonReview", false).put("sessionIdleMinutes", 60);
+    JsonNode response = write("PUT", "/api/system/settings", compatible, admin);
+    assertFalse(response.path("policy").has("allowSamePersonReview"));
+    assertEquals(18, response.path("policy").path("passwordMinLength").asInt());
+    assertEquals(37, response.path("policy").path("loginLockMinutes").asInt());
+    assertEquals(60, response.path("policy").path("sessionIdleMinutes").asInt());
+    assertEquals(policy.path("requireUpper"), response.path("policy").path("requireUpper"));
+    assertFalse(getJson("/api/system/settings", admin).path("policy").has("allowSamePersonReview"));
+    ObjectNode historical = (ObjectNode) s.get("settings", id, null).path("policy").deepCopy();
+    historical.put("allowSamePersonReview", true);
+    s.update("settings", id, null, s.object().set("policy", historical));
+    ObjectNode update = s.object().put("ccmaxIntakeConcurrencyLimit", 2);
+    assertFalse(write("PUT", "/api/system/settings", update, admin).path("policy").has("allowSamePersonReview"));
+    assertTrue(s.get("settings", id, null).path("policy").path("allowSamePersonReview").asBoolean());
+  }
+
+  @Test
   void workbenchUsesRoleAndActualSettlementTotals() throws Exception {
     Client admin = client(true), supplier = client(false);
     String owner = a.findUser(supplier.uid).path("supplierId").asText();

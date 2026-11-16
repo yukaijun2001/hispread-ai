@@ -144,6 +144,19 @@ public class ResourceOperations {
     throw new ApiException(404, "原提交记录不存在或无权查看");
   }
 
+  public ObjectNode lifecycleByRequest(String requestKey, HttpServletRequest req) {
+    auth.require(req, "resource.read");
+    for (ObjectNode operation : store.list("resource-operation", null)) {
+      if (!eq(operation, "type", "LIFECYCLE") || !eq(operation, "requestKey", requestKey)) continue;
+      try {
+        return publishOperation(getOperation(text(operation, "id"), req), req);
+      } catch (ApiException denied) {
+        if (denied.status != 403 && denied.status != 404) throw denied;
+      }
+    }
+    throw new ApiException(404, "原维护记录不存在或无权查看");
+  }
+
   public List<ObjectNode> listOperations(String type, HttpServletRequest req) {
     List<ObjectNode> out = new ArrayList<>();
     for (ObjectNode op : store.list("resource-operation", null))
@@ -946,7 +959,7 @@ public class ResourceOperations {
       return lifecycleLocked(text(operation, "supplierId"), text(operation, "requestKey"), () -> {
         LifecycleAttempt attempt = transactions.execute(status -> {
           ObjectNode op = getOperation(id, req);
-          if (confirmedRemoval(op)) return new LifecycleAttempt(op, null, null, false);
+          if (confirmedRemoval(op) || lifecycleResolved(op)) return new LifecycleAttempt(op, null, null, false);
           ObjectNode config = gateway.requireConfigured(text(op, "targetId"));
           if (!eq(config, "protocol", text(op, "protocol")))
             throw new ApiException(409, "目标协议已变化，请核对原操作");
@@ -967,7 +980,7 @@ public class ResourceOperations {
         "select pg_advisory_xact_lock(hashtext(?),hashtext(?))", (row, index) -> true,
         "resource-operation-reconcile", id);
     ObjectNode op = getOperation(id, req);
-    if (confirmedRemoval(op)) return result(op, req);
+    if (confirmedRemoval(op) || eq(op, "type", "LIFECYCLE") && lifecycleResolved(op)) return result(op, req);
     String path = text(op, "upstreamPath");
     String remote = text(op, "upstreamId");
     if (remote.isBlank()) remote = text(op, "requestKey");
@@ -1156,6 +1169,7 @@ public class ResourceOperations {
       if (!eq(previous, "fingerprint", digest(body))) throw new ApiException(409, "提交编号已用于不同资料", "IDEMPOTENCY_CONFLICT");
       return jobDetail(text(previous, "id"), req);
     }
+    if (type.equals("LIFECYCLE")) requireNoUnresolvedLifecycle(firstOwner, body, req);
     JobSelection selection = validateJob(type, body, req);
     String path = type.equals("LIFECYCLE") ? "/resource-lifecycle-jobs" : "/resource-proxy-replacements";
     ObjectNode response = invoke(type, null, selection.owner(), "POST", path, body,
@@ -1216,6 +1230,7 @@ public class ResourceOperations {
         throw new ApiException(409, "提交编号已用于不同资料", "IDEMPOTENCY_CONFLICT");
       return new LifecycleAttempt(prior, null, null, false);
     }
+    requireNoUnresolvedLifecycle(owner, body, req);
     JobSelection selection = validateJob("LIFECYCLE", body, req);
     ObjectNode config = gateway.requireConfigured(selection.target());
     String protocol = text(config, "protocol");
@@ -1250,6 +1265,59 @@ public class ResourceOperations {
     return new LifecycleAttempt(store.create("resource-operation", owner, op), config, wire, false);
   }
 
+  private void requireNoUnresolvedLifecycle(String owner, ObjectNode body, HttpServletRequest req) {
+    Set<String> requested = new TreeSet<>();
+    for (JsonNode item : body.path("items")) {
+      String resourceId = text(item, "resourceId");
+      b.resource(resourceId, req);
+      requested.add(resourceId);
+    }
+    // Different request keys must serialize on the affected resources until the first
+    // durable intent commits. Batches lock in a stable order to avoid deadlocks.
+    for (String resourceId : requested)
+      store.jdbc.queryForObject("select pg_advisory_xact_lock(hashtext(?),hashtext(?))",
+          (row, index) -> true, "resource-lifecycle-intent:" + owner, resourceId);
+    for (ObjectNode operation : store.list("resource-operation", owner)) {
+      if (!eq(operation, "type", "LIFECYCLE")) continue;
+      for (JsonNode item : operation.path("request").path("items")) {
+        String resourceId = text(item, "resourceId");
+        if (!requested.contains(resourceId) || lifecycleResolved(operation)) continue;
+        String operationId = null;
+        try {
+          getOperation(text(operation, "id"), req);
+          operationId = text(operation, "id");
+        } catch (ApiException denied) {
+          if (denied.status != 403 && denied.status != 404) throw denied;
+        }
+        throw new ApiException(409, "该资源有结果尚未确认的维护操作，请先核对原操作，勿重复提交",
+            "RESOURCE_LIFECYCLE_UNRESOLVED", operationId);
+      }
+    }
+  }
+
+  private boolean lifecycleResolved(ObjectNode operation) {
+    if (!Set.of("SUCCESS", "COMPLETED", "FAILED", "PARTIAL", "PARTIAL_FAILED", "CANCELLED", "CANCELED", "EXPIRED")
+        .contains(text(operation, "state")) || operation.path("result").path("unknownCount").asLong() > 0)
+      return false;
+    JsonNode items = operation.path("result").path("items");
+    // Top-level items may be the caller's original request, never a confirmation.
+    if (!items.isArray())
+      return Set.of("SUCCESS", "COMPLETED", "FAILED", "CANCELLED", "CANCELED", "EXPIRED")
+          .contains(text(operation, "state"));
+    Set<String> confirmed = new HashSet<>();
+    for (JsonNode item : items) {
+      String state = text(item, "state");
+      if (state.isBlank()) continue;
+      if (!Set.of("SUCCESS", "COMPLETED", "FAILED", "PAUSED", "RESUMED", "ACTIVE", "GONE", "REMOVED", "DONE", "CANCELLED")
+          .contains(state)) return false;
+      confirmed.add(text(item, "resourceId"));
+    }
+    Set<String> expected = new HashSet<>();
+    for (JsonNode item : operation.path("request").path("items")) expected.add(text(item, "resourceId"));
+    if (!expected.isEmpty() && confirmed.containsAll(expected)) return true;
+    return Set.of("FAILED", "CANCELLED", "CANCELED", "EXPIRED").contains(text(operation, "state"));
+  }
+
   private ObjectNode executeLifecycle(LifecycleAttempt attempt, boolean readOnly, HttpServletRequest req) {
     ObjectNode response;
     try {
@@ -1265,7 +1333,7 @@ public class ResourceOperations {
                 .put("error", "上游操作未完成，请查询原操作"));
         return null;
       });
-      throw error;
+      throw new ApiException(error.status, error.getMessage(), error.code, text(attempt.operation(), "id"));
     }
     return transactions.execute(status -> {
       ObjectNode op = getOperation(text(attempt.operation(), "id"), req);
