@@ -19,12 +19,17 @@ Options (environment variables with the same meaning are also supported):
   --origin URL      Browser-facing origin, e.g. http://203.0.113.10:10001
                     (PUBLIC_ORIGIN; otherwise existing origin or detected public IPv4)
   --project NAME    Stable Compose project (COMPOSE_PROJECT_NAME; default: hispread)
+  --clean           After successful deployment, clear this site's QA-only supplier,
+                    projects, users, business records and attachments. No backup is made.
+                    Keeps the existing platform administrator and configuration. Aborts
+                    if data is not an unambiguous acceptance-only installation.
   -h, --help        Display this help without changing anything
 
 Prerequisites: Git, Docker Engine, Docker Compose >= 2.24.4, Python 3 and curl.
 Only frontend 0.0.0.0:10001 -> 8080 is published; backend/PostgreSQL remain unexposed.
 Existing passwords and data volumes are preserved. Dirty, ahead and divergent checkouts
 are rejected; the script never resets Git, runs compose down or deletes volumes.
+--clean deletes verified QA data after successful deployment and does not create a backup.
 HELP
 }
 
@@ -40,7 +45,7 @@ cleanup() {
 }
 
 main() {
-  local script_dir repo branch destination env_file origin project
+  local script_dir repo branch destination env_file origin project clean_test_data
   script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
   repo="${REPO_URL:-}"
   branch="${DEPLOY_BRANCH:-main}"
@@ -48,6 +53,7 @@ main() {
   env_file="${ENV_FILE:-.env.production}"
   origin="${PUBLIC_ORIGIN:-}"
   project="${COMPOSE_PROJECT_NAME:-hispread}"
+  clean_test_data="false"
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -h|--help) usage; return 0 ;;
@@ -57,6 +63,7 @@ main() {
       --env-file) need_value "$@"; env_file="$2"; shift 2 ;;
       --origin) need_value "$@"; origin="$2"; shift 2 ;;
       --project) need_value "$@"; project="$2"; shift 2 ;;
+      --clean) clean_test_data="true"; shift ;;
       *) die "Unknown option: $1 (use --help)" ;;
     esac
   done
@@ -328,6 +335,12 @@ PY
   log "Deployment complete: $origin (commit $revision)"
   printf 'Only frontend TCP/10001 is published. Allow this port in your server firewall/security group.\n'
   printf 'Administrator username/password are in %s (mode 600); existing account passwords were not reset.\n' "$env_file"
+  if [[ "$clean_test_data" == "true" ]]; then
+    log "Clearing test data after successful deployment (no backup will be created)"
+    python3 "$destination/deploy/clean-test-data.py" \
+      --apply --deploy-lock-held --deploy-lock-owner "$$" \
+      --env-file "$env_file" --project "$project"
+  fi
 }
 
 main "$@"

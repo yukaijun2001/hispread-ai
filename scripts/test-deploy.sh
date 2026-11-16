@@ -53,6 +53,8 @@ DOTENV
 export DEPLOY_TEST_LOG="$test_root/logs/commands.jsonl"
 export DEPLOY_TEST_REAL_PYTHON="$real_python"
 export DEPLOY_TEST_REAL_GIT="$real_git"
+export DEPLOY_TEST_HEALTH_MARKER="$test_root/health.seen"
+export DEPLOY_TEST_DEPLOY_COMPLETE_MARKER="$test_root/deploy-complete.seen"
 # JSON command trace avoids exposing environment or credentials.
 cat > "$test_root/bin/docker" <<'DOCKER'
 #!/usr/bin/env bash
@@ -98,7 +100,8 @@ YAML
  exit 0
 fi
 if [[ " $* " == *" build "* && "${DEPLOY_TEST_DOCKER_FAIL:-0}" == 1 ]]; then echo 'fixture: build failed' >&2; exit 19; fi
-if [[ " $* " == *" ps "* ]]; then echo 'frontend healthy'; fi
+if [[ " $* " == *" ps "* ]]; then : > "$DEPLOY_TEST_DEPLOY_COMPLETE_MARKER"; echo 'frontend healthy'; fi
+if [[ " $* " == *" stop "* ]]; then exit 0; fi
 exit 0
 DOCKER
 cat > "$test_root/bin/curl" <<'CURL'
@@ -111,7 +114,7 @@ PY
 if [[ "${DEPLOY_TEST_CURL_FAIL:-0}" == 1 ]]; then exit 22; fi
 case " $* " in
  *"/api/auth/csrf"*) printf '%s\n' '{"headerName":"X-CSRF-TOKEN","token":"fixture-csrf-token"}';;
- *"/api/health"*) printf '%s\n' '{"status":"UP"}';;
+ *"/api/health/ready"*) : > "$DEPLOY_TEST_HEALTH_MARKER"; printf '%s\n' '{"status":"UP"}';;
  *) printf '%s\n' '<!doctype html><html><head><title>Hispread AI</title></head><body></body></html>';;
 esac
 CURL
@@ -138,6 +141,7 @@ mkdir -p "$seed/deploy" "$seed/backend" "$seed/frontend"
 printf 'FROM scratch\n' > "$seed/backend/Dockerfile"
 printf 'FROM scratch\n' > "$seed/frontend/Dockerfile"
 cp "$project_root/docker-compose.yml" "$seed/docker-compose.yml"
+cp "$project_root/deploy/clean-test-data.py" "$seed/deploy/clean-test-data.py"
 cp "$project_root/.env.production.example" "$seed/.env.production.example"
 cp "$project_root/deploy/init-env.sh" "$seed/deploy/init-env.sh"
 if [[ -f "$project_root/.gitignore" ]]; then cp "$project_root/.gitignore" "$seed/.gitignore"; fi
@@ -153,8 +157,10 @@ fail(){ echo "FAIL $1" >&2; if [[ -f "${last_output:-}" ]]; then tail -30 "$last
 clone(){ "$real_git" clone -q --branch main "$remote" "$1"; "$real_git" -C "$1" config user.email 'deploy-test@example.invalid'; "$real_git" -C "$1" config user.name 'Deploy fixture'; }
 run_deploy(){
  local checkout="$1"; shift
+ local arg
+ for arg in "$@"; do [[ "$arg" == "--clean" ]] && rm -f "$DEPLOY_TEST_HEALTH_MARKER" "$DEPLOY_TEST_DEPLOY_COMPLETE_MARKER"; done
  last_output="$test_root/logs/run-$passes.log"
- (cd "$test_root" && REPO_URL="$remote" DEPLOY_BRANCH=main DEPLOY_DIR="$checkout" ENV_FILE=.env.production COMPOSE_PROJECT_NAME=deploy-fixture PUBLIC_ORIGIN=http://198.51.100.8:10001 HTTP_PORT=9999 HTTP_BIND=127.0.0.1 DATABASE_PASSWORD=ambient-database-must-not-win ADMIN_PASSWORD=AmbientAdmin-MustNotWin123 ADMIN_USERNAME=ambient-user-must-not-win bash "$seed/deploy.sh" --repo "$remote" --branch main --dir "$checkout" --origin http://198.51.100.8:10001 --env-file .env.production --project deploy-fixture "$@") > "$last_output" 2>&1
+ (cd "$test_root" && DEPLOY_TEST_HEALTH_MARKER="$test_root/health.seen" REPO_URL="$remote" DEPLOY_BRANCH=main DEPLOY_DIR="$checkout" ENV_FILE=.env.production COMPOSE_PROJECT_NAME=deploy-fixture PUBLIC_ORIGIN=http://198.51.100.8:10001 HTTP_PORT=9999 HTTP_BIND=127.0.0.1 DATABASE_PASSWORD=ambient-database-must-not-win ADMIN_PASSWORD=AmbientAdmin-MustNotWin123 ADMIN_USERNAME=ambient-user-must-not-win bash "$seed/deploy.sh" --repo "$remote" --branch main --dir "$checkout" --origin http://198.51.100.8:10001 --env-file .env.production --project deploy-fixture "$@") > "$last_output" 2>&1
 }
 expect_fail(){ if run_deploy "$1"; then fail "$2 unexpectedly succeeded"; fi; pass "$2"; }
 # Help must be safe and never call Docker or create state.
@@ -318,4 +324,47 @@ assert any('/api/health' in x for x in urls),'health smoke check missing'
 assert any('/api/auth/csrf' in x for x in urls),'CSRF smoke check missing'
 PY
 pass 'readiness and CSRF smoke checks run'
+# Verify --clean is opt-in and invoked only after deployment readiness. The
+# fixture implementation logs calls and never connects to Docker or PostgreSQL.
+clean_source="$test_root/clean-option-source"
+"$real_git" clone -q --branch main "$remote" "$clean_source"
+"$real_git" -C "$clean_source" config user.email 'deploy-test@example.invalid'
+"$real_git" -C "$clean_source" config user.name 'Deploy fixture'
+cat > "$clean_source/deploy/clean-test-data.py" <<'PY'
+#!/usr/bin/env python3
+import json,os,sys
+with open(os.environ['DEPLOY_TEST_LOG'],'a') as stream:
+ stream.write(json.dumps({'cmd':'clean','healthSeen':os.path.exists(os.environ['DEPLOY_TEST_HEALTH_MARKER']),
+  'deployCompleteSeen':os.path.exists(os.environ['DEPLOY_TEST_DEPLOY_COMPLETE_MARKER']),
+  'deployLockOwner':sys.argv[sys.argv.index('--deploy-lock-owner')+1],
+  'envFile':sys.argv[sys.argv.index('--env-file')+1],
+  'project':sys.argv[sys.argv.index('--project')+1]})+'\n')
+if os.environ.get('DEPLOY_TEST_CLEAN_FAIL')=='1':sys.exit(31)
+PY
+"$real_git" -C "$clean_source" add deploy/clean-test-data.py
+"$real_git" -C "$clean_source" commit -q -m 'fixture cleanup hook'
+"$real_git" -C "$clean_source" push -q origin main
+clean_checkout="$test_root/clean-option"
+run_deploy "$clean_checkout" || fail 'clean-option baseline deployment'
+"$real_python" - "$DEPLOY_TEST_LOG" <<'PY'
+import json,sys
+assert not any(json.loads(line)['cmd']=='clean' for line in open(sys.argv[1])),'default deployment triggered cleanup'
+PY
+pass 'default deployment does not trigger cleanup'
+export DEPLOY_TEST_CLEAN_FAIL=0
+run_deploy "$clean_checkout" --clean || fail '--clean deployment'
+unset DEPLOY_TEST_CLEAN_FAIL
+"$real_python" - "$DEPLOY_TEST_LOG" <<'PY'
+import json,sys
+rows=[json.loads(line) for line in open(sys.argv[1]) if json.loads(line)['cmd']=='clean']
+assert len(rows)==1,rows
+row=rows[0]
+assert row['healthSeen'] and row['deployCompleteSeen'] and row['deployLockOwner'].isdigit()
+assert row['envFile'].endswith('/.env.production') and row['project']=='deploy-fixture'
+PY
+pass '--clean runs once after health checks under deploy lock'
+export DEPLOY_TEST_CLEAN_FAIL=1
+if run_deploy "$clean_checkout" --clean; then fail '--clean failure did not propagate'; fi
+unset DEPLOY_TEST_CLEAN_FAIL
+pass 'cleanup failure propagates after deployment'
 echo "deploy.sh harness: $passes scenarios passed (no real Docker daemon or network used)."
