@@ -19,7 +19,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-@SpringBootTest(properties = "app.payments.allow-private-adapters=true")
+@SpringBootTest(properties = {"app.payments.allow-private-adapters=true", "app.payments.online-enabled=true"})
 @AutoConfigureMockMvc
 @ActiveProfiles("integration-test")
 class PaymentExecutionIntegrationTest {

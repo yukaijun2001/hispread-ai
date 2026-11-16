@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.*;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api")
 public class PlatformConfigController {
+  @Value("${app.payments.online-enabled:false}")
+  private boolean onlinePaymentsEnabled;
   private final Store s;
   private final AuthService a;
   private final BusinessSupport b;
@@ -598,6 +601,8 @@ public class PlatformConfigController {
   public Object provider(
       @PathVariable String code, @RequestBody ObjectNode body, HttpServletRequest r) {
     guard(r, "payout.provider.write");
+    if (!onlinePaymentsEnabled)
+      throw new ApiException(410, "线上付款通道已关闭，已有配置仅保留用于历史查单", "PAYMENT_CHANNEL_DISABLED");
     if (!Set.of("AIRWALLEX", "OKX_USDT", "BINANCE_USDT").contains(code))
       throw new ApiException(400, "未知资金通道");
     List<ObjectNode> items =
@@ -663,6 +668,8 @@ public class PlatformConfigController {
   @PostMapping("/payout-providers/{code}/test")
   public Object test(@PathVariable String code, HttpServletRequest r) {
     guard(r, "payout.provider.test");
+    if (!onlinePaymentsEnabled)
+      throw new ApiException(410, "线上付款通道已关闭，不再执行通道测试", "PAYMENT_CHANNEL_DISABLED");
     ObjectNode config;
     try {
       config = s.get("payout-provider", code, null);

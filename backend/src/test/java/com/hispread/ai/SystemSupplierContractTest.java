@@ -274,6 +274,6 @@ class SystemSupplierContractTest {
     assertEquals(
         "server-only-key",
         s.get("resource-target", t.path("id").asText(), null).path("apiKey").asText());
-    write("POST", "/api/payout-providers/OKX_USDT/test", s.object(), c, 503);
+    write("POST", "/api/payout-providers/OKX_USDT/test", s.object(), c, 410);
   }
 }

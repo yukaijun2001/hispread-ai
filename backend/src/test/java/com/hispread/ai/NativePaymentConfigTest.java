@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.env.MockEnvironment;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class NativePaymentConfigTest {
   @Test
@@ -31,6 +32,7 @@ class NativePaymentConfigTest {
     NativePaymentGateway nativeGateway = new NativePaymentGateway(factory, r -> { throw new AssertionError("must not send"); }, java.time.Clock.systemUTC());
     PaymentExecutionGateway execution = new PaymentExecutionGateway(factory, new MockEnvironment(), nativeGateway);
     PlatformConfigController controller = new PlatformConfigController(s, auth, null, null, null, null, null, execution, null, null);
+    ReflectionTestUtils.setField(controller, "onlinePaymentsEnabled", true);
     ObjectNode body = factory.object().put("enabled", true).put("apiKey", "native-api-key-value")
         .put("secretKey", "native-secret-value").put("passphrase", "native-passphrase-value").put("regionCode", "GLOBAL");
     body.putObject("executionAdapter").put("enabled", true).put("protocol", "NATIVE_OKX");

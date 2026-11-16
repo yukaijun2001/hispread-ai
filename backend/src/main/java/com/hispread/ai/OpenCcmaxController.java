@@ -58,6 +58,11 @@ public class OpenCcmaxController {
     return out;
   }
 
+  @GetMapping("/capabilities")
+  public Object capabilities(HttpServletRequest request) {
+    return resources.capabilities(request);
+  }
+
   @GetMapping("/proxies")
   public Object proxies(
       @RequestParam(defaultValue = "1") int page,
@@ -256,6 +261,9 @@ public class OpenCcmaxController {
     if (path.endsWith("/submissions/credentials")) return operations.submit(body, r);
     if (path.endsWith("/submissions/oauth/authorize")) {
       ObjectNode input = body.path("input").isObject() ? (ObjectNode) body.path("input") : body;
+      if (input.has("credentialMode") && !eq(input, "credentialMode", "OAUTH"))
+        throw new ApiException(400, "OAuth 接口仅接受 OAUTH 上号方式", "CCMAX_OAUTH_MODE_REQUIRED");
+      required(input, "projectId", "accountName");
       return operations.authorize(input, r);
     }
     if (path.endsWith("/submissions/oauth/complete")) {
@@ -270,6 +278,11 @@ public class OpenCcmaxController {
     a.require(r, "resource.read");
     try {
       return operations.operation(id, r);
+    } catch (ApiException missing) {
+      if (missing.status != 404) throw missing;
+    }
+    try {
+      return operations.submissionByRequest(id, r);
     } catch (ApiException missing) {
       if (missing.status != 404) throw missing;
     }
@@ -327,7 +340,12 @@ public class OpenCcmaxController {
   public Object maintenance(
       @PathVariable String resourceId, @RequestBody ObjectNode body, HttpServletRequest r) {
     a.require(r, "resource.write");
-    row(resourceId, r);
+    ObjectNode resource = row(resourceId, r);
+    if (r.getRequestURI().endsWith("reauthorizations")
+        && (eq(resource, "upstreamProtocol", "CCMAX_NATIVE") || !text(resource, "upstreamAccountId").isBlank())
+        && (body.has("mode") && !eq(body, "mode", "OAUTH")
+            || body.hasNonNull("refreshToken") || body.hasNonNull("accessToken") || body.hasNonNull("sessionKey")))
+      throw new ApiException(400, "原生账号重新授权仅支持 OAuth", "CCMAX_RAW_IMPORT_DISABLED");
     return operations.action(
         resourceId,
         r.getRequestURI().endsWith("credential-refresh")

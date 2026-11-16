@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.*;
 import java.util.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +19,8 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api")
 public class PlatformFinanceController {
+  @Value("${app.payments.online-enabled:false}")
+  private boolean onlinePaymentsEnabled;
   private final Store store;
   private final AuthService auth;
   private final BusinessSupport b;
@@ -523,8 +526,10 @@ public class PlatformFinanceController {
   @PostMapping({"/payments", "/payments/offline"})
   @Transactional
   public ObjectNode createPayment(@RequestBody ObjectNode body, HttpServletRequest req) {
-    boolean offline = req.getRequestURI().endsWith("offline");
     platform(req, "payment.create");
+    if (!onlinePaymentsEnabled && eq(body, "paymentMethod", "CHANNEL"))
+      throw new ApiException(410, "线上付款通道已关闭，请使用线下付款申请", "PAYMENT_CHANNEL_DISABLED");
+    boolean offline = !onlinePaymentsEnabled || req.getRequestURI().endsWith("offline");
     required(body, "settlementId", "requestKey", "payoutCurrency");
     String requestFingerprint =
         fingerprint(

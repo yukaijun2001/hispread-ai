@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -19,6 +20,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 @Service
 public class PaymentExecutionService {
+  @Value("${app.payments.online-enabled:false}")
+  private boolean onlineEnabled;
   private final Store s;
   private final AuthService auth;
   private final AccessPolicy access;
@@ -41,6 +44,15 @@ public class PaymentExecutionService {
   private void permitted(HttpServletRequest req, String permission) {
     if (!access.admin(req)) throw new ApiException(403, "资金执行与查单仅最高管理员可操作");
     auth.require(req, permission);
+  }
+
+  public boolean onlineEnabled() {
+    return onlineEnabled;
+  }
+
+  public void requireOnline() {
+    if (!onlineEnabled)
+      throw new ApiException(410, "线上付款通道已关闭，请提交线下付款申请并登记真实付款凭证", "PAYMENT_CHANNEL_DISABLED");
   }
 
   private void lock(String key) {
@@ -144,6 +156,8 @@ public class PaymentExecutionService {
 
   public ObjectNode preview(String id, ObjectNode body, HttpServletRequest req) {
     permitted(req, "payment.execute");
+    access.get("payment", id, req);
+    requireOnline();
     ObjectNode payment = access.get("payment", id, req);
     version(payment, body);
     approved(payment);
@@ -185,6 +199,11 @@ public class PaymentExecutionService {
 
   public ObjectNode execute(String id, ObjectNode body, HttpServletRequest req) {
     permitted(req, "payment.execute");
+    if (!onlineEnabled) {
+      ObjectNode payment = access.get("payment", id, req);
+      if (existing(id) != null) return publicPayment(payment, req);
+      requireOnline();
+    }
     record Intent(ObjectNode operation, ObjectNode adapter, ObjectNode payload, boolean send) {}
     Intent intent =
         tx.execute(

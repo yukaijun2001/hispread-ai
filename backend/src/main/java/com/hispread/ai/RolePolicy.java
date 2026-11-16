@@ -16,7 +16,6 @@ public class RolePolicy {
       List.of(
           "workbench.read",
           "workbench.tasks.read",
-          "workbench.monitoring.read",
           "supplier.read",
           "supplier.write",
           "project.read",
@@ -35,7 +34,6 @@ public class RolePolicy {
       List.of(
           "workbench.read",
           "workbench.tasks.read",
-          "workbench.monitoring.read",
           "supplier.read",
           "project.read",
           "quote.read",
@@ -59,7 +57,6 @@ public class RolePolicy {
       List.of(
           "workbench.read",
           "workbench.tasks.read",
-          "workbench.monitoring.read",
           "supplier.read",
           "supplier.write",
           "project.read",

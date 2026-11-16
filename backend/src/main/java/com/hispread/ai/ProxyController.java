@@ -89,6 +89,8 @@ public class ProxyController {
           .put("testable", true)
           .put("lastTestState", "NOT_TESTED");
       if (!d.hasNonNull("maxResources")) d.put("maxResources", 0);
+      if (!d.path("maxResources").isIntegralNumber() || !d.path("maxResources").canConvertToInt()
+          || d.path("maxResources").asInt() < 0) throw new IllegalArgumentException();
       if (!d.has("enabled")) d.put("enabled", true);
       return d;
     } catch (Exception e) {
@@ -120,8 +122,25 @@ public class ProxyController {
   @PostMapping("/import")
   public Object imports(@RequestBody ObjectNode b, HttpServletRequest r) {
     a.require(r, "proxy.write");
-    int imported = 0, skipped = 0;
-    for (String line : b.path("lines").asText().split("\\R")) {
+    String owner = ownerForCreate(b, r);
+    String lines = b.path("lines").asText();
+    if (lines.length() > 200000) throw new ApiException(400, "代理文本不能超过200000个字符");
+    String[] entries = lines.split("\\R");
+    if (entries.length > 500) throw new ApiException(400, "最多导入500行");
+    if (b.hasNonNull("maxResources") && (!b.path("maxResources").isIntegralNumber()
+        || !b.path("maxResources").canConvertToInt() || b.path("maxResources").asInt() < 0))
+      throw new ApiException(400, "代理绑定上限须为非负整数");
+    int maximum = 0;
+    try {
+      maximum = s.get("supplier-settings", owner, null).path("defaultProxyMaxResources").asInt(0);
+    } catch (ApiException missing) {
+      if (missing.status != 404) throw missing;
+    }
+    if (b.hasNonNull("maxResources")) maximum = b.path("maxResources").asInt();
+    int imported = 0;
+    ArrayNode skipped = s.json.createArrayNode();
+    for (int index = 0; index < entries.length; index++) {
+      String line = entries[index];
       if (line.isBlank()) continue;
       try {
         ObjectNode d = s.object();
@@ -143,21 +162,20 @@ public class ProxyController {
         }
         String candidate = address;
         if (access.visible("proxy", r).stream()
-            .anyMatch(p -> candidate.equals(p.path("url").asText()))) {
-          skipped++;
+            .anyMatch(p -> owner.equals(p.path("supplierId").asText()) && candidate.equals(p.path("url").asText()))) {
+          skipped.addObject().put("line", index + 1).put("reason", "记录已存在");
           continue;
         }
         d.put("name", "代理 " + (imported + 1)).put("url", address);
-        d.set("maxResources", b.has("maxResources") ? b.get("maxResources") : s.json.nullNode());
-        String owner = ownerForCreate(b, r);
+        d.put("maxResources", maximum);
         ObjectNode data = checked(d).put("createdBy", a.userId(r)).put("supplierId", owner);
         s.create("proxy", owner, data);
         imported++;
       } catch (ApiException e) {
-        skipped++;
+        skipped.addObject().put("line", index + 1).put("reason", "格式无效，需有效的代理地址及端口");
       }
     }
-    return Map.of("imported", imported, "skipped", skipped);
+    return Map.of("imported", imported, "skipped", skipped, "skippedCount", skipped.size());
   }
 
   @GetMapping("/{id}/resources")

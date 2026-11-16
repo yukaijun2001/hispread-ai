@@ -81,7 +81,7 @@ python3 deploy/smoke-test.py --url https://你的域名 --env-file .env.producti
 docker compose --env-file .env.production up -d --build --wait
 ```
 
-`/healthz`为前端liveness；`/api/health/live`为进程liveness；`/api/health/ready`执行数据库SELECT1。迁移由Flyway启动时执行，现有数据库通过baseline0保留，V1/V2为幂等初始表和持久会话/索引迁移。已执行迁移文件不能修改；后续升级新增V3/V4等。
+`/healthz`为前端liveness；`/api/health/live`为进程liveness；`/api/health/ready`执行数据库SELECT1。迁移由Flyway启动时执行，现有数据库通过baseline0保留。V1/V2建立表和持久会话/索引；V3收紧任务范围；V4仅从角色和用户授权中移除退役的监控权限，保留其余自定义授权、业务数据和会话版本。已执行迁移文件不能修改；后续升级新增迁移。
 
 日志使用Docker json-file轮转（10MB×3/服务），响应X-Request-ID与错误traceId可关联。未知错误不向客户端输出堆栈/秘密。优雅关闭40秒，付款和授权不确定状态应查询原操作，不能盲目重新提交。
 
@@ -112,11 +112,11 @@ docker compose -p hispread-demo --env-file .env.demo -f docker-compose.yml -f do
 
 ## 7. 外部服务
 
-最新接口与配置请优先阅读 [接口补齐与验证](../docs/interface-completion-2026-11-09.md)。`PAYMENT_SANDBOX_ENABLED`默认false，开启后也只操作独立模拟记录。后台只保留可选的交付状态同步；升级默认停用旧计划。网关监控、自动权重轮换、企微外发和财务自动确认已移除。
+当前范围优先阅读 [控制台收紧实现与验证](../docs/console-scope-implementation-2026-11-16.md)，较早的 [接口补齐与验证](../docs/interface-completion-2026-11-09.md) 保留为历史记录。生产配置固定 `app.payments.online-enabled=false`、`sandbox-enabled=false`，旧 `PAYMENT_SANDBOX_ENABLED` 环境变量不会重新启用生产沙箱。后台只保留可选的交付状态同步；升级默认停用旧计划。网关监控、自动权重轮换、企微外发和财务自动确认已移除。
 
 资源/CCMAX功能通过管理员维护的resource-target适配器接入。目标需HTTPS（HTTP需显式允许）、真实API凭据和本项目约定的上游操作协议；未配置返回503，网络失败/上游拒绝/未知结果会保存可查状态。接口适配测试使用本地fixture，不代表已经连接原站私有服务。
 
-支付支持Airwallex/OKX/Binance官方只读测试和显式选择的官方原生付款协议，也保留`HISPREAD_PAYOUT_V1`支付中台。管理员配置真实凭据、审核账户版本映射与执行协议后，独立审核的付款才可预检、执行和查询原操作。未配置时不执行。测试使用本地fixture，未进行真实资金划转。配置和限制见`docs/native-payment-implementation.md`。
+当前付款仅走线下申请、独立审核、真实转账结果与凭证登记、供应商到账确认。通道配置、连接测试、预检和新的线上执行均关闭，即使保存过支付凭据也不会创建新的出款。已有 Airwallex/OKX/Binance 或 `HISPREAD_PAYOUT_V1` 款项保留原通道的历史查单；不确定款项继续占用金额，不换通道、不重发。旧支付适配器留用于历史兼容和本地协议测试，`docs/native-payment-implementation.md` 描述历史实现。
 
 ## 8. 发布跨架构镜像
 

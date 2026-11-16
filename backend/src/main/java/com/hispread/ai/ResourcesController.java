@@ -151,7 +151,25 @@ public class ResourcesController {
     auth.require(req, "resource.read");
     String owner = auth.platform(req) ? req.getParameter("supplierId") : auth.owner(req);
     if (owner != null && !owner.isBlank()) b.access.requireSupplier(req, owner);
-    return ccmaxPolicy.capabilities(owner, gateway.ccmaxConfigured(), gateway.allowDirectCcmax(), req);
+    String resourceId = req.getParameter("resourceId");
+    if (resourceId != null && !resourceId.isBlank()) {
+      ObjectNode resource = b.resource(resourceId, req);
+      owner = b.entityOwner("resource", resourceId, req);
+      try {
+        ObjectNode target = gateway.requireCcmaxConfigured(text(resource, "targetId"));
+        return ccmaxPolicy.capabilities(owner, true, eq(target, "protocol", "CCMAX_NATIVE"), req);
+      } catch (ApiException unavailable) {
+        if (unavailable.status != 503 && unavailable.status != 409) throw unavailable;
+        return ccmaxPolicy.capabilities(owner, false, false, req);
+      }
+    }
+    try {
+      ObjectNode target = gateway.requireCcmaxConfigured(null);
+      return ccmaxPolicy.capabilities(owner, gateway.ccmaxConfigured(), eq(target, "protocol", "CCMAX_NATIVE"), req);
+    } catch (ApiException unavailable) {
+      if (unavailable.status != 503 && unavailable.status != 409) throw unavailable;
+      return ccmaxPolicy.capabilities(owner, false, false, req);
+    }
   }
 
   @GetMapping("/resources/{id}")
@@ -261,6 +279,11 @@ public class ResourcesController {
   @PostMapping("/resources/supplier-submit")
   public ObjectNode supplierSubmit(@RequestBody ObjectNode body, HttpServletRequest req) {
     return operations.submit(body, req);
+  }
+
+  @GetMapping("/resources/submissions/{requestKey}")
+  public ObjectNode submissionByRequest(@PathVariable String requestKey, HttpServletRequest req) {
+    return operations.submissionByRequest(requestKey, req);
   }
 
   @PostMapping("/resources/ccmax/batch")
@@ -445,13 +468,30 @@ public class ResourcesController {
   @GetMapping("/resource-proxy-replacements/proxy-options")
   public ObjectNode proxyOptions(@RequestParam Map<String, String> q, HttpServletRequest req) {
     auth.require(req, "proxy.read");
+    String resourceId = q.getOrDefault("resourceId", "");
+    String owner = auth.platform(req) ? q.getOrDefault("supplierId", "") : auth.owner(req);
+    boolean supported = false;
+    if (!resourceId.isBlank()) {
+      ObjectNode resource = b.resource(resourceId, req);
+      owner = b.entityOwner("resource", resourceId, req);
+      try {
+        ObjectNode target = gateway.requireConfigured(text(resource, "targetId"));
+        supported = target.path("protocol").asText("CUSTOM").equals("CUSTOM");
+      } catch (ApiException unavailable) {
+        if (unavailable.status != 503 && unavailable.status != 409) throw unavailable;
+      }
+    }
+    final String selectedOwner = owner;
+    final boolean replacementSupported = supported;
     return b.page(
         b.owned("proxy", req).stream()
+            .filter(x -> !selectedOwner.isBlank() && b.entityOwner("proxy", text(x, "id"), req).equals(selectedOwner))
             .filter(
                 x ->
                     x.path("enabled").asBoolean()
                         && b.contains(x, q.get("search"), "name", "endpoint", "url"))
-            .map(x -> b.publicRecord("proxy", x, req))
+            .map(x -> b.publicRecord("proxy", x, req)
+                .put("supported", replacementSupported && x.path("enabled").asBoolean()))
             .toList(),
         q);
   }

@@ -61,8 +61,10 @@ class RolePolicyIntegrationTest {
   void defaultsAreLocalLeastPrivilegeAndPlatformIdentityIsNotAnExtraRole() throws Exception {
     Set<String> operator = values(policy.defaults("OPERATOR")),
         finance = values(policy.defaults("FINANCE"));
-    assertEquals(17, operator.size());
-    assertEquals(22, finance.size());
+    assertEquals(16, operator.size());
+    assertEquals(21, finance.size());
+    assertFalse(operator.contains("workbench.monitoring.read"));
+    assertFalse(finance.contains("workbench.monitoring.read"));
     assertTrue(operator.containsAll(Set.of("quote.review", "resource.read", "supplier.write")));
     assertFalse(operator.contains("payment.record"));
     assertFalse(operator.contains("settlement.read"));
@@ -129,7 +131,7 @@ class RolePolicyIntegrationTest {
     seed.migrateRoleDefaults();
     ObjectNode migrated = store.get("role", "OPERATOR", null);
     assertEquals(RolePolicy.DEFAULT_POLICY_VERSION, migrated.path("defaultPolicy").asText());
-    assertEquals(17, migrated.path("permissions").size());
+    assertEquals(16, migrated.path("permissions").size());
     ObjectNode refreshed = auth.findUser(id);
     assertTrue(
         values(refreshed.path("permissions")).containsAll(Set.of("quote.read", "quote.review")));

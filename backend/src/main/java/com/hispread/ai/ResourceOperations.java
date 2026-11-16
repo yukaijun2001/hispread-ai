@@ -130,6 +130,20 @@ public class ResourceOperations {
     return op;
   }
 
+  public ObjectNode submissionByRequest(String requestKey, HttpServletRequest req) {
+    auth.require(req, "resource.read");
+    for (ObjectNode operation : store.list("resource-operation", null)) {
+      if (!eq(operation, "type", "SUBMIT") || !eq(operation, "requestKey", requestKey)) continue;
+      try {
+        getOperation(text(operation, "id"), req);
+        return operation(text(operation, "id"), req);
+      } catch (ApiException denied) {
+        if (denied.status != 403 && denied.status != 404) throw denied;
+      }
+    }
+    throw new ApiException(404, "原提交记录不存在或无权查看");
+  }
+
   public List<ObjectNode> listOperations(String type, HttpServletRequest req) {
     List<ObjectNode> out = new ArrayList<>();
     for (ObjectNode op : store.list("resource-operation", null))

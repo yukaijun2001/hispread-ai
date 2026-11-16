@@ -423,7 +423,7 @@ class FinanceContractIntegrationTest {
     for (JsonNode p : capabilities) if (p.path("code").asText().equals("AIRWALLEX")) aw = p;
     assertNotNull(aw);
     assertTrue(aw.path("configured").asBoolean());
-    assertTrue(aw.path("readOnlyTestAvailable").asBoolean());
+    assertFalse(aw.path("readOnlyTestAvailable").asBoolean());
     assertFalse(aw.path("executable").asBoolean());
     assertFalse(capabilities.toString().contains("fixture"));
     assertTrue(get("/api/payments/providers", c).isEmpty());

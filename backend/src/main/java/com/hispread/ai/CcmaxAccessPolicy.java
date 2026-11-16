@@ -79,9 +79,11 @@ public class CcmaxAccessPolicy {
     boolean intake = owner != null && !owner.isBlank()
         ? allowsIntake(owner)
         : auth.admin(req) && !stopped();
-    return store.object()
+    ObjectNode capabilities = store.object()
         .put("allowCcmax", configured && intake)
         .put("allowDirectCcmax", direct)
+        .put("supportsProxy", configured && !direct)
+        .put("allowRawCredentialImport", configured && !direct)
         .put("forceStopCcmaxIntake", stopped())
         .put("allowCcmaxReauthorization", configured && allowsReauthorization(owner, req))
         .put("allowCcmaxPause", configured && allowsLifecycle(owner, "PAUSE", req))
@@ -91,5 +93,11 @@ public class CcmaxAccessPolicy {
             : stopped() ? "平台已暂停CCMAX新增上号，已有资源查询和维护不受影响"
             : !intake ? "当前供应商未开通CCMAX上号，请联系平台管理员"
             : "已配置资源上游，操作结果以真实响应为准");
+    var modes = capabilities.putArray("credentialModes");
+    if (configured) {
+      modes.add("OAUTH");
+      if (!direct) for (String mode : List.of("REFRESH_TOKEN", "ACCESS_TOKEN", "SESSION_KEY")) modes.add(mode);
+    }
+    return capabilities;
   }
 }

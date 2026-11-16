@@ -215,7 +215,7 @@ public class WorkbenchController {
 
   @GetMapping("/workbench/monitoring")
   public Object monitoring(HttpServletRequest req) {
-    a.require(req, "workbench.monitoring.read");
+    a.require(req, "workbench.read");
     return List.of();
   }
 

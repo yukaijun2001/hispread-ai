@@ -23,6 +23,7 @@ public class FinanceController {
   private final PaymentExecutionGateway executionGateway;
   private final PaymentExecutionService execution;
   private final PaymentSandboxService sandbox;
+  private final OnboardingReportService onboardingReports;
 
   public FinanceController(
       Store store,
@@ -31,7 +32,8 @@ public class FinanceController {
       AccessPolicy access,
       PaymentExecutionGateway executionGateway,
       PaymentExecutionService execution,
-      PaymentSandboxService sandbox) {
+      PaymentSandboxService sandbox,
+      OnboardingReportService onboardingReports) {
     this.store = store;
     this.auth = auth;
     this.b = b;
@@ -39,6 +41,7 @@ public class FinanceController {
     this.executionGateway = executionGateway;
     this.execution = execution;
     this.sandbox = sandbox;
+    this.onboardingReports = onboardingReports;
   }
 
   private void financial(HttpServletRequest req) {
@@ -308,11 +311,11 @@ public class FinanceController {
               .put("name", names.get(code))
               .put("enabled", enabled)
               .put("configured", configured)
-              .put("readOnlyTestAvailable", enabled && configured)
-              .put("executable", executionGateway.executable(raw))
+              .put("readOnlyTestAvailable", execution.onlineEnabled() && enabled && configured)
+              .put("executable", execution.onlineEnabled() && executionGateway.executable(raw))
               .put(
                   "unavailableReason",
-                  executionGateway.executable(raw)
+                  !execution.onlineEnabled() ? "线上付款通道已关闭，当前仅支持线下登记" : executionGateway.executable(raw)
                       ? ""
                       : !enabled ? "通道未启用" : "未配置可执行的官方支付适配器或支付中台；连接测试独立且只读"));
     }
@@ -339,16 +342,22 @@ public class FinanceController {
 
   @PostMapping("/payments/sandbox/events")
   public ObjectNode externalSandbox(@RequestBody ObjectNode body, HttpServletRequest req) {
+    auth.require(req, "payment.execute");
+    execution.requireOnline();
     return sandbox.event(body, req);
   }
 
   @GetMapping("/payments/sandbox-capabilities")
   public ObjectNode sandboxCapabilities(HttpServletRequest req) {
-    return sandbox.capabilities(req);
+    ObjectNode capability = sandbox.capabilities(req);
+    if (!execution.onlineEnabled()) capability.put("enabled", false);
+    return capability;
   }
 
   @PostMapping("/payments/sandbox")
   public ObjectNode createSandbox(@RequestBody ObjectNode body, HttpServletRequest req) {
+    auth.require(req, "payment.execute");
+    execution.requireOnline();
     return sandbox.create(body, req);
   }
 
@@ -901,31 +910,14 @@ public class FinanceController {
     auth.require(req, "report.read");
     auth.require(req, "usage.read");
     auth.require(req, "resource.read");
-    List<ObjectNode> rows =
-        access.visible("resource", req).stream()
-            .filter(r -> b.match(r, q, "supplierId", "supplierId"))
-            .toList();
-    ObjectNode out =
-        b.obj()
-            .put("from", q.getOrDefault("from", today()))
-            .put("to", q.getOrDefault("to", today()))
-            .put("total", rows.size());
-    Map<String, Long> counts = new LinkedHashMap<>();
-    for (ObjectNode r : rows) {
-      String type = text(r, "resourceType"), state = text(r, "operationalState");
-      counts.merge(type + ":" + state, 1L, Long::sum);
-    }
-    ArrayNode report = out.putArray("rows");
-    counts.forEach(
-        (key, count) -> {
-          String[] values = key.split(":", 2);
-          report.add(
-              b.obj()
-                  .put("resourceType", values[0])
-                  .put("operationalState", values.length > 1 ? values[1] : "")
-                  .put("count", count));
-        });
-    return out;
+    return onboardingReports.legacy(q, req.getRequestURI().endsWith("/current"), req);
+  }
+
+  @GetMapping("/reports/onboarding")
+  public ObjectNode onboardingReport(@RequestParam Map<String, String> q, HttpServletRequest req) {
+    auth.require(req, "report.read");
+    auth.require(req, "resource.read");
+    return onboardingReports.report(q, req);
   }
 
   private static BigDecimal sum(List<ObjectNode> rows, String field) {

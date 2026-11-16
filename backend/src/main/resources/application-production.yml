@@ -9,6 +9,9 @@ spring:
     timeout: ${SESSION_TIMEOUT:8h}
 app:
   bootstrap-mode: production
+  payments:
+    online-enabled: false
+    sandbox-enabled: false
 logging:
   level:
     root: INFO

@@ -57,7 +57,5 @@
   "file.write",
   "supplier.owner.assign",
   "workbench.read",
-  "workbench.tasks.read",
-  "workbench.monitoring.read",
-  "workbench.monitoring.configure"
+  "workbench.tasks.read"
 ]

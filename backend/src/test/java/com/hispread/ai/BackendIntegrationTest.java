@@ -180,7 +180,7 @@ class BackendIntegrationTest {
             post("/api/open/v1/ccmax/submissions/oauth/authorize")
                 .header("Authorization", bearer)
                 .contentType("application/json")
-                .content("{}"))
+                .content("{\"credentialMode\":\"OAUTH\",\"projectId\":\"missing-project\",\"accountName\":\"fixture\"}"))
         .andExpect(status().isServiceUnavailable());
     mvc.perform(
             post("/api/auth/api-tokens/" + token.path("id").asText() + "/revoke")

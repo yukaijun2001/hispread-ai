@@ -15,7 +15,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-@SpringBootTest
+@SpringBootTest(properties = "app.payments.online-enabled=true")
 @AutoConfigureMockMvc
 @Transactional
 class ExecutionAdapterConfigTest {

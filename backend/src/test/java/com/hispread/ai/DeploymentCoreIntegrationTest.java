@@ -62,11 +62,41 @@ class DeploymentCoreIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.database").value("UP"));
     assertEquals(
-        3,
+        4,
         jdbc.queryForObject(
             "select count(*) from flyway_schema_history where success and type='SQL'",
             Integer.class));
     assertNotNull(jdbc.queryForObject("select to_regclass('spring_session')", String.class));
+  }
+
+  @Test
+  void consolePermissionCleanupPreservesOtherGrantsFinancialDataAndSessions() throws Exception {
+    String userId = java.util.UUID.randomUUID().toString();
+    var user = store.object().put("id", userId).put("username", "migration-console-" + userId)
+        .put("role", "ADMIN").putNull("supplierId").put("version", 0);
+    user.putArray("permissions").add("system.settings").add("workbench.monitoring.read")
+        .add("workbench.monitoring.configure");
+    auth.createUser(user, "FixtureTest@123");
+    var role = store.create("role", "GLOBAL", store.object().put("id", "migration-" + userId)
+        .put("builtIn", false).put("scopeType", "ADMIN")
+        .set("permissions", user.path("permissions")));
+    var payment = store.create("payment", "migration-console-owner", store.object()
+        .put("state", "UNKNOWN").put("obligationAmount", "12"));
+    Long sessionVersion = jdbc.queryForObject("select session_version from hub_user where id=?", Long.class, userId);
+    try (var stream = new org.springframework.core.io.ClassPathResource("db/migration/V4__console_scope_permissions.sql").getInputStream()) {
+      jdbc.execute(new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+    var savedRole = store.get("role", role.path("id").asText(), "GLOBAL");
+    assertEquals("[\"system.settings\"]", savedRole.path("permissions").toString());
+    assertEquals(role.path("version").asLong() + 1, savedRole.path("version").asLong());
+    var savedUser = store.parse(jdbc.queryForObject("select profile::text from hub_user where id=?", String.class, userId));
+    assertEquals("[\"system.settings\"]", savedUser.path("permissions").toString());
+    assertEquals(sessionVersion, jdbc.queryForObject("select session_version from hub_user where id=?", Long.class, userId));
+    assertEquals(payment, store.get("payment", payment.path("id").asText(), "migration-console-owner"));
+    try (var stream = new org.springframework.core.io.ClassPathResource("db/migration/V4__console_scope_permissions.sql").getInputStream()) {
+      jdbc.execute(new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+    assertEquals(savedRole, store.get("role", role.path("id").asText(), "GLOBAL"));
   }
 
   @Test

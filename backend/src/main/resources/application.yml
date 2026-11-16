@@ -57,6 +57,7 @@ app:
     proxy-probe-url: ${INTEGRATION_PROXY_PROBE_URL:https://api.ipify.org?format=json}
     proxy-probe-timeout-ms: ${INTEGRATION_PROXY_PROBE_TIMEOUT_MS:10000}
   payments:
+    online-enabled: false
     sandbox-enabled: ${PAYMENT_SANDBOX_ENABLED:false}
   operator-username: ${OPERATOR_USERNAME:}
   operator-password: ${OPERATOR_PASSWORD:}
