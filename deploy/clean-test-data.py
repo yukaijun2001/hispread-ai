@@ -17,12 +17,13 @@ CONFIG_KINDS = {
 BUSINESS_KINDS = {
     "supplier", "supplier-settings", "project", "quote", "resource", "resource-secret",
     "resource-operation", "native-oauth", "intake", "intake-ledger", "intake-review",
+    "submission", "reauthorization", "proxy-replacement",
     "agent", "group", "allocation", "owner-term", "account", "account-secret",
     "document", "bill", "input", "settlement", "batch", "payment", "payout-call",
     "sandbox-payment", "sandbox-event", "notification", "notice", "notice-delivery",
     "export", "proxy", "audit", "turnover", "monitoring", "monitoring-source",
     "monitoring-multiplier", "scheduled-task", "scheduled-run", "priority-round",
-    "rotation-settings",
+    "rotation-settings", "supplier-usage-snapshot",
 }
 BUILTIN_ROLES = {"ADMIN", "OPERATOR", "FINANCE", "SUPPLIER", "SUPPLIER_AGENT"}
 INVENTORY_SQL = """

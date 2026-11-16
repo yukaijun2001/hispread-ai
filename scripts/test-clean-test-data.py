@@ -42,7 +42,11 @@ def fixture():
               entity('export', 'qa-export', 'local-admin'),
               entity('api-token', 'qa-token', 'qa-user'), entity('audit', 'qa-audit'),
               entity('notice', 'qa-notice'), entity('scheduled-task', 'CCMAX_STATUS_SYNC', enabled=False, running=False),
-              entity('category', 'QA_TEST'), entity('intake-policy', 'supplier-qa:qa-user')]
+              entity('category', 'QA_TEST'), entity('intake-policy', 'supplier-qa:qa-user'),
+              entity('supplier-usage-snapshot', 'qa-usage', 'supplier-qa', supplierId='supplier-qa'),
+              entity('submission', 'qa-submission', 'supplier-qa', supplierId='supplier-qa'),
+              entity('reauthorization', 'qa-reauthorization', 'supplier-qa', supplierId='supplier-qa'),
+              entity('proxy-replacement', 'qa-proxy-replacement', 'supplier-qa', supplierId='supplier-qa')]
     admin = {'id': 'local-admin', 'username': 'wutong', 'supplierId': None, 'enabled': True,
              'role': 'ADMIN', 'fingerprint': 'unchanged-admin-password-profile-and-version'}
     member = {'id': 'qa-user', 'username': 'qa_supplier', 'supplierId': 'supplier-qa',
