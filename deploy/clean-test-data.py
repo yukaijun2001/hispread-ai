@@ -12,7 +12,7 @@ import uuid
 
 CONFIG_KINDS = {
     "role", "settings", "resource-target", "payout-provider", "exchange-rate",
-    "resource-target-sync-settings", "resource-sync-settings",
+    "resource-target-sync-settings", "resource-sync-settings", "reminder-settings",
 }
 BUSINESS_KINDS = {
     "supplier", "supplier-settings", "project", "quote", "resource", "resource-secret",

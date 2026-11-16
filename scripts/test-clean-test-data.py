@@ -30,7 +30,7 @@ def fixture():
         return {'kind': kind, 'id': identity, 'owner': owner, 'data': {'id': identity, **data},
                 'fingerprint': kind + ':' + identity}
     keep = [entity('role', role) for role in sorted(CLEAN.BUILTIN_ROLES)]
-    keep += [entity('settings', 'default'), entity('resource-target', 'native', protocol='CCMAX_NATIVE'),
+    keep += [entity('settings', 'default'), entity('reminder-settings', 'WORKBENCH_WECOM_REMINDER'), entity('resource-target', 'native', protocol='CCMAX_NATIVE'),
              entity('resource-target', 'newapi', protocol='NEWAPI'), entity('payout-provider', 'historical'),
              entity('exchange-rate', 'fx'), entity('intake-policy', 'system'),
              entity('api-token', 'admin-token', 'local-admin'), entity('category', 'ANTHROPIC')]
