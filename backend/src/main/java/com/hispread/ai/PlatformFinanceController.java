@@ -1053,7 +1053,11 @@ public class PlatformFinanceController {
     String exportFingerprint = fingerprint(b.pick(body, "type", "format", "filter"));
     for (ObjectNode prior : store.list("export", auth.userId(req)))
       if (eq(prior, "requestKey", text(body, "requestKey"))) {
-        if (prior.has("requestFingerprint") && !eq(prior, "requestFingerprint", exportFingerprint))
+        // JSONB reorders object keys, so a stored raw-JSON hash cannot identify a
+        // semantically unchanged retry. Compare the immutable export inputs instead;
+        // retain existing hashes for historical records and leave financial hashes alone.
+        if (!b.pick(prior, "type", "format", "filter")
+            .equals(b.pick(body, "type", "format", "filter")))
           throw new ApiException(409, "导出编号已用于不同筛选条件");
         return publicExport(prior);
       }

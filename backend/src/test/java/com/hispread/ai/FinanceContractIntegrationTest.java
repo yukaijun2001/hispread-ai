@@ -211,6 +211,60 @@ class FinanceContractIntegrationTest {
   }
 
   @Test
+  void exportReplayUsesPersistedInputsDespiteJsonbKeyOrderAndLegacyHashes() throws Exception {
+    Client c = admin();
+    String owner = supplier("Reordered export").path("id").asText(), day = BusinessSupport.today();
+    ObjectNode originalFilter = s.object().put("reviewStatus", "").put("supplier", owner)
+        .put("project", "").put("from", day).put("to", day).put("currency", "USD");
+    ObjectNode body = s.object().put("type", "SUMMARY").put("format", "CSV")
+        .put("requestKey", UUID.randomUUID().toString());
+    body.set("filter", originalFilter);
+    ObjectNode created = (ObjectNode) post("/api/accounting/daily/exports", body, c, 200);
+
+    for (String mode : List.of("created", "legacy-hash", "legacy-no-hash")) {
+      String id = created.path("id").asText();
+      if (!mode.equals("created")) {
+        ObjectNode historical = created.deepCopy();
+        historical.remove(List.of("id", "version", "updatedAt"));
+        historical.put("requestKey", UUID.randomUUID().toString());
+        historical.set("filter", originalFilter.deepCopy());
+        if (mode.equals("legacy-hash")) {
+          // Original pre-JSONB serialization from the former fingerprint algorithm.
+          ObjectNode payload = s.object().put("type", "SUMMARY").put("format", "CSV");
+          payload.set("filter", originalFilter.deepCopy());
+          historical.put("requestFingerprint", HexFormat.of().formatHex(
+              java.security.MessageDigest.getInstance("SHA-256")
+                  .digest(payload.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8))));
+        } else historical.remove("requestFingerprint");
+        // Preserve an actual immutable snapshot and file, as prior releases did.
+        ObjectNode source = s.get("export", created.path("id").asText(), c.uid);
+        historical.set("contentBase64", source.path("contentBase64"));
+        historical.set("previewRows", source.path("previewRows"));
+        id = s.create("export", c.uid, historical).path("id").asText();
+      }
+      String path = "/api/accounting/daily/exports/" + id;
+      ObjectNode persisted = s.get("export", id, c.uid);
+      JsonNode returned = get(path, c);
+      assertEquals(originalFilter, returned.path("filter"));
+      assertNotEquals(originalFilter.toString(), returned.path("filter").toString());
+      ObjectNode retry = s.object().put("type", returned.path("type").asText())
+          .put("format", returned.path("format").asText())
+          .put("requestKey", returned.path("requestKey").asText());
+      retry.set("filter", returned.path("filter").deepCopy());
+      int before = s.list("export", c.uid).size();
+      assertEquals(id, post("/api/accounting/daily/exports", retry, c, 200).path("id").asText());
+      assertEquals(persisted, s.get("export", id, c.uid));
+      assertEquals(before, s.list("export", c.uid).size());
+      post("/api/accounting/daily/exports", retry.deepCopy().put("format", "XLSX"), c, 409);
+      ObjectNode differentFilter = retry.deepCopy();
+      ((ObjectNode) differentFilter.path("filter")).put("from", LocalDate.parse(day).minusDays(1).toString());
+      post("/api/accounting/daily/exports", differentFilter, c, 409);
+      assertEquals(persisted, s.get("export", id, c.uid));
+      assertEquals(before, s.list("export", c.uid).size());
+    }
+  }
+
+  @Test
   void exportKeepsPendingAndConfirmedAmountsSeparateRegardlessOfSourceOrder() throws Exception {
     Client c = admin();
     for (boolean pendingFirst : List.of(false, true)) {

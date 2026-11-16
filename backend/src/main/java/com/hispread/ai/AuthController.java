@@ -19,7 +19,7 @@ public class AuthController {
 
   @GetMapping("/health")
   public Object health() {
-    return Map.of("status", "UP", "version", "0.8.126", "storage", "PostgreSQL");
+    return Map.of("status", "UP", "version", "0.8.127", "storage", "PostgreSQL");
   }
 
   @GetMapping("/auth/csrf")
