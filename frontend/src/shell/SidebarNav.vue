@@ -23,10 +23,6 @@ function isActive(item: NavItem) {
   return route.name === item.route;
 }
 
-function sectionOpen(section: NavSection) {
-  return section.items.some(isActive);
-}
-
 const collapsed = ref<Record<string, boolean>>({});
 
 watch(sections, (list) => {
@@ -38,13 +34,21 @@ watch(sections, (list) => {
 }, { immediate: true });
 
 function isCollapsed(section: NavSection) {
-  return !!collapsed.value[section.id] && !sectionOpen(section);
+  return !!collapsed.value[section.id];
 }
 
 function toggle(section: NavSection) {
   if (!section.label) return;
   collapsed.value = { ...collapsed.value, [section.id]: !collapsed.value[section.id] };
 }
+
+watch([() => route.name, currentTab], () => {
+  const next = { ...collapsed.value };
+  for (const section of sections.value) {
+    if (section.items.some(isActive)) next[section.id] = false;
+  }
+  collapsed.value = next;
+});
 </script>
 
 <template>
@@ -66,7 +70,7 @@ function toggle(section: NavSection) {
           <span>{{ section.label }}</span>
           <Icon name="down" :size="14" class="chevron" :class="{ closed: isCollapsed(section) }" />
         </button>
-        <div :id="`nav-${section.id}`" class="items" :hidden="isCollapsed(section) ? true : undefined">
+        <div v-show="!isCollapsed(section)" :id="`nav-${section.id}`" class="items">
           <RouterLink
             v-for="item in section.items"
             :key="item.key"
