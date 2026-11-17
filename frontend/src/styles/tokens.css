@@ -1,0 +1,54 @@
+/* Design tokens. Neutral surfaces, hairline borders, one restrained accent;
+   the primary action is charcoal. Components use these through var(). */
+:root {
+  --hs-bg: #f3f3f3;
+  --hs-surface: #fff;
+  --hs-surface-subtle: #fafafa;
+  --hs-surface-hover: #f4f4f4;
+  --hs-surface-selected: #e8e8e8;
+  --hs-border: #e8e8e8;
+  --hs-border-strong: #d9d9d9;
+  --hs-divider: #f0f0f0;
+  --hs-text: #171717;
+  --hs-text-2: #4d4d4d;
+  --hs-text-3: #737373;
+  --hs-text-4: #a3a3a3;
+  --hs-accent: #3267f6;
+  --hs-accent-hover: #2858d8;
+  --hs-accent-soft: #eef3fe;
+  --hs-accent-ring: 0 0 0 3px rgb(50 103 246 / 14%);
+  --hs-primary: #1c1c1c;
+  --hs-primary-top: #3b3b3b;
+  --hs-success: #1a7a4c;
+  --hs-success-soft: #ebf6f0;
+  --hs-warning: #8f5a0c;
+  --hs-warning-soft: #fcf4e4;
+  --hs-danger: #b0293a;
+  --hs-danger-soft: #fdf0f1;
+  --hs-violet: #6a4bb0;
+  --hs-violet-soft: #f3effc;
+  --hs-teal: #2f8a76;
+  --hs-teal-soft: #ebf6f3;
+
+  --hs-radius-card: 16px;
+  --hs-radius-control: 10px;
+  --hs-radius-small: 8px;
+  --hs-shadow-control: 0 1px 2px rgb(0 0 0 / 4%);
+  --hs-shadow-card: 0 1px 2px rgb(0 0 0 / 3%);
+  --hs-shadow-pop: 0 2px 6px rgb(0 0 0 / 4%), 0 16px 40px rgb(0 0 0 / 10%);
+  --hs-shadow-primary: inset 0 1px 0 rgb(255 255 255 / 12%), 0 1px 2px rgb(0 0 0 / 14%), 0 3px 8px -3px rgb(0 0 0 / 22%);
+
+  --hs-font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  --hs-font-mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --hs-text-xs: 12px;
+  --hs-text-sm: 13px;
+  --hs-text-md: 14px;
+  --hs-text-lg: 16px;
+  --hs-text-xl: 20px;
+  --hs-text-2xl: 24px;
+
+  --hs-control-height: 36px;
+  --hs-control-height-sm: 30px;
+  --hs-sidebar-width: 232px;
+  --hs-page-gutter: clamp(16px, 2vw, 28px);
+}

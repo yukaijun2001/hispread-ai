@@ -1,6 +1,6 @@
 # 实现方式与边界
 
-本地生产证据版本为0.8.122。原网站使用React，但本项目按要求使用Vue3：App.vue启动Vue，vue-compat.js把恢复业务函数的JSX调用与hooks映射为Vue组件、响应式状态、生命周期、provide/inject和Teleport。没有React或ReactDOM依赖，也没有iframe、远端页面代理或截图背景。原先打包进索引的React、ReactDOM、调度器已删除；Three.js改成独立npm依赖，保留原自定义shader与随机种子。业务模块保留可阅读的美化JS而非冒充原始.vue源码。全部来源映射在frontend/scripts/provenance.json；后续可逐模块迁成SFC，当前所有DOM由Vue管理。
+本地生产证据版本为0.8.122。原网站使用React，本项目按要求使用Vue 3 单文件组件重写了全部控制台页面。没有React或ReactDOM依赖，也没有iframe、远端页面代理或截图背景。恢复出来的编译模块、vue-compat 适配层和旧样式已删除；Three.js 作为登录页动画的独立 npm 依赖保留。当前页面源码在 frontend/src/pages 与 frontend/src/shell。
 
 全部14份真实CSS和品牌图片保留在frontend/public/assets，保持精确class与DOM层级，动态导入使用Vite重新构建。页面包括登录注册、工作台、全部供应商业务导航，以及生产证据中的平台管理模块。交付涵盖平台最高管理员、供应商主账号、供应商子账号三种角色。主账号有线上像素基线；管理员和子账号只有生产源码的分支依据，需明确标注无线上像素基线。
 

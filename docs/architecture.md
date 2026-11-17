@@ -22,7 +22,7 @@ JSONB业务表hub_entity按kind和id定位、owner_id隔离、version做乐观�
 
 财务链路采用BigDecimal：平台录入原始金额并按有效报价计算，或明确直接录入真实金额；预览返回快照哈希，创建结算前再次校验；供应商确认后平台才可登记付款，到账确认更新收款汇总。线下付款代表操作人员提供凭证的登记行为，未调用外部资金通道。
 
-前端84个恢复模块由唯一Vue渲染器处理，原React/ReactDOM内联实现已移除。完整DOM、样式、图标、交互与校验保留；可读角色索引在frontend/src/views/roles，源模块映射在frontend/scripts/provenance.json。该恢复方式不是原作者的原始工程源码，也不依赖源站来显示页面。
+控制台页面已用 Vue 单文件组件重写，恢复模块和旧渲染适配层已删除。页面在 frontend/src/pages，样式在 frontend/src/styles。该实现不是原作者的原始工程源码，也不依赖源站来显示页面。
 
 新增两个平台角色的默认权限、历史空角色迁移和本地账号说明见five-role-permissions.md。原证据不含OPERATOR/FINANCE服务端默认配置，因此本地默认策略与原站私有配置的边界在该文档明确列出。
 

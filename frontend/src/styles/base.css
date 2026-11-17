@@ -1,0 +1,60 @@
+/* Document defaults. Components keep their own scoped rules; this layer only
+   replaces the browser defaults the retired legacy stylesheet used to set. */
+:root {
+  color: var(--hs-text);
+  background: var(--hs-bg);
+  font-family: var(--hs-font);
+  font-size: var(--hs-text-md);
+  font-weight: 400;
+  line-height: 1.5;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #app { min-height: 100%; }
+
+body {
+  min-width: 360px;
+  margin: 0;
+  color: var(--hs-text);
+  background: var(--hs-bg);
+}
+
+body:has(dialog[open]) { overflow: hidden; }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+
+button { cursor: pointer; }
+
+button:disabled { cursor: not-allowed; }
+
+a { color: inherit; text-decoration: none; }
+
+img, svg { display: block; max-width: 100%; }
+
+p, h1, h2, h3, h4, ul, ol, table { margin: 0; }
+
+ul, ol { padding: 0; }
+
+button, input, select, textarea {
+  margin: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+input[type="checkbox"], input[type="radio"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--hs-primary);
+  cursor: pointer;
+}
+
+input[type="checkbox"]:disabled, input[type="radio"]:disabled { cursor: not-allowed; }
+
+:focus-visible { outline: 2px solid var(--hs-accent); outline-offset: 2px; }

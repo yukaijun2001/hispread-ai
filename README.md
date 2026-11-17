@@ -73,10 +73,8 @@ mvn test
 
 ## 源码与证据
 
-- `frontend/src/App.vue`、`main.js`：Vue应用入口。
-- `frontend/src/runtime/vue-compat.js`：将恢复的业务函数映射为Vue组件、响应式状态与生命周期，唯一DOM渲染器为Vue。无React/ReactDOM依赖。
-- `frontend/src/recovered/`：84个可阅读业务模块，已删除打包的React渲染器，保留真实DOM/事件/校验/接口。
-- `frontend/public/assets/`：14份原CSS与品牌图；粒子动画使用Three.js和恢复的原shader。
+- 前端已用 Vue 3 + TypeScript + vue-router + Pinia 重写（结构、约定和进度见 [docs/frontend-rewrite/](docs/frontend-rewrite/README.md)）：`frontend/src/App.vue`、`main.js` 入口；`src/shell/` 外壳与登录；`src/pages/` 各业务页；`src/components/ui/` 设计系统；`src/lib/` 接口客户端、翻译、精确金额运算。
+- `frontend/public/assets/`：只保留品牌图。控制台样式在 `src/styles/tokens.css` 与 `src/styles/base.css`，页面组件使用 scoped 样式。
 - `backend/src/main/java/com/hispread/ai/`：会话/权限/CSRF、PostgreSQL存储与业务控制器。
 - `docs/evidence-core.md`、`evidence-domain.md`：源码阅读、字段与接口契约。
 - `docs/rea-evidence.md`：REA静态/运行证据ID及覆盖限制。

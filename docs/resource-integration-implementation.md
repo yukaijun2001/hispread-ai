@@ -1,6 +1,6 @@
 # Resource and proxy implementation — 2026-11-09
 
-The recovered frontend proves the local API shape, not the original CCMAX administrator protocol. Source evidence is recorded in `docs/evidence-domain.md` (resource form, OAuth session, lifecycle, proxy replacement) and the read-only recovered `frontend/src/recovered` modules. No original private CCMAX server, production key, or private API specification was supplied. This implementation therefore offers explicit `CUSTOM` and `NEWAPI` protocols and never labels the custom contract as the original private implementation.
+The recovered frontend proves the local API shape, not the original CCMAX administrator protocol. Source evidence is recorded in `docs/evidence-domain.md` (resource form, OAuth session, lifecycle, proxy replacement). The recovered modules were removed after the Vue rewrite. No original private CCMAX server, production key, or private API specification was supplied. This implementation therefore offers explicit `CUSTOM` and `NEWAPI` protocols and never labels the custom contract as the original private implementation.
 
 ## Proxy verification
 
