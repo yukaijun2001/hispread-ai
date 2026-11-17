@@ -70,6 +70,12 @@ function onRowKey(event: KeyboardEvent, row: Row) {
 <style scoped>
 .hs-table-wrap { width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; transition: opacity .15s; }
 .hs-table-wrap.refreshing { opacity: .65; }
+@supports (content-visibility: auto) {
+  .hs-table-wrap { content-visibility: auto; contain-intrinsic-size: auto 100% auto 280px; }
+}
+@supports not (content-visibility: auto) {
+  .hs-table-wrap { contain: layout style paint; }
+}
 .hs-table { width: 100%; border-collapse: collapse; font-size: var(--hs-text-sm); white-space: nowrap; }
 .hs-table th, .hs-table td { height: auto; padding: 0 14px; text-align: left; vertical-align: middle; }
 .hs-table th:first-child, .hs-table td:first-child { padding-left: 20px; }

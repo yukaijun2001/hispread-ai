@@ -1,14 +1,12 @@
 // Locale resolution and translation. Chinese source text is the key; English
 // comes from the dictionary. The locale is fixed for the page lifetime —
 // switching stores the preference and reloads.
-import dictionary from '../i18n/en-US.js';
-
 export type Locale = 'zh-CN' | 'en-US';
 export type LanguagePreference = Locale | 'auto';
 
 const STORAGE_KEY = 'hispread.language';
 const CHINA_TIME_ZONES = new Set(['Asia/Shanghai', 'Asia/Urumqi', 'Asia/Chongqing', 'Asia/Chungking', 'Asia/Harbin', 'PRC']);
-const entries = dictionary as Record<string, string>;
+const entries: Record<string, string> = {};
 
 export const GENERIC_ERROR = 'The operation could not be completed. Please refresh and try again, or contact support with the request reference.';
 
@@ -33,6 +31,17 @@ function resolveLocale(): Locale {
 
 const locale = resolveLocale();
 export const getLocale = (): Locale => locale;
+
+let dictionaryReady: Promise<void> | undefined;
+
+/** English copy stays out of the Chinese startup bundle. */
+export function loadDictionary(): Promise<void> {
+  if (locale !== 'en-US') return Promise.resolve();
+  dictionaryReady ??= import('../i18n/en-US.js').then((module) => {
+    Object.assign(entries, module.default as Record<string, string>);
+  });
+  return dictionaryReady;
+}
 
 export function setLanguagePreference(preference: LanguagePreference) {
   const url = new URL(window.location.href);

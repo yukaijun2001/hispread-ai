@@ -6036,4 +6036,6 @@ export default {
   "首次成功／当前结果时间": "First success / current result time",
   "注册后登录，再填写个人及企业资料。": "After registering, sign in and fill in your personal and company details.",
   "使用平台分配的账号登录控制台。": "Sign in to the console with the account the platform assigned to you.",
+  "展开{0}": `Expand {0}`,
+  "收起{0}": `Collapse {0}`,
 };

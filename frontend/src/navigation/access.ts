@@ -34,34 +34,34 @@ interface RouteMeta { label: string; icon: IconName; permission: string }
 
 // Labels are translated lazily so the catalogue can be imported before i18n matters.
 const ROUTES: Record<RouteId, { label: string; icon: IconName; permission: string }> = {
-  workbench: { label: '工作台', icon: 'grid', permission: 'workbench.read' },
-  suppliers: { label: '供应商管理', icon: 'users', permission: 'supplier.read' },
-  'operator-kpi': { label: '运营归属', icon: 'users', permission: 'supplier.owner.assign' },
-  projects: { label: '项目管理', icon: 'quote', permission: 'project.read' },
+  workbench: { label: '工作台', icon: 'dashboard', permission: 'workbench.read' },
+  suppliers: { label: '供应商管理', icon: 'building', permission: 'supplier.read' },
+  'operator-kpi': { label: '运营归属', icon: 'pin', permission: 'supplier.owner.assign' },
+  projects: { label: '项目管理', icon: 'folder', permission: 'project.read' },
   quotes: { label: '报价管理', icon: 'quote', permission: 'quote.read' },
   settlements: { label: '账务管理', icon: 'wallet', permission: 'settlement.read' },
-  deliveries: { label: '我的交付', icon: 'quote', permission: 'resource.read' },
-  'outbound-proxies': { label: '代理配置', icon: 'settings', permission: 'proxy.read' },
-  'supplier-agents': { label: '团队成员', icon: 'users', permission: 'supplier.agent.manage' },
-  resources: { label: '资源管理', icon: 'grid', permission: 'resource.read' },
-  reports: { label: '报表中心', icon: 'audit', permission: 'report.read' },
-  'api-docs': { label: 'API 文档', icon: 'quote', permission: '' },
-  'scheduled-tasks': { label: '上号与交付任务', icon: 'audit', permission: 'resource.read' },
+  deliveries: { label: '我的交付', icon: 'package', permission: 'resource.read' },
+  'outbound-proxies': { label: '代理配置', icon: 'globe', permission: 'proxy.read' },
+  'supplier-agents': { label: '团队成员', icon: 'id-card', permission: 'supplier.agent.manage' },
+  resources: { label: '资源管理', icon: 'layers', permission: 'resource.read' },
+  reports: { label: '报表中心', icon: 'chart', permission: 'report.read' },
+  'api-docs': { label: 'API 文档', icon: 'book', permission: '' },
+  'scheduled-tasks': { label: '上号与交付任务', icon: 'clock', permission: 'resource.read' },
   users: { label: '账号管理', icon: 'users', permission: 'system.users' },
   roles: { label: '角色与权限', icon: 'shield', permission: 'system.roles' },
   'notice-admin': { label: '通知管理', icon: 'bell', permission: 'notification.publish' },
-  'resource-targets': { label: '资源接口配置', icon: 'settings', permission: 'resource.config.read' },
+  'resource-targets': { label: '资源接口配置', icon: 'plug', permission: 'resource.config.read' },
   settings: { label: '系统参数', icon: 'settings', permission: 'system.settings' },
-  'scheduled-task-runs': { label: '同步历史', icon: 'audit', permission: 'system.settings' },
-  'payout-calls': { label: '历史出款查询', icon: 'audit', permission: 'payout.call.read' },
+  'scheduled-task-runs': { label: '同步历史', icon: 'history', permission: 'system.settings' },
+  'payout-calls': { label: '历史出款查询', icon: 'receipt', permission: 'payout.call.read' },
   audits: { label: '审计日志', icon: 'audit', permission: 'audit.read' },
   'payout-providers': { label: '资金通道', icon: 'bank', permission: 'payout.provider.read' },
-  'payout-recipients': { label: '收款人汇总', icon: 'users', permission: 'account.read' },
-  'supplier-accounts': { label: '供应商收款账户', icon: 'bank', permission: 'account.read' },
-  'resources-pending': { label: 'NewAPI 待分配', icon: 'grid', permission: 'resource.intake.manage' },
-  'deliveries-pending': { label: 'NewAPI 待分配', icon: 'quote', permission: 'resource.intake.manage' },
-  'ccmax-resource-analysis': { label: '上号统计', icon: 'audit', permission: '' },
-  notifications: { label: '消息通知', icon: 'bell', permission: '' },
+  'payout-recipients': { label: '收款人汇总', icon: 'card', permission: 'account.read' },
+  'supplier-accounts': { label: '供应商收款账户', icon: 'wallet', permission: 'account.read' },
+  'resources-pending': { label: 'NewAPI 待分配', icon: 'inbox', permission: 'resource.intake.manage' },
+  'deliveries-pending': { label: 'NewAPI 待分配', icon: 'inbox', permission: 'resource.intake.manage' },
+  'ccmax-resource-analysis': { label: '上号统计', icon: 'pulse', permission: '' },
+  notifications: { label: '消息通知', icon: 'message', permission: '' },
 };
 
 const SYSTEM_ROUTES: RouteId[] = ['users', 'roles', 'notice-admin', 'resource-targets', 'settings', 'scheduled-task-runs', 'payout-calls', 'audits'];
@@ -154,7 +154,10 @@ export function navigationFor(user: SessionUser, capabilities: SubmissionCapabil
     key: query ? `${route}?${new URLSearchParams(query)}` : route, route, query, label, icon: ROUTES[route].icon,
   });
   const settlementItems = visible('settlements')
-    ? settlementTabs(user).map((tab) => ({ ...item('settlements', tab.label, { tab: tab.id }), icon: (tab.id === 'rates' ? 'bank' : 'wallet') as IconName }))
+    ? settlementTabs(user).map((tab) => ({
+      ...item('settlements', tab.label, { tab: tab.id }),
+      icon: ({ daily: 'calendar', departments: 'org', statements: 'file-check', inputs: 'list', payments: 'coins', rates: 'bank' } as const)[tab.id],
+    }))
     : [];
   const deliveryRoute: RouteId = supplier ? 'deliveries' : 'resources';
   const deliveryItems = visible(deliveryRoute)

@@ -1,4 +1,4 @@
-import { computed, onScopeDispose, ref, shallowRef, toValue, watch, type MaybeRefOrGetter } from 'vue';
+import { computed, nextTick, onScopeDispose, ref, shallowRef, toValue, watch, type MaybeRefOrGetter } from 'vue';
 import { apiFetch } from '../lib/api';
 import { t } from '../lib/i18n';
 import { useSessionStore } from '../stores/session';
@@ -32,6 +32,17 @@ export function useApiData<T>(path: MaybeRefOrGetter<string | null | undefined>,
   let controller: AbortController | undefined;
   let pollTimer: number | undefined;
   let active = true;
+  let visibleRevision = 0;
+  let visibleTimer: number | undefined;
+
+  const yieldToPaint = () => new Promise<void>((resolve) => {
+    const finish = () => {
+      window.clearTimeout(visibleTimer);
+      resolve();
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => finish());
+    else visibleTimer = window.setTimeout(finish, 0);
+  });
 
   const schedulePoll = () => {
     if (!active || pollMs <= 0) return;
@@ -45,25 +56,33 @@ export function useApiData<T>(path: MaybeRefOrGetter<string | null | undefined>,
   function load(foreground: boolean) {
     const target = toValue(path);
     const requestKey = key.value;
+    const requestRevision = ++visibleRevision;
     if (!target || inFlight) return;
     inFlight = true;
     window.clearTimeout(pollTimer);
     const request = new AbortController();
     controller = request;
-    const requestRevision = revision + (foreground ? 1 : 0);
     if (foreground) {
-      revision = requestRevision;
+      revision++;
       const keep = loadedKey === requestKey && data.value !== null;
       if (!keep) data.value = null;
       error.value = '';
       loading.value = !keep;
       refreshing.value = keep;
     }
+    const acceptedRevision = revision;
     let timedOut = false;
     const timer = window.setTimeout(() => { timedOut = true; request.abort(); }, TIMEOUT_MS);
-    apiFetch<T>(target, { signal: request.signal, background: !foreground })
+    const started = foreground ? yieldToPaint() : Promise.resolve();
+    started.then(() => {
+      if (!active || requestKey !== key.value || requestRevision !== visibleRevision) {
+        inFlight = false;
+        return undefined;
+      }
+      return apiFetch<T>(target, { signal: request.signal, background: !foreground });
+    })
       .then((value) => {
-        if (!active || requestKey !== key.value || requestRevision !== revision) return;
+        if (value === undefined || !active || requestKey !== key.value || acceptedRevision !== revision) return;
         data.value = value;
         loadedKey = requestKey;
         error.value = '';
@@ -82,6 +101,7 @@ export function useApiData<T>(path: MaybeRefOrGetter<string | null | undefined>,
 
   watch([key, () => session.epoch, reloadToken], () => {
     controller?.abort();
+    visibleRevision++;
     inFlight = false;
     window.clearTimeout(pollTimer);
     if (!key.value) {
@@ -89,7 +109,7 @@ export function useApiData<T>(path: MaybeRefOrGetter<string | null | undefined>,
       return;
     }
     if (loadedKey !== key.value) { data.value = null; loadedKey = ''; }
-    load(true);
+    nextTick(() => { if (active && key.value) load(true); });
   }, { immediate: true });
 
   const onVisible = () => { if (!document.hidden && !error.value) load(false); };
@@ -97,8 +117,10 @@ export function useApiData<T>(path: MaybeRefOrGetter<string | null | undefined>,
 
   onScopeDispose(() => {
     active = false;
+    visibleRevision++;
     controller?.abort();
     window.clearTimeout(pollTimer);
+    window.clearTimeout(visibleTimer);
     document.removeEventListener('visibilitychange', onVisible);
   });
 
